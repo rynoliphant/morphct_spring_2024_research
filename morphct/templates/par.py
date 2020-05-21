@@ -111,6 +111,8 @@ The mapping of coarse-grained bonds to atomstic bonds. For example, in P3HT 'bon
 corresponds to the 'C2-C3' bond between atoms #2 and #5, so the dictionary item look like this:
 'bondB': ['C2-C3', 2, 5]
 (KEYS = CG bond name, VALUES = ['AA bond name', AAID1, AAID2])
+NOTE: This parameter is only for INTRA-monomer connections, for INTER-monomer
+connections, please use the `additional_constraints` parameter.
 """
 CG_to_template_bonds = {}
 
@@ -128,9 +130,9 @@ A list of the constraints that need to be added to the system that describe the 
 coarse-grained sites. For example, in P3HT an additional bonded constraint is required between monomers,
 between atom #3 on one monomer and atom #0 on the next monomer. Since there are 25 atoms defined in
 the template file for each monomer, the entry looks like this:
-['A', 'C1-C10', 3, 25]. Note that this treatment works for bonds, angles, and dihedrals and the
+['C1-C10', 3, 25]. Note that this treatment works for bonds, angles, and dihedrals and the
 constraint is configured according to the length of the additional_constraints element.
-(['CG Site Name', 'Constraint Name', AAID1, AAID2,...])
+['Constraint Name', AAID1, AAID2,...]
 """
 additional_constraints = []
 
