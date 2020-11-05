@@ -517,8 +517,8 @@ class atomistic:
                 monomer_CG_types.append(self.CG_dictionary["type"][CG_site])
             if len(set(template_files)) != 1:
                 print(monomer)
-                print(monomerCGTypes)
-                print(templateFiles)
+                print(monomer_CG_types)
+                print(template_files)
                 raise SystemError("Not all monomer sites are the same template")
             # Copy the template dictionary for editing for this monomer
             this_monomer_dictionary = copy.deepcopy(
