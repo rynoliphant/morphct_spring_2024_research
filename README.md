@@ -1,4 +1,4 @@
-[![alt-text](morphCTLogo.png "MorphCT Logo" =500x)](https://bitbucket.org/cmelab/morphct)
+[<img src="morphCTLogo.png" width="500">](https://github.com/cmelab/morphct)
 
 [![DOI](https://zenodo.org/badge/100152281.svg)](https://zenodo.org/badge/latestdoi/100152281)
 [![Run Status](https://api.shippable.com/projects/5ae1ee243e7d2b0700153be4/badge?branch=dev)](https://app.shippable.com/bitbucket/cmelab/morphct) 
