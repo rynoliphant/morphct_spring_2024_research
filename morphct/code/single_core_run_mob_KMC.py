@@ -336,29 +336,25 @@ def update_molecule(atom_ID, molecule_list, bonded_atoms):
     return molecule_list
 
 
-def main():
+def main(
+        jobs_to_run,
+        KMC_directory,
+        AA_morphdict,
+        CG_morphdict,
+        CGtoAAID_list,
+        param_dict,
+        chromo_list,
+        CPU_rank,
+        seed,
+        overwrite=False
+        ):
     global log_file
 
-    KMC_directory = sys.argv[1]
-    CPU_rank = int(sys.argv[2])
-    np.random.seed(int(sys.argv[3]))
-    overwrite = False
-    try:
-        overwrite = bool(sys.argv[4])
-    except:
-        pass
-    # Load `jobs_to_run' which is a list, where each element contains the
-    # [carrier.ID, carrier.lifetime, carrier.carrierType]
-    pickle_file_name = os.path.join(
-        KMC_directory, "KMC_data_{:02d}.pickle".format(CPU_rank)
-    )
-    with open(pickle_file_name, "rb") as pickle_file:
-        jobs_to_run = pickle.load(pickle_file)
     log_file = os.path.join(KMC_directory, "KMC_log_{:02d}.log".format(CPU_rank))
     # Reset the log file
     with open(log_file, "wb+") as log_file_handle:
         pass
-    hf.write_to_file(log_file, ["Found {:d} jobs to run".format(len(jobs_to_run))])
+    hf.write_to_file(log_file, f"Found {len(jobs_to_run):d} jobs to run")
     # Set the affinities for this current process to make sure it's maximising
     # available CPU usage
     current_PID = os.getpid()
@@ -371,32 +367,6 @@ def main():
     # except OSError:
     #     hf.write_to_file(log_file, ["Taskset command not found, skipping setting of"
     #                                 " processor affinity..."])
-    # Now load the main morphology pickle (used as a workaround to obtain the
-    # chromophore_list without having to save it in each carrier [very memory
-    # inefficient!])
-    pickle_dir = KMC_directory.replace("/KMC", "/code")
-    for file_name in os.listdir(pickle_dir):
-        if "pickle" in file_name:
-            main_morphology_pickle_name = os.path.join(pickle_dir, file_name)
-    hf.write_to_file(
-        log_file,
-        [
-            "".join(
-                [
-                    "Found main morphology pickle file at ",
-                    main_morphology_pickle_name,
-                    "! loading data...",
-                ]
-            )
-        ],
-    )
-    pickle_data = hf.load_pickle(main_morphology_pickle_name)
-    AA_morphology_dict = pickle_data[0]
-    CG_morphology_dict = pickle_data[1]
-    CG_to_AAID_master = pickle_data[2]
-    parameter_dict = pickle_data[3]
-    chromophore_list = pickle_data[4]
-    hf.write_to_file(log_file, ["Main morphology pickle loaded!"])
     try:
         if parameter_dict["use_average_hop_rates"] is True:
             # Chosen to split hopping by inter-intra molecular hops, so get
@@ -413,7 +383,7 @@ def main():
     killer = termination_signal()
     # Save the pickle as a list of `saveCarrier' instances that contain the
     # bare minimum
-    save_data = initialise_save_data(len(chromophore_list), int(sys.argv[3]))
+    save_data = initialise_save_data(len(chromophore_list), seed)
     if parameter_dict["record_carrier_history"] is False:
         save_data["hole_history_matrix"] = None
         save_data["electron_history_matrix"] = None
@@ -576,4 +546,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    pass
