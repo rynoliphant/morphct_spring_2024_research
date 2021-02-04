@@ -31,74 +31,66 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
             terminating_group_images,
             "".join([parameter_dict["output_orca_directory"], chromophore.orca_input]),
         )
-    print("")
     # Determine how many pairs there are first:
-    number_of_pairs = 0
-    for chromo in chromophore_list:
-        for neighbour in chromo.neighbours:
-            if int(neighbour[0]) > chromo.ID:
-                number_of_pairs += 1
-    number_of_pairs = np.sum([len(chromo.neighbours) for chromo in chromophore_list])
-    print("There are", int(number_of_pairs / 2), "total neighbour pairs to consider.")
+    n_pairs = np.sum([len(chromo.neighbours) for chromo in chromophore_list])
+    print(f"There are {n_pairs // 2} total neighbour pairs to consider.")
     # /2 because the forwards and backwards hops are identical
     # Then consider each chromophore against every other chromophore
-    for chromophore1 in chromophore_list:
-        neighbours_ID = [neighbour[0] for neighbour in chromophore1.neighbours]
-        neighbours_image = [neighbour[1] for neighbour in chromophore1.neighbours]
-        for chromophore2 in chromophore_list:
-            # Skip if chromophore2 is not one of chromophore1's neighbours
-            # Also skip if chromophore2's ID is < chromophore1's ID to prevent
+    for chromo1 in chromophore_list:
+        neighbours_ID = [neighbour[0] for neighbour in chromo1.neighbours]
+        neighbours_image = [neighbour[1] for neighbour in chromo1.neighbours]
+        for chromo2 in chromophore_list:
+            # Skip if chromo2 is not one of chromo1's neighbours
+            # Also skip if chromo2's ID is < chromo1's ID to prevent
             # duplicates
-            if (chromophore2.ID not in neighbours_ID) or (
-                chromophore2.ID < chromophore1.ID
-            ):
+            if (chromo2.ID not in neighbours_ID) or (chromo2.ID < chromo1.ID):
                 continue
             # Update the qcc input name
-            input_name = chromophore1.orca_input.replace(
-                ".inp", "-{:05d}.inp".format(chromophore2.ID)
+            input_name = chromo1.orca_input.replace(
+                ".inp", "-{:05d}.inp".format(chromo2.ID)
             ).replace("single", "pair")
             # Find the correct relative image for the neighbour chromophore
-            chromophore2_relative_image = neighbours_image[
-                neighbours_ID.index(chromophore2.ID)
+            chromo2_relative_image = neighbours_image[
+                neighbours_ID.index(chromo2.ID)
             ]
-            chromophore2_transformation = list(
-                np.array(chromophore1.image)
-                - np.array(chromophore2.image)
-                + np.array(chromophore2_relative_image)
+            chromo2_transformation = list(
+                np.array(chromo1.image)
+                - np.array(chromo2.image)
+                + np.array(chromo2_relative_image)
             )
             # Find the dimer AAIDs and relative images for each atom
-            AAIDs = chromophore1.AAIDs + chromophore2.AAIDs
-            images = [[0, 0, 0] for i in range(len(chromophore1.AAIDs))] + [
-                chromophore2_transformation for i in range(len(chromophore2.AAIDs))
+            AAIDs = chromo1.AAIDs + chromo2.AAIDs
+            images = [[0, 0, 0] for i in range(len(chromo1.AAIDs))] + [
+                chromo2_transformation for i in range(len(chromo2.AAIDs))
             ]
             # Now add the terminating groups to both chromophores
             # Note that we would only ever expect both chromophores to require
             # termination or neither
-            if chromophore1.terminate is True:
-                term_group_posns1 = terminate_monomers(
-                    chromophore1, parameter_dict, AA_morphology_dict
+            if chromo1.terminate is True:
+                term_group_pos1 = terminate_monomers(
+                    chromo1, parameter_dict, AA_morphology_dict
                 )
-                term_group_posns2 = terminate_monomers(
-                    chromophore2, parameter_dict, AA_morphology_dict
+                term_group_pos2 = terminate_monomers(
+                    chromo2, parameter_dict, AA_morphology_dict
                 )
                 # We don't want to add the terminating hydrogens for adjacent
                 # monomers, so remove the ones that are within a particular
                 # distance
-                term_group_posns1, term_group_posns2 = remove_adjacent_terminators(
-                    term_group_posns1, term_group_posns2
+                term_group_pos1, term_group_pos2 = remove_adjacent_terminators(
+                    term_group_pos1, term_group_pos2
                 )
                 terminating_group_images1 = [
-                    [0, 0, 0] for i in range(len(term_group_posns1))
+                    [0, 0, 0] for i in range(len(term_group_pos1))
                 ]
                 terminating_group_images2 = [
-                    chromophore2_transformation for i in range(len(term_group_posns2))
+                    chromo2_transformation for i in range(len(term_group_pos2))
                 ]
                 # Write the dimer input file
                 write_qcc_inp(
                     AA_morphology_dict,
                     AAIDs,
                     images,
-                    term_group_posns1 + term_group_posns2,
+                    term_group_pos1 + term_group_pos2,
                     terminating_group_images1 + terminating_group_images2,
                     "".join([parameter_dict["output_orca_directory"], input_name]),
                 )
@@ -112,7 +104,6 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
                     None,
                     "".join([parameter_dict["output_orca_directory"], input_name]),
                 )
-    print("")
 
 
 def remove_adjacent_terminators(group1, group2):
@@ -140,7 +131,7 @@ def write_qcc_inp(
     AA_morphology_dict,
     AAIDs,
     images,
-    terminating_group_posns,
+    terminating_group_pos,
     terminating_group_images,
     input_name,
 ):
@@ -177,8 +168,8 @@ def write_qcc_inp(
             )
         )
     # Now add in the terminating Hydrogens if necessary
-    if terminating_group_posns is not None:
-        for index, position in enumerate(terminating_group_posns):
+    if terminating_group_pos is not None:
+        for index, position in enumerate(terminating_group_pos):
             # Cut the integer bit off the atomType
             all_atom_types.append("H")
             # Add in the correct periodic images to the position
