@@ -233,7 +233,7 @@ def write_orca_inp(
     inp_file_lines[-1:-1] = lines_to_write
     # Write the orca input file
     with open(input_name, "w+") as orca_file:
-        orca_file.writelines(inp_file_lines)
+        orca_file.writelines(lines_to_write)
     print("\rOrca Input File written as", os.path.split(input_name)[1], end=" ")
 
 
