@@ -8,7 +8,7 @@ from scipy.spatial import Delaunay
 from morphct.code import helper_functions as hf
 
 
-class Chromophore:
+class chromophore:
     def __init__(
         self,
         chromo_ID,
