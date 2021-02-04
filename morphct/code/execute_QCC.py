@@ -23,40 +23,36 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
         else:
             terminating_group_positions = None
             terminating_group_images = None
-        write_qcc_inp(
+        chromophore.qcc_input = write_qcc_inp(
             AA_morphology_dict,
             chromophore.AAIDs,
             [chromophore.image] * len(chromophore.AAIDs),
             terminating_group_positions,
             terminating_group_images,
-            "".join([parameter_dict["output_orca_directory"], chromophore.orca_input]),
         )
     # Determine how many pairs there are first:
-    n_pairs = np.sum([len(chromo.neighbours) for chromo in chromophore_list])
-    print(f"There are {n_pairs // 2} total neighbour pairs to consider.")
+    n_pairs = np.sum([len(chromo.neighbors) for chromo in chromophore_list])
+    print(f"There are {n_pairs // 2} total neighbor pairs to consider.")
     # /2 because the forwards and backwards hops are identical
     # Then consider each chromophore against every other chromophore
+    qcc_pairs = []
     for chromo1 in chromophore_list:
-        neighbours_ID = [neighbour[0] for neighbour in chromo1.neighbours]
-        neighbours_image = [neighbour[1] for neighbour in chromo1.neighbours]
+        neighbors_ID = [neighbor[0] for neighbor in chromo1.neighbors]
+        neighbors_image = [neighbor[1] for neighbor in chromo1.neighbors]
         for chromo2 in chromophore_list:
-            # Skip if chromo2 is not one of chromo1's neighbours
+            # Skip if chromo2 is not one of chromo1's neighbors
             # Also skip if chromo2's ID is < chromo1's ID to prevent
             # duplicates
-            if (chromo2.ID not in neighbours_ID) or (chromo2.ID < chromo1.ID):
+            if (chromo2.ID not in neighbors_ID) or (chromo2.ID < chromo1.ID):
                 continue
             # Update the qcc input name
-            input_name = chromo1.orca_input.replace(
-                ".inp", "-{:05d}.inp".format(chromo2.ID)
-            ).replace("single", "pair")
-            # Find the correct relative image for the neighbour chromophore
-            chromo2_relative_image = neighbours_image[
-                neighbours_ID.index(chromo2.ID)
-            ]
+            pair = (chromo1.ID, chromo2.ID)
+            # Find the correct relative image for the neighbor chromophore
+            chromo2_rel_image = neighbors_image[neighbors_ID.index(chromo2.ID)]
             chromo2_transformation = list(
                 np.array(chromo1.image)
                 - np.array(chromo2.image)
-                + np.array(chromo2_relative_image)
+                + np.array(chromo2_rel_image)
             )
             # Find the dimer AAIDs and relative images for each atom
             AAIDs = chromo1.AAIDs + chromo2.AAIDs
@@ -86,32 +82,32 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
                     chromo2_transformation for i in range(len(term_group_pos2))
                 ]
                 # Write the dimer input file
-                write_qcc_inp(
+                qcc_input = write_qcc_inp(
                     AA_morphology_dict,
                     AAIDs,
                     images,
                     term_group_pos1 + term_group_pos2,
                     terminating_group_images1 + terminating_group_images2,
-                    "".join([parameter_dict["output_orca_directory"], input_name]),
                 )
             else:
                 # Write the dimer input file
-                write_qcc_inp(
+                qcc_input = write_qcc_inp(
                     AA_morphology_dict,
                     AAIDs,
                     images,
                     None,
                     None,
-                    "".join([parameter_dict["output_orca_directory"], input_name]),
                 )
+            qcc_pairs.append((pair,qcc_input))
+    return qcc_pairs
 
 
 def remove_adjacent_terminators(group1, group2):
     pop_list = [[], []]
-    for index1, terminating_hydrogen1 in enumerate(group1):
-        for index2, terminating_hydrogen2 in enumerate(group2):
-            separation = np.linalg.norm(terminating_hydrogen2 - terminating_hydrogen1)
-            if separation < 1.2:
+    for index1, terminal_hydrogen1 in enumerate(group1):
+        for index2, terminal_hydrogen2 in enumerate(group2):
+            sep = np.linalg.norm(terminal_hydrogen2 - terminal_hydrogen1)
+            if sep < 1.2:
                 pop_list[0].append(index1)
                 pop_list[1].append(index2)
     for group_no, group in enumerate(pop_list):
@@ -120,24 +116,26 @@ def remove_adjacent_terminators(group1, group2):
                 [group1, group2][group_no].pop(index)
             except IndexError:
                 raise SystemError(
-                    "Tried to pop a termination group that does"
-                    " not exist...are you sure this is an"
-                    " atomistic morphology?"
+                    """
+                    Tried to pop a termination group that does not exist...
+                    are you sure this is an atomistic morphology?
+                    """
                 )
     return group1, group2
 
 
 def write_qcc_inp(
-    AA_morphology_dict,
+    AA_morphdict,
     AAIDs,
     images,
-    terminating_group_pos,
-    terminating_group_images,
-    input_name,
+    terminal_pos,
+    terminal_images,
 ):
-    lines_to_write = []
+    qcc_lines = []
     all_atom_types = []
     all_positions = []
+    numstr = "0123456789"
+    lxyz = [AA_morphdict["lx"], AA_morphdict["ly"], AA_morphdict["lz"]]
     # Format the atom positions ready for qcc
     for index, atom_ID in enumerate(AAIDs):
         # Cut the integer bit off the atomType. To allow atom types like Ca and
@@ -145,50 +143,24 @@ def write_qcc_inp(
         # use iter to return the first element of the list of upper case letters'
         # and the first element of the list of lower case letters in the atom
         # type (if any) and .join them together.
-        atom_type = AA_morphology_dict["type"][atom_ID]
-        all_atom_types.append(
-            next(iter([char for char in atom_type if char.isupper()]), "")
-            + next(iter([char for char in atom_type if char.islower()]), "")
-        )
+        atom_type = AA_morphdict["type"][atom_ID].strip(numstr).capitalize()
+        all_atom_types.append(atom_type)
         # Add in the correct periodic images to the position
         all_positions.append(
-            AA_morphology_dict["unwrapped_position"][atom_ID]
-            + np.array(
-                [
-                    (
-                        images[index][i]
-                        * [
-                            AA_morphology_dict["lx"],
-                            AA_morphology_dict["ly"],
-                            AA_morphology_dict["lz"],
-                        ][i]
-                    )
-                    for i in range(3)
-                ]
-            )
+            AA_morphdict["unwrapped_position"][atom_ID]
+            + np.array([(images[index][i] * lxyz[i]) for i in range(3)])
         )
     # Now add in the terminating Hydrogens if necessary
-    if terminating_group_pos is not None:
-        for index, position in enumerate(terminating_group_pos):
+    if terminal_pos is not None:
+        for ind, pos in enumerate(terminal_pos):
             # Cut the integer bit off the atomType
             all_atom_types.append("H")
             # Add in the correct periodic images to the position
             all_positions.append(
-                position
-                + np.array(
-                    [
-                        (
-                            terminating_group_images[index][i]
-                            * [
-                                AA_morphology_dict["lx"],
-                                AA_morphology_dict["ly"],
-                                AA_morphology_dict["lz"],
-                            ][i]
+                    pos + np.array(
+                        [terminal_images[ind][i] * lxyz[i] for i in range(3)]
                         )
-                        for i in range(3)
-                    ]
-                )
-            )
+                    )
     # Now geometrically centralize all of the atoms that are to be included in
     # this input file to make it easier on qcc
     central_position = np.array(
@@ -200,19 +172,16 @@ def write_qcc_inp(
     )
     # Create the lines to be written in the input file
     for index, position in enumerate(all_positions):
-        lines_to_write.append(
-            " {0:s}  {1:.5f}  {2:.5f}  {3:.5f}\n".format(
+        qcc_lines.append(
+            "{0:s}  {1:.5f}  {2:.5f}  {3:.5f};".format(
                 all_atom_types[index],
                 position[0] - central_position[0],
                 position[1] - central_position[1],
                 position[2] - central_position[2],
             )
         )
-    # Write the qcc input file
-    with open(input_name, "w+") as qcc_file:
-        qcc_file.writelines(lines_to_write)
-    print("\rOrca Input File written as", os.path.split(input_name)[1], end=" ")
-
+    qcc_input = " ".join(qcc_lines)
+    return qcc_input
 
 def terminate_monomers(chromophore, parameter_dict, AA_morphology_dict):
     # No CG morphology, so we will use the UA -> AA code definition of which
