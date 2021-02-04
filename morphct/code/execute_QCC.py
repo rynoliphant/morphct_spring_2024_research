@@ -23,7 +23,7 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
         else:
             terminating_group_positions = None
             terminating_group_images = None
-        write_orca_inp(
+        write_qcc_inp(
             AA_morphology_dict,
             chromophore.AAIDs,
             [chromophore.image] * len(chromophore.AAIDs),
@@ -53,7 +53,7 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
                 chromophore2.ID < chromophore1.ID
             ):
                 continue
-            # Update the orca input name
+            # Update the qcc input name
             input_name = chromophore1.orca_input.replace(
                 ".inp", "-{:05d}.inp".format(chromophore2.ID)
             ).replace("single", "pair")
@@ -94,7 +94,7 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
                     chromophore2_transformation for i in range(len(term_group_posns2))
                 ]
                 # Write the dimer input file
-                write_orca_inp(
+                write_qcc_inp(
                     AA_morphology_dict,
                     AAIDs,
                     images,
@@ -104,7 +104,7 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
                 )
             else:
                 # Write the dimer input file
-                write_orca_inp(
+                write_qcc_inp(
                     AA_morphology_dict,
                     AAIDs,
                     images,
@@ -136,7 +136,7 @@ def remove_adjacent_terminators(group1, group2):
     return group1, group2
 
 
-def write_orca_inp(
+def write_qcc_inp(
     AA_morphology_dict,
     AAIDs,
     images,
@@ -147,7 +147,7 @@ def write_orca_inp(
     lines_to_write = []
     all_atom_types = []
     all_positions = []
-    # Format the atom positions ready for orca
+    # Format the atom positions ready for qcc
     for index, atom_ID in enumerate(AAIDs):
         # Cut the integer bit off the atomType. To allow atom types like Ca and
         # Br, where the atom is defined by one upper- and one lower-case letter,
@@ -199,7 +199,7 @@ def write_orca_inp(
                 )
             )
     # Now geometrically centralize all of the atoms that are to be included in
-    # this input file to make it easier on orca
+    # this input file to make it easier on qcc
     central_position = np.array(
         [
             np.average(np.array(all_positions)[:, 0]),
@@ -217,23 +217,9 @@ def write_orca_inp(
                 position[2] - central_position[2],
             )
         )
-    # Load the orca input template
-    orca_temp_dir = os.path.join(PROJECT_ROOT, "templates")
-    orca_temp_test_dir = os.path.join(PROJECT_ROOT, "code", "unit_testing", "assets")
-    try:
-        with open(os.path.join(orca_temp_dir, "template.inp"), "r") as template_file:
-            inp_file_lines = template_file.readlines()
-    # In case running testbed:
-    except FileNotFoundError:
-        with open(
-            os.path.join(orca_temp_test_dir, "template.inp"), "r"
-        ) as template_file:
-            inp_file_lines = template_file.readlines()
-    # Insert the linesToWrite
-    inp_file_lines[-1:-1] = lines_to_write
-    # Write the orca input file
-    with open(input_name, "w+") as orca_file:
-        orca_file.writelines(lines_to_write)
+    # Write the qcc input file
+    with open(input_name, "w+") as qcc_file:
+        qcc_file.writelines(lines_to_write)
     print("\rOrca Input File written as", os.path.split(input_name)[1], end=" ")
 
 
@@ -269,11 +255,11 @@ def terminate_monomers(chromophore, parameter_dict, AA_morphology_dict):
                 1,
             )
     # Return terminatingGroups (positions of those hydrogens to be added to the
-    # orca input)
+    # qcc input)
     return new_hydrogen_positions
 
 
-def get_orca_jobs(input_dir, parameter_dict, proc_IDs):
+def get_qcc_jobs(input_dir, parameter_dict, proc_IDs):
     # First delete any previous log files as we're about to start again with the
     # ZINDO/S calculations
     try:
@@ -281,22 +267,22 @@ def get_orca_jobs(input_dir, parameter_dict, proc_IDs):
     except OSError:
         pass
     # Obtain a list of files to run
-    single_orca_file_list = os.listdir(os.path.join(input_dir, "single"))
-    pair_orca_file_list = os.listdir(os.path.join(input_dir, "pair"))
-    orca_files_to_run = []
-    for file_name in single_orca_file_list:
+    single_qcc_file_list = os.listdir(os.path.join(input_dir, "single"))
+    pair_qcc_file_list = os.listdir(os.path.join(input_dir, "pair"))
+    qcc_files_to_run = []
+    for file_name in single_qcc_file_list:
         if file_name[-4:] == ".inp":
-            orca_files_to_run.append(os.path.join(input_dir, "single", file_name))
-    for file_name in pair_orca_file_list:
+            qcc_files_to_run.append(os.path.join(input_dir, "single", file_name))
+    for file_name in pair_qcc_file_list:
         if file_name[-4:] == ".inp":
-            orca_files_to_run.append(os.path.join(input_dir, "pair", file_name))
-    orca_files_to_run.sort()
+            qcc_files_to_run.append(os.path.join(input_dir, "pair", file_name))
+    qcc_files_to_run.sort()
     if parameter_dict["overwrite_current_data"] is False:
         # Do not run any jobs that have already have an output file (and so have
         # at least started to
         # run if not finished)
         pop_list = []
-        for job_no, job in enumerate(orca_files_to_run):
+        for job_no, job in enumerate(qcc_files_to_run):
             try:
                 with open(
                     job.replace("input_orca", "output_orca").replace(".inp", ".out"),
@@ -307,18 +293,18 @@ def get_orca_jobs(input_dir, parameter_dict, proc_IDs):
                 pass
         pop_list.sort(reverse=True)
         for pop_index in pop_list:
-            orca_files_to_run.pop(pop_index)
-    if len(orca_files_to_run) == 0:
+            qcc_files_to_run.pop(pop_index)
+    if len(qcc_files_to_run) == 0:
         return []
     # Create a jobslist for each procID
     jobs_list = [
-        orca_files_to_run[
-            i : i + (int(np.ceil(len(orca_files_to_run) / len(proc_IDs))))
+        qcc_files_to_run[
+            i : i + (int(np.ceil(len(qcc_files_to_run) / len(proc_IDs))))
         ]
         for i in range(
             0,
-            len(orca_files_to_run),
-            int(np.ceil(len(orca_files_to_run) / float(len(proc_IDs)))),
+            len(qcc_files_to_run),
+            int(np.ceil(len(qcc_files_to_run) / float(len(proc_IDs)))),
         )
     ]
     return jobs_list
@@ -339,14 +325,14 @@ def main(
         parameter_dict["output_orca_directory"], "chromophores", "input_orca"
     )
     proc_IDs = parameter_dict["proc_IDs"]
-    jobs_list = get_orca_jobs(input_dir, parameter_dict, proc_IDs)
+    jobs_list = get_qcc_jobs(input_dir, parameter_dict, proc_IDs)
     # Shuffle the jobsList to spread it out over the cores
     np.random.shuffle(jobs_list)
-    number_of_inputs = sum([len(orca_files_to_run) for orca_files_to_run in jobs_list])
-    print("Found", number_of_inputs, "orca files to run.")
+    number_of_inputs = sum([len(qcc_files_to_run) for qcc_files_to_run in jobs_list])
+    print("Found", number_of_inputs, "qcc files to run.")
     if number_of_inputs > 0:
         # Create pickle file containing the jobs sorted by ProcID to be picked
-        # up by single_core_run_orca.py
+        # up by single_core_run_qcc.py
         pickle_name = input_dir.replace("input_orca", "orca_jobs.pickle")
         with open(pickle_name, "wb+") as pickle_file:
             pickle.dump(jobs_list, pickle_file)
@@ -354,7 +340,7 @@ def main(
         if len(jobs_list) <= len(proc_IDs):
             proc_IDs = proc_IDs[: len(jobs_list)]
         running_jobs = []
-        # Open the required processes to execute the orca jobs
+        # Open the required processes to execute the qcc jobs
         for CPU_rank, jobs in enumerate(jobs_list):
             running_jobs.append(
                 sp.Popen(
