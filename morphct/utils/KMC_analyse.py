@@ -215,12 +215,12 @@ def plot_cluster_size_dist(cluster_freqs, directory):
         plt.close()
 
 
-def create_array_for_plot_connections(chromophore_list, carrier_history, sim_dims):
+def create_array_for_plot_connections(chromo_list, carrier_history, sim_dims):
     """
     Function to create an array of with a starting point, a vector
     and the number of hops that occured.
     Requires:
-        chromophore_list,
+        chromo_list,
         carrier_history
         sim_dims
     Returns:
@@ -228,8 +228,8 @@ def create_array_for_plot_connections(chromophore_list, carrier_history, sim_dim
     """
     # Create an "empty" array to store data.
     connections_array = np.zeros(7)
-    # Iterate through the chromophore_list
-    for i, chromo in enumerate(chromophore_list):
+    # Iterate through the chromo_list
+    for i, chromo in enumerate(chromo_list):
         # Iterate through the neighbors of the chromophore
         for neighbor in zip(chromo.neighbours):
             index = neighbor[0][0]  # index of the neighbor
@@ -238,10 +238,10 @@ def create_array_for_plot_connections(chromophore_list, carrier_history, sim_dim
             if i < index:
                 # Get the vector between the two chromophores.
                 if not np.count_nonzero(image):
-                    vector = chromophore_list[index].posn - chromo.posn
+                    vector = chromo_list[index].posn - chromo.posn
                 # Account for periodic boundary conditions if not in same relative image.
                 else:
-                    vector = chromophore_list[index].posn - chromo.posn
+                    vector = chromo_list[index].posn - chromo.posn
                     vector += image * np.array(
                         [2 * sim_dims[0][1], 2 * sim_dims[1][1], 2 * sim_dims[2][1]]
                     )
@@ -261,7 +261,7 @@ def create_array_for_plot_connections(chromophore_list, carrier_history, sim_dim
 
 
 def plot_connections(
-    chromophore_list, sim_dims, carrier_history, directory, carrier_type
+    chromo_list, sim_dims, carrier_history, directory, carrier_type
 ):
     # A complicated function that shows connections between carriers in 3D that carriers prefer to hop between.
     # Connections that are frequently used are highlighted in black, whereas rarely used connections are more white.
@@ -276,7 +276,7 @@ def plot_connections(
 
     # Create the array for all the chromophore connections
     connections_array = create_array_for_plot_connections(
-        chromophore_list, carrier_history, sim_dims
+        chromo_list, carrier_history, sim_dims
     )
 
     # Determine the smalles, non-zero number of times two chromophores are connected.
@@ -582,8 +582,8 @@ def calculate_anisotropy(xvals, yvals, zvals):
 
 def plot_hop_vectors(
     carrier_data,
-    AA_morphology_dict,
-    chromophore_list,
+    AA_morphdict,
+    chromo_list,
     directory,
     sim_dims,
     carrier_type,
@@ -603,8 +603,8 @@ def plot_hop_vectors(
     for (chromo1, chromo2) in non_zero_coords:
         # Find the normal of chromo1 plane (first three atoms)
         triplet_posn = [
-            np.array(AA_morphology_dict["position"][AAID])
-            for AAID in chromophore_list[chromo1].AAIDs[:3]
+            np.array(AA_morphdict["position"][AAID])
+            for AAID in chromo_list[chromo1].AAIDs[:3]
         ]
         AB = triplet_posn[1] - triplet_posn[0]
         AC = triplet_posn[2] - triplet_posn[0]
@@ -614,12 +614,12 @@ def plot_hop_vectors(
         rotation_matrix = hf.get_rotation_matrix(normal, np.array([0, 0, 1]))
         # Find the vector from chromo1 to chromo2 (using the correct rleative image)
         neighbour_IDs = [
-            neighbour[0] for neighbour in chromophore_list[chromo1].neighbours
+            neighbour[0] for neighbour in chromo_list[chromo1].neighbours
         ]
         nlist_index = neighbour_IDs.index(chromo2)
-        relative_image = np.array(chromophore_list[chromo1].neighbours[nlist_index][1])
-        chromo1_posn = chromophore_list[chromo1].posn
-        chromo2_posn = chromophore_list[chromo2].posn + (relative_image * box_lengths)
+        relative_image = np.array(chromo_list[chromo1].neighbours[nlist_index][1])
+        chromo1_posn = chromo_list[chromo1].posn
+        chromo2_posn = chromo_list[chromo2].posn + (relative_image * box_lengths)
         unrotated_hop_vector = chromo2_posn - chromo1_posn
         # Apply rotation matrix to chromo1-chromo2 vector
         hop_vector = np.matmul(rotation_matrix, unrotated_hop_vector)
@@ -984,7 +984,7 @@ def update_molecule(atom_ID, molecule_list, bonded_atoms):
 
 
 def plot_neighbour_hist(
-    chromophore_list,
+    chromo_list,
     chromo_to_mol_ID,
     morphology_shape,
     output_dir,
@@ -993,13 +993,13 @@ def plot_neighbour_hist(
 ):
     separation_dist_donor = []
     separation_dist_acceptor = []
-    for chromo1 in chromophore_list:
+    for chromo1 in chromo_list:
         for chromo2_details in chromo1.neighbours:
             if (chromo2_details is None) or (
-                chromo1.ID == chromophore_list[chromo2_details[0]].ID
+                chromo1.ID == chromo_list[chromo2_details[0]].ID
             ):
                 continue
-            chromo2 = chromophore_list[chromo2_details[0]]
+            chromo2 = chromo_list[chromo2_details[0]]
             # Skip any chromophores that are part of the same molecule
             if chromo_to_mol_ID[chromo1.ID] == chromo_to_mol_ID[chromo2.ID]:
                 continue
@@ -1066,7 +1066,7 @@ def plot_neighbour_hist(
 
 
 def plot_orientation_hist(
-    chromophore_list,
+    chromo_list,
     chromo_to_mol_ID,
     orientations_data,
     output_dir,
@@ -1075,14 +1075,14 @@ def plot_orientation_hist(
 ):
     orientation_dist_donor = []
     orientation_dist_acceptor = []
-    for chromo1 in chromophore_list:
+    for chromo1 in chromo_list:
         orientation_1 = orientations_data[chromo1.ID]
         for chromo2_details in chromo1.neighbours:
             if (chromo2_details is None) or (
-                chromo1.ID == chromophore_list[chromo2_details[0]].ID
+                chromo1.ID == chromo_list[chromo2_details[0]].ID
             ):
                 continue
-            chromo2 = chromophore_list[chromo2_details[0]]
+            chromo2 = chromo_list[chromo2_details[0]]
             # Skip any chromophores that are part of the same molecule
             if chromo_to_mol_ID[chromo1.ID] == chromo_to_mol_ID[chromo2.ID]:
                 continue
@@ -1180,13 +1180,13 @@ def create_cut_off_dict(
 
 
 def get_clusters(
-    chromophore_list,
+    chromo_list,
     carrier_history_dict,
     orientations_all,
     cut_off_dict,
-    AA_morphology_dict,
+    AA_morphdict,
 ):
-    freud_box = [[AA_morphology_dict[coord] for coord in ["lx", "ly", "lz"]]]
+    freud_box = [[AA_morphdict[coord] for coord in ["lx", "ly", "lz"]]]
     materials_to_check = ["donor", "acceptor"]
     carriers_to_check = ["hole", "electron"]
     cluster_freqs = [{}, {}]
@@ -1197,12 +1197,12 @@ def get_clusters(
     species_psi = [0, 0]
     clusters_cutoffs = [[], []]
     if any(cut is not None for cut in cut_off_dict["separation"]):
-        separations = get_separations(chromophore_list, AA_morphology_dict)
+        separations = get_separations(chromo_list, AA_morphdict)
     else:
         separations = None
     for type_index, material_type in enumerate(materials_to_check):
         material_chromos = [
-            chromo for chromo in chromophore_list if chromo.species == material_type
+            chromo for chromo in chromo_list if chromo.species == material_type
         ]
         print("Examining the", material_type, "material...")
         positions = np.array([chromo.posn for chromo in material_chromos])
@@ -1216,7 +1216,7 @@ def get_clusters(
             orientations = None
         print("Calculating clusters...")
         n_list = get_n_list(
-            chromophore_list,
+            chromo_list,
             carrier_history_dict[carriers_to_check[type_index]],
             separations=separations,
             r_cut=cut_off_dict["separation"][type_index],
@@ -1308,7 +1308,7 @@ def update_neighbors(particle, cluster_list, neighbor_list):
 
 
 def get_n_list(
-    chromophore_list,
+    chromo_list,
     carrier_history,
     separations,
     r_cut,
@@ -1324,7 +1324,7 @@ def get_n_list(
         # angle
         dotcut = np.cos(o_cut * np.pi / 180)
     n_list = []
-    for chromophore in chromophore_list:
+    for chromophore in chromo_list:
         n_list.append([neighbour[0] for neighbour in chromophore.neighbours])
     printing = False
     for chromo_ID, neighbours in enumerate(n_list):
@@ -1333,10 +1333,10 @@ def get_n_list(
         remove_list = []
         if printing is True:
             print(chromo_ID)
-            print(chromophore_list[chromo_ID].neighbours, "==", n_list[chromo_ID])
-            print(chromophore_list[chromo_ID].neighbours_TI)
+            print(chromo_list[chromo_ID].neighbours, "==", n_list[chromo_ID])
+            print(chromo_list[chromo_ID].neighbours_TI)
         for neighbour_index, neighbour_ID in enumerate(neighbours):
-            ti = chromophore_list[chromo_ID].neighbours_TI[neighbour_index]
+            ti = chromo_list[chromo_ID].neighbours_TI[neighbour_index]
             if printing is True:
                 print(
                     "Examining neighbour_index",
@@ -1402,20 +1402,20 @@ def get_n_list(
 
 
 def get_orientations(
-    chromophore_list,
-    CG_morphology_dict,
-    AA_morphology_dict,
-    CG_to_AAID_master,
-    parameter_dict,
+    chromo_list,
+    CG_morphdict,
+    AA_morphdict,
+    CGtoAAID_list,
+    param_dict,
 ):
     orientations = []
-    for index, chromophore in enumerate(chromophore_list):
+    for index, chromophore in enumerate(chromo_list):
         positions = get_electronic_atom_positions(
             chromophore,
-            CG_morphology_dict,
-            AA_morphology_dict,
-            CG_to_AAID_master,
-            parameter_dict,
+            CG_morphdict,
+            AA_morphdict,
+            CGtoAAID_list,
+            param_dict,
         )
         # There is a really cool way to do this with single value composition
         # but on the time crunch I didn't have time to learn how to implement
@@ -1469,16 +1469,16 @@ def calculate_plane(positions):
     return np.cross(vec1, vec2)
 
 
-def get_separations(chromophore_list, AA_morphology_dict):
-    box_dims = [AA_morphology_dict[axis] for axis in ["lx", "ly", "lz"]]
+def get_separations(chromo_list, AA_morphdict):
+    box_dims = [AA_morphdict[axis] for axis in ["lx", "ly", "lz"]]
     separations = lil_matrix(
-        (len(chromophore_list), len(chromophore_list)), dtype=float
+        (len(chromo_list), len(chromo_list)), dtype=float
     )
-    for chromo_ID, chromophore in enumerate(chromophore_list):
+    for chromo_ID, chromophore in enumerate(chromo_list):
         for neighbour_details in chromophore.neighbours:
             neighbour_ID = neighbour_details[0]
             relative_image = neighbour_details[1]
-            neighbour_posn = chromophore_list[neighbour_ID].posn
+            neighbour_posn = chromo_list[neighbour_ID].posn
             neighbour_chromo_posn = neighbour_posn + (
                 np.array(relative_image) * np.array(box_dims)
             )
@@ -1494,32 +1494,32 @@ def get_separations(chromophore_list, AA_morphology_dict):
 
 def get_electronic_atom_positions(
     chromophore,
-    CG_morphology_dict,
-    AA_morphology_dict,
-    CG_to_AAID_master,
-    parameter_dict,
+    CG_morphdict,
+    AA_morphdict,
+    CGtoAAID_list,
+    param_dict,
 ):
     # We don't save this in the chromophore info so we'll have to calculate it
     # again.
     # Determine whether this chromophore is a donor or an acceptor, as well
     # as the site types that have been defined as the electronically active
     # in the chromophore
-    if CG_morphology_dict is not None:
+    if CG_morphdict is not None:
         # Normal operation
         CG_types = sorted(
-            list(set([CG_morphology_dict["type"][CGID] for CGID in chromophore.CGIDs]))
+            list(set([CG_morphdict["type"][CGID] for CGID in chromophore.CGIDs]))
         )
         active_CG_sites, _ = obtain_electronic_species(
             chromophore.CGIDs,
-            CG_morphology_dict["type"],
-            parameter_dict["CG_site_species"],
+            CG_morphdict["type"],
+            param_dict["CG_site_species"],
         )
-        # CG_to_AAID_master is a list of dictionaries where each list
+        # CGtoAAID_list is a list of dictionaries where each list
         # element corresponds to a new molecule. Firstly, flatten this out
         # so that it becomes a single CG:AAID dictionary
-        flattened_CG_to_AAID_master = {
+        flattened_CGtoAAID_list = {
             dict_key: dict_val[1]
-            for dictionary in CG_to_AAID_master
+            for dictionary in CGtoAAID_list
             for dict_key, dict_val in dictionary.items()
         }
         # By using active_CG_sites, determine the AAIDs for
@@ -1528,28 +1528,28 @@ def get_electronic_atom_positions(
         # to each CG site so the list needs to be flattened afterwards.
         electronically_active_AAIDs = [
             AAID
-            for AAIDs in [flattened_CG_to_AAID_master[CGID] for CGID in active_CG_sites]
+            for AAIDs in [flattened_CGtoAAID_list[CGID] for CGID in active_CG_sites]
             for AAID in AAIDs
         ]
     else:
         # No fine-graining has been performed by MorphCT, so we know that
         # the input morphology is already atomistic.
-        if len(parameter_dict["CG_site_species"]) == 1:
+        if len(param_dict["CG_site_species"]) == 1:
             # If the morphology contains only a single type of electronic
-            # species, then the parameter_dict['CG_site_species'] should
+            # species, then the param_dict['CG_site_species'] should
             # only have one entry, and we can set all chromophores to be
             # this species.
             active_CG_sites = chromophore.CGIDs
             electronically_active_AAIDs = chromophore.CGIDs
-        elif (len(parameter_dict["CG_site_species"]) == 0) and (
-            len(parameter_dict["AA_rigid_body_species"]) > 0
+        elif (len(param_dict["CG_site_species"]) == 0) and (
+            len(param_dict["AA_rigid_body_species"]) > 0
         ):
             # If the CG_site_species have not been specified, then look to
             # the AA_rigid_body_species dictionary to determine which rigid
             # bodies are donors and which are acceptors
             electronically_active_AAIDs = []
             for AAID in chromophore.CGIDs:
-                if AA_morphology_dict["body"][AAID] != -1:
+                if AA_morphdict["body"][AAID] != -1:
                     electronically_active_AAIDs.append(AAID)
         else:
             raise SystemError(
@@ -1561,7 +1561,7 @@ def get_electronic_atom_positions(
     # unwrapped_position of the chromophore is located in, relative to the
     # original simulation volume.
     electronically_active_unwrapped_posns = [
-        AA_morphology_dict["unwrapped_position"][AAID]
+        AA_morphdict["unwrapped_position"][AAID]
         for AAID in electronically_active_AAIDs
     ]
     return electronically_active_unwrapped_posns
@@ -1710,7 +1710,7 @@ def generate_lists_for_3d_clusters(cluster_lookup, colours, large_cluster):
 
 
 def plot_clusters_3D(
-    output_dir, chromophore_list, cluster_dicts, sim_dims, generate_tcl
+    output_dir, chromo_list, cluster_dicts, sim_dims, generate_tcl
 ):
     fig = plt.figure()
     ax = p3.Axes3D(fig)
@@ -1725,7 +1725,7 @@ def plot_clusters_3D(
         if cluster_ID not in cluster_lookup.keys():
             cluster_lookup[cluster_ID] = []
         else:
-            cluster_lookup[cluster_ID].append(chromophore_list[chromo_ID])
+            cluster_lookup[cluster_ID].append(chromo_list[chromo_ID])
     if generate_tcl:
         write_cluster_tcl_script(output_dir, cluster_lookup, large_cluster)
 
@@ -1835,25 +1835,25 @@ def plot_clusters_3D(
 
 
 def determine_molecule_IDs(
-    CG_to_AAID_master, AA_morphology_dict, parameter_dict, chromophore_list
+    CGtoAAID_list, AA_morphdict, param_dict, chromo_list
 ):
     print("Determining molecule IDs...")
     CGID_to_mol_ID = {}
-    if CG_to_AAID_master is not None:
+    if CGtoAAID_list is not None:
         # Normal operation with a CGMorphology defined (fine-graining was performed)
-        for mol_ID, mol_dict in enumerate(CG_to_AAID_master):
+        for mol_ID, mol_dict in enumerate(CGtoAAID_list):
             for CGID in list(mol_dict.keys()):
                 CGID_to_mol_ID[CGID] = mol_ID
-    elif (len(parameter_dict["CG_site_species"]) == 1) and (
-        ("AA_rigid_body_species" not in parameter_dict)
-        or (len(parameter_dict["AA_rigid_body_species"]) == 0)
+    elif (len(param_dict["CG_site_species"]) == 1) and (
+        ("AA_rigid_body_species" not in param_dict)
+        or (len(param_dict["AA_rigid_body_species"]) == 0)
     ):
         print(
             "Small-molecule system detected, assuming each chromophore is its own molecule..."
         )
         # When CGMorphology doesn't exist, and no rigid body species have been specified, then
         # every chromophore is its own molecule)
-        for index, chromo in enumerate(chromophore_list):
+        for index, chromo in enumerate(chromo_list):
             for CGID in chromo.CGIDs:
                 CGID_to_mol_ID[CGID] = chromo.ID
     else:
@@ -1861,26 +1861,26 @@ def determine_molecule_IDs(
         print(
             "Polymeric system detected, determining molecules based on AA bonds (slow calculation)..."
         )
-        molecule_AAIDs, molecule_lengths = split_molecules(AA_morphology_dict)
+        molecule_AAIDs, molecule_lengths = split_molecules(AA_morphdict)
         for index, molecule_AAID_list in enumerate(molecule_AAIDs):
             for AAID in molecule_AAID_list:
                 CGID_to_mol_ID[AAID] = index
     # Convert to chromo_to_mol_ID
     chromo_to_mol_ID = {}
-    for chromophore in chromophore_list:
+    for chromophore in chromo_list:
         first_CGID = chromophore.CGIDs[0]
         chromo_to_mol_ID[chromophore.ID] = CGID_to_mol_ID[first_CGID]
     return chromo_to_mol_ID
 
 
-def plot_energy_levels(output_dir, chromophore_list, data_dict):
+def plot_energy_levels(output_dir, chromo_list, data_dict):
     HOMO_levels = []
     LUMO_levels = []
     donor_delta_E_ij = []
     acceptor_delta_E_ij = []
     donor_lambda_ij = None
     acceptor_lambda_ij = None
-    for chromo in chromophore_list:
+    for chromo in chromo_list:
         if chromo.species == "donor":
             HOMO_levels.append(chromo.HOMO)
             for neighbour_index, delta_E_ij in enumerate(chromo.neighbours_delta_E):
@@ -1985,12 +1985,12 @@ def plot_delta_E_ij(delta_E_ij, gauss_bins, fit_args, data_type, file_name, lamb
 
 def plot_mixed_hopping_rates(
     output_dir,
-    chromophore_list,
-    parameter_dict,
+    chromo_list,
+    param_dict,
     cluster_dicts,
     chromo_to_mol_ID,
     data_dict,
-    AA_morphology_dict,
+    AA_morphdict,
     cut_off_dict,
 ):
     # Create all the empty lists we need
@@ -2008,12 +2008,12 @@ def plot_mixed_hopping_rates(
     ]:
         property_lists[property_name] = []
     T = 290
-    for chromo in chromophore_list:
+    for chromo in chromo_list:
         mol1ID = chromo_to_mol_ID[chromo.ID]
         for index, T_ij in enumerate(chromo.neighbours_TI):
             if (T_ij is None) or (T_ij == 0):
                 continue
-            chromo2 = chromophore_list[chromo.neighbours[index][0]]
+            chromo2 = chromo_list[chromo.neighbours[index][0]]
             mol2ID = chromo_to_mol_ID[chromo2.ID]
             delta_E = chromo.neighbours_delta_E[index]
             if chromo.sub_species == chromo2.sub_species:
@@ -2026,19 +2026,19 @@ def plot_mixed_hopping_rates(
             prefactor = 1.0
             # Apply the koopmans prefactor
             try:
-                use_koop = parameter_dict["use_koopmans_approximation"]
+                use_koop = param_dict["use_koopmans_approximation"]
                 if use_koop:
-                    prefactor *= parameter_dict["koopmans_hopping_prefactor"]
+                    prefactor *= param_dict["koopmans_hopping_prefactor"]
             except KeyError:
                 pass
             # Apply the simple energetic penalty model
             try:
-                boltz_pen = parameter_dict["use_simple_energetic_penalty"]
+                boltz_pen = param_dict["use_simple_energetic_penalty"]
             except KeyError:
                 boltz_pen = False
             # Apply the distance penalty due to VRH
             try:
-                VRH = parameter_dict["use_VRH"]
+                VRH = param_dict["use_VRH"]
                 if VRH is True:
                     VRH_delocalisation = 1.0 / chromo.VRH_delocalisation
             except KeyError:
@@ -2048,7 +2048,7 @@ def plot_mixed_hopping_rates(
                 neighbour_chromo_posn = chromo2.posn + (
                     np.array(relative_image)
                     * np.array(
-                        [AA_morphology_dict[axis] for axis in ["lx", "ly", "lz"]]
+                        [AA_morphdict[axis] for axis in ["lx", "ly", "lz"]]
                     )
                 )
                 chromophore_separation = (
@@ -2502,7 +2502,7 @@ def calculate_cut_off_from_dist(
 
 
 def plot_TI_hist(
-    chromophore_list, chromo_to_mol_ID, output_dir, TI_cut_donor, TI_cut_acceptor
+    chromo_list, chromo_to_mol_ID, output_dir, TI_cut_donor, TI_cut_acceptor
 ):
     # TI_dist [[DONOR], [ACCEPTOR]]
     TI_dist_intra = [[], []]
@@ -2511,9 +2511,9 @@ def plot_TI_hist(
     labels = ["Intra-mol", "Inter-mol"]
     TI_cuts = [TI_cut_donor, TI_cut_acceptor]
     for material_index, material_type in enumerate(material):
-        for chromo1 in chromophore_list:
+        for chromo1 in chromo_list:
             for neighbour_index, chromo2_details in enumerate(chromo1.neighbours):
-                chromo2 = chromophore_list[chromo2_details[0]]
+                chromo2 = chromo_list[chromo2_details[0]]
                 if (chromo2_details is None) or (chromo1.ID >= chromo2.ID):
                     continue
                 if chromo_to_mol_ID[chromo1.ID] == chromo_to_mol_ID[chromo2.ID]:
@@ -2746,247 +2746,68 @@ def calculate_mobility(
     return mobility, mob_error, r_squared
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-t",
-        "--three_D",
-        action="store_true",
-        required=False,
-        help=(
-            "If present, use matplotlib to plot the 3D graphs (3D network, anisotropy and cluster"
-            " positions. This takes a while (usually a couple of minutes) to plot."
-            " Default = False"
-        ),
-    )
-    parser.add_argument(
-        "-sd",
-        "--sequence_donor",
-        type=lambda s: [float(item) for item in s.split(",")],
-        default=None,
-        required=False,
-        help=(
-            "Create a figure in the current directory that describes the evolution"
-            " of the hole anisotropy/mobility using the specified comma-delimited"
-            " string as the sequence of x values. For instance -s"
-            " '1.5,1.75,2.0,2.25,2.5' will assign each of the 5 following directories"
-            " these x-values when plotting the hole mobility evolution."
-        ),
-    )
-    parser.add_argument(
-        "-sa",
-        "--sequence_acceptor",
-        type=lambda s: [float(item) for item in s.split(",")],
-        default=None,
-        required=False,
-        help=(
-            "Create a figure in the current directory that describes the evolution"
-            " of the electron anisotropy/mobility using the specified comma-delimited"
-            " string as the sequence of x values. For instance -s"
-            " '1.5,1.75,2.0,2.25,2.5' will assign each of the 5 following directories"
-            " these x-values when plotting the electron mobility evolution."
-        ),
-    )
-    parser.add_argument(
-        "-cod",
-        "--o_cut_donor",
-        default=None,
-        required=False,
-        type=str,
-        help=(
-            "Specify the orientation cut-off (in degrees) for the donor material for determining"
-            " which chromophores belong to the same cluster. Chromophores with angle between normal"
-            " vectors > o_cut_donor will be considered as different crystals. Default = None (Note: if all"
-            " cut-offs are specified as None, then the entire morphology will be considered"
-            " as a single crystal)."
-        ),
-    )
-    parser.add_argument(
-        "-coa",
-        "--o_cut_acceptor",
-        default=None,
-        required=False,
-        type=str,
-        help=(
-            "Specify the orientation cut-off (in degrees) for the acceptor material for determining"
-            " which chromophores belong to the same cluster. Chromophores with angle between normal"
-            " vectors > o_cut_acceptor will be considered as different crystals. Default = None (Note: if all"
-            " cut-offs are specified as None, then the entire morphology will be considered"
-            " as a single crystal)."
-        ),
-    )
-    parser.add_argument(
-        "-ctd",
-        "--ti_cut_donor",
-        default=None,
-        required=False,
-        type=str,
-        help=(
-            "Specify the transfer integral cut-off (in eV) for the donor material for determining"
-            " which chromophores belong to the same cluster. Chromophores with hopping transfer"
-            " integral < ti_cut_donor will be considered as different crystals. Default = None (Note: if all"
-            " cut-offs are specified as None, then the entire morphology will be considered"
-            " as a single crystal)."
-        ),
-    )
-    parser.add_argument(
-        "-cta",
-        "--ti_cut_acceptor",
-        default=None,
-        required=False,
-        type=str,
-        help=(
-            "Specify the transfer integral cut-off (in eV) for the acceptor material for determining"
-            " which chromophores belong to the same cluster. Chromophores with hopping transfer"
-            " integral < ti_cut_acceptor will be considered as different crystals. Default = None (Note: if all"
-            " cut-offs are specified as None, then the entire morphology will be considered"
-            " as a single crystal."
-        ),
-    )
-    parser.add_argument(
-        "-cfd",
-        "--freq_cut_donor",
-        default=None,
-        required=False,
-        type=str,
-        help=(
-            "Specify the hopping frequency cut-off for the donor material for determining"
-            " which chromophores belong to the same cluster. Chromophores connected by fewer than"
-            " freq_cut_donor total hops in the KMC simulation will be considered as different crystals."
-            " Use 'auto' to have KMCAnalyse set the cut-off to the final minimum of the frequency distribution."
-            " Default = None (Note: if all cut-offs are specified as None, then the entire morphology will"
-            " be considered as a single crystal."
-        ),
-    )
-    parser.add_argument(
-        "-cfa",
-        "--freq_cut_acceptor",
-        default=None,
-        required=False,
-        type=str,
-        help=(
-            "Specify the hopping frequency cut-off for the acceptor material for determining"
-            " which chromophores belong to the same cluster. Chromophores connected by fewer than"
-            " freq_cut_acceptor total hops in the KMC simulation will be considered as different crystals."
-            " Use 'auto' to have KMCAnalyse set the cut-off to the final minimum of the frequency distribution."
-            " Default = None (Note: if all cut-offs are specified as None, then the entire morphology will"
-            " be considered as a single crystal."
-        ),
-    )
-    parser.add_argument(
-        "-crd",
-        "--sep_cut_donor",
-        default=None,
-        required=False,
-        type=str,
-        help=(
-            "Specify the separation cut-off (in Angstroms) for the donor material for determining"
-            " which chromophores belong to the same cluster. Chromophores with separation"
-            " r > sep_cut_donor will be considered as different crystals. Default = None (Note: if all"
-            " cut-offs are specified as None, then the entire morphology will be considered"
-            " as a single crystal)."
-        ),
-    )
-    parser.add_argument(
-        "-cra",
-        "--sep_cut_acceptor",
-        default=None,
-        required=False,
-        type=str,
-        help=(
-            "Specify the separation cut-off (in Angstroms) for the acceptor material for determining"
-            " which chromophores belong to the same cluster. Chromophores with separation"
-            " r > sep_cut_acceptor will be considered as different crystals. Default = None (Note: if all"
-            " cut-offs are specified as None, then the entire morphology will be considered"
-            " as a single crystal)."
-        ),
-    )
-    parser.add_argument(
-        "-x",
-        "--xlabel",
-        default="Temperature (Arb. U.)",
-        required=False,
-        help=(
-            "Specify an x-label for the combined plot (only used if -s is specified). Default ="
-            ' "Temperature (Arb. U.)"'
-        ),
-    )
-    parser.add_argument(
-        "-b",
-        "--backend",
-        default=None,
-        required=False,
-        help=(
-            "Specify a backend for matplotlib to use when plotting. Default = user defined in the"
-            " .matplotlibrc."
-        ),
-    )
-    parser.add_argument(
-        "-tcl",
-        "--generate_tcl",
-        action="store_true",
-        required=False,
-        help=(
-            "Specify to create a tcl file to use with VMD in which each resid is colored"
-            'based off of its cluster. Only functions when used in conjunction with the "-t"'
-            "flag. Default = False"
-        ),
-    )
-    args, directory_list = parser.parse_known_args()
-
+def main(
+        AA_morphdict,
+        CG_morphdict,
+        CGtoAAID_list,
+        param_dict,
+        chromo_list,
+        carrier_data_list,
+        directory,
+        three_D=False,
+        freq_cut_donor=None,
+        freq_cut_acceptor=None,
+        sep_cut_donor=None,
+        sep_cut_acceptor=None,
+        o_cut_donor=None,
+        o_cut_acceptor=None,
+        ti_cut_donor=None,
+        ti_cut_acceptor=None,
+        generate_tcl=False,
+        sequence_donor=None,
+        sequence_acceptor=None,
+        xlabel="Temperature (Arb. U.)",
+        backend=None,
+        ):
     # Load the matplotlib backend and the plotting subroutines
     global plt
     global p3
-    if args.backend is not None:
+    if backend is not None:
         import matplotlib
 
-        matplotlib.use(args.backend.strip())
+        matplotlib.use(backend.strip())
     import matplotlib.pyplot as plt
 
     try:
         import mpl_toolkits.mplot3d as p3
     except ImportError:
         print(
-            "Could not import 3D plotting engine, calling the plotMolecule3D function will result in an error!"
+            "Could not import 3D plotting engine, calling the plotMolecule3D ",
+            "function will result in an error!"
         )
     hole_mobility_data = []
     hole_anisotropy_data = []
     electron_mobility_data = []
     electron_anisotropy_data = []
-    for directory in directory_list:
-        # Create the figures directory if it doesn't already exist
-        os.makedirs(os.path.join(directory, "figures"), exist_ok=True)
-        # Load in all the required data
-        data_dict = {}
-        print("\n")
-        print("-----===== KMC_ANALYSE =====-----")
-        print(directory)
-        print("-----=======================-----")
-        print("Getting carrier data...")
-        carrier_data = load_KMC_results_pickle(directory)
-        print("Carrier Data obtained")
+    # Create the figures directory if it doesn't already exist
+    os.makedirs(os.path.join(directory, "figures"), exist_ok=True)
+    # Load in all the required data
+    data_dict = {}
+    print("\n")
+    print("-----===== KMC_ANALYSE =====-----")
+    print(directory)
+    print("-----=======================-----")
+    for carrier_data in carrier_data_list:
         # Now need to split up the carrierData into both electrons and holes
-        carrier_data_holes, carrier_data_electrons = split_carriers_by_type(
-            carrier_data
-        )
-        print("Loading chromophore_list...")
-        pickle_location = os.path.join(
-            directory, "code", "".join([os.path.split(directory)[1], ".pickle"])
-        )
-        data = hf.load_pickle(pickle_location)
-        AA_morphology_dict = data[0]
-        if "unwrapped_position" not in AA_morphology_dict.keys():
-            AA_morphology_dict = hf.add_unwrapped_positions(AA_morphology_dict)
-        CG_morphology_dict = data[1]
-        CG_to_AAID_master = data[2]
-        parameter_dict = data[3]
-        chromophore_list = data[4]
-        print("Chromophore_list obtained")
+        (carrier_data_holes,
+         carrier_data_electrons) = split_carriers_by_type(carrier_data)
+        if "unwrapped_position" not in AA_morphdict.keys():
+            AA_morphdict = hf.add_unwrapped_positions(AA_morphdict)
         morphology_shape = np.array(
-            [AA_morphology_dict[axis] for axis in ["lx", "ly", "lz"]]
+            [AA_morphdict[axis] for axis in ["lx", "ly", "lz"]]
         )
         sim_dims = [
-            [-AA_morphology_dict[axis] / 2.0, AA_morphology_dict[axis] / 2.0]
+            [-AA_morphdict[axis] / 2.0, AA_morphdict[axis] / 2.0]
             for axis in ["lx", "ly", "lz"]
         ]
 
@@ -3006,9 +2827,11 @@ def main():
             current_carrier_type = complete_carrier_types[carrier_type_index]
             print("Considering the transport of {:s}...".format(current_carrier_type))
             print("Obtaining mean squared displacements...")
-            carrier_history, times, MSDs, time_standard_errors, MSD_standard_errors = get_carrier_data(
-                carrier_data
-            )
+            (carrier_history,
+             times,
+             MSDs,
+             time_standard_errors,
+             MSD_standard_errors) = get_carrier_data(carrier_data)
             carrier_history_dict[current_carrier_type] = carrier_history
             print("Plotting distribution of carrier displacements")
             plot_displacement_dist(carrier_data, directory, current_carrier_type)
@@ -3024,31 +2847,31 @@ def main():
             print("Plotting hop vector distribution")
             plot_hop_vectors(
                 carrier_data,
-                AA_morphology_dict,
-                chromophore_list,
+                AA_morphdict,
+                chromo_list,
                 directory,
                 sim_dims,
                 current_carrier_type,
-                args.three_D,
+                three_D,
             )
             print("Calculating carrier trajectory anisotropy...")
             anisotropy = plot_anisotropy(
-                carrier_data, directory, sim_dims, current_carrier_type, args.three_D
+                carrier_data, directory, sim_dims, current_carrier_type, three_D
             )
             print("Plotting carrier hop frequency distribution...")
             if current_carrier_type == "hole":
-                args.freq_cut_donor = plot_frequency_dist(
+                freq_cut_donor = plot_frequency_dist(
                     directory,
                     current_carrier_type,
                     carrier_history,
-                    args.freq_cut_donor,
+                    freq_cut_donor,
                 )
             else:
-                args.freq_cut_acceptor = plot_frequency_dist(
+                freq_cut_acceptor = plot_frequency_dist(
                     directory,
                     current_carrier_type,
                     carrier_history,
-                    args.freq_cut_acceptor,
+                    freq_cut_acceptor,
                 )
             print("Plotting carrier net hop frequency distribution...")
             plot_net_frequency_dist(directory, current_carrier_type, carrier_history)
@@ -3056,10 +2879,10 @@ def main():
             plot_discrepancy_frequency_dist(
                 directory, current_carrier_type, carrier_history
             )
-            if (carrier_history is not None) and args.three_D:
+            if (carrier_history is not None) and three_D:
                 print("Determining carrier hopping connections (network graph)...")
                 plot_connections(
-                    chromophore_list,
+                    chromo_list,
                     sim_dims,
                     carrier_history,
                     directory,
@@ -3079,57 +2902,62 @@ def main():
         # Now plot the distributions!
         temp_dir = os.path.join(directory, "figures")
         chromo_to_mol_ID = determine_molecule_IDs(
-            CG_to_AAID_master, AA_morphology_dict, parameter_dict, chromophore_list
+            CGtoAAID_list, AA_morphdict, param_dict, chromo_list
         )
-        data_dict = plot_energy_levels(temp_dir, chromophore_list, data_dict)
+        data_dict = plot_energy_levels(temp_dir, chromo_list, data_dict)
         orientations = get_orientations(
-            chromophore_list,
-            CG_morphology_dict,
-            AA_morphology_dict,
-            CG_to_AAID_master,
-            parameter_dict,
+            chromo_list,
+            CG_morphdict,
+            AA_morphdict,
+            CGtoAAID_list,
+            param_dict,
         )
-        args.sep_cut_donor, args.sep_cut_acceptor = plot_neighbour_hist(
-            chromophore_list,
+        sep_cut_donor, sep_cut_acceptor = plot_neighbour_hist(
+            chromo_list,
             chromo_to_mol_ID,
             morphology_shape,
             temp_dir,
-            args.sep_cut_donor,
-            args.sep_cut_acceptor,
+            sep_cut_donor,
+            sep_cut_acceptor,
         )
-        args.o_cut_donor, args.o_cut_acceptor = plot_orientation_hist(
-            chromophore_list,
+        o_cut_donor, o_cut_acceptor = plot_orientation_hist(
+            chromo_list,
             chromo_to_mol_ID,
             orientations,
             temp_dir,
-            args.o_cut_donor,
-            args.o_cut_acceptor,
+            o_cut_donor,
+            o_cut_acceptor,
         )
-        args.ti_cut_donor, args.ti_cut_acceptor = plot_TI_hist(
-            chromophore_list,
+        ti_cut_donor, ti_cut_acceptor = plot_TI_hist(
+            chromo_list,
             chromo_to_mol_ID,
             temp_dir,
-            args.ti_cut_donor,
-            args.ti_cut_acceptor,
+            ti_cut_donor,
+            ti_cut_acceptor,
         )
         cut_off_dict = create_cut_off_dict(
-            args.sep_cut_donor,
-            args.sep_cut_acceptor,
-            args.o_cut_donor,
-            args.o_cut_acceptor,
-            args.ti_cut_donor,
-            args.ti_cut_acceptor,
-            args.freq_cut_donor,
-            args.freq_cut_acceptor,
+            sep_cut_donor,
+            sep_cut_acceptor,
+            o_cut_donor,
+            o_cut_acceptor,
+            ti_cut_donor,
+            ti_cut_acceptor,
+            freq_cut_donor,
+            freq_cut_acceptor,
         )
         print("Cut-offs specified (value format: [donor, acceptor]) =", cut_off_dict)
-        cluster_dicts, cluster_freqs, clusters_total, clusters_large, clusters_biggest, clusters_cutoffs = get_clusters(
-            chromophore_list,
-            carrier_history_dict,
-            orientations,
-            cut_off_dict,
-            AA_morphology_dict,
-        )
+        (cluster_dicts,
+         cluster_freqs,
+         clusters_total,
+         clusters_large,
+         clusters_biggest,
+         clusters_cutoffs) = get_clusters(
+             chromo_list,
+             carrier_history_dict,
+             orientations,
+             cut_off_dict,
+             AA_morphdict
+             )
         if clusters_total[0] > 0:
             data_dict["donor_clusters_total"] = clusters_total[0]
             data_dict["donor_clusters_large"] = clusters_large[0]
@@ -3152,19 +2980,23 @@ def main():
                 clusters_cutoffs[1][2]
             )
             data_dict["acceptor_clusters_hop_freq_cut"] = repr(clusters_cutoffs[1][3])
-        if args.three_D:
+        if three_D:
             print("Plotting 3D cluster location plot...")
             plot_clusters_3D(
-                temp_dir, chromophore_list, cluster_dicts, sim_dims, args.generate_tcl
+                temp_dir,
+                chromo_list,
+                cluster_dicts,
+                sim_dims,
+                generate_tcl
             )
         data_dict = plot_mixed_hopping_rates(
             temp_dir,
-            chromophore_list,
-            parameter_dict,
+            chromo_list,
+            param_dict,
             cluster_dicts,
             chromo_to_mol_ID,
             data_dict,
-            AA_morphology_dict,
+            AA_morphdict,
             cut_off_dict,
         )
         print("Plotting cluster size distribution...")
@@ -3172,27 +3004,225 @@ def main():
         print("Writing CSV Output File...")
         write_CSV(data_dict, directory)
     print("Plotting Mobility and Anisotropy progressions...")
-    if args.sequence_donor is not None:
+    if sequence_donor is not None:
         if len(hole_anisotropy_data) > 0:
             plot_temperature_progression(
-                args.sequence_donor,
+                sequence_donor,
                 hole_mobility_data,
                 hole_anisotropy_data,
                 "hole",
-                args.xlabel,
+                xlabel,
             )
-    if args.sequence_acceptor is not None:
+    if sequence_acceptor is not None:
         if len(electron_anisotropy_data) > 0:
             plot_temperature_progression(
-                args.sequence_acceptor,
+                sequence_acceptor,
                 electron_mobility_data,
                 electron_anisotropy_data,
                 "electron",
-                args.xlabel,
+                xlabel,
             )
     else:
         print("Skipping plotting mobility evolution.")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-t",
+        "--three_D",
+        action="store_true",
+        required=False,
+        help=(
+            "If present, use matplotlib to plot the 3D graphs (3D network, "
+            "anisotropy and cluster positions. This takes a while (usually a "
+            "couple of minutes) to plot. Default = False"
+        ),
+    )
+    parser.add_argument(
+        "-sd",
+        "--sequence_donor",
+        type=lambda s: [float(item) for item in s.split(",")],
+        default=None,
+        required=False,
+        help=(
+            "Create a figure in the current directory that describes the "
+            "evolution of the hole anisotropy/mobility using the specified "
+            "comma-delimited string as the sequence of x values. For instance "
+            "-s '1.5,1.75,2.0,2.25,2.5' will assign each of the 5 following "
+            "directories these x-values when plotting the hole mobility "
+            "evolution."
+        ),
+    )
+    parser.add_argument(
+        "-sa",
+        "--sequence_acceptor",
+        type=lambda s: [float(item) for item in s.split(",")],
+        default=None,
+        required=False,
+        help=(
+            "Create a figure in the current directory that describes the "
+            "evolution of the electron anisotropy/mobility using the specified "
+            "comma-delimited string as the sequence of x values. For instance "
+            "-s '1.5,1.75,2.0,2.25,2.5' will assign each of the 5 following "
+            "directories these x-values when plotting the electron mobility "
+            "evolution."
+        ),
+    )
+    parser.add_argument(
+        "-cod",
+        "--o_cut_donor",
+        default=None,
+        required=False,
+        type=str,
+        help=(
+            "Specify the orientation cut-off (in degrees) for the donor "
+            "material for determining which chromophores belong to the same "
+            "cluster. Chromophores with angle between normal vectors > "
+            "o_cut_donor will be considered as different crystals. "
+            "Default = None (Note: if all cut-offs are specified as None, then"
+            " the entire morphology will be considered as a single crystal)."
+        ),
+    )
+    parser.add_argument(
+        "-coa",
+        "--o_cut_acceptor",
+        default=None,
+        required=False,
+        type=str,
+        help=(
+            "Specify the orientation cut-off (in degrees) for the acceptor "
+            "material for determining which chromophores belong to the same "
+            "cluster. Chromophores with angle between normal vectors > "
+            "o_cut_acceptor will be considered as different crystals. "
+            "Default = None (Note: if all cut-offs are specified as None, then"
+            " the entire morphology will be considered as a single crystal)."
+        ),
+    )
+    parser.add_argument(
+        "-ctd",
+        "--ti_cut_donor",
+        default=None,
+        required=False,
+        type=str,
+        help=(
+            "Specify the transfer integral cut-off (in eV) for the donor "
+            "material for determining which chromophores belong to the same "
+            "cluster. Chromophores with hopping TI < TI_cut_donor will be "
+            "considered as different crystals. Default = None (Note: if all "
+            "cut-offs are specified as None, then the entire morphology will "
+            "be considered as a single crystal)."
+        ),
+    )
+    parser.add_argument(
+        "-cta",
+        "--ti_cut_acceptor",
+        default=None,
+        required=False,
+        type=str,
+        help=(
+            "Specify the transfer integral cut-off (in eV) for the acceptor "
+            "material for determining which chromophores belong to the same "
+            "cluster. Chromophores with hopping TI < TI_cut_acceptor will be "
+            "considered as different crystals. Default = None (Note: if all "
+            "cut-offs are specified as None, then the entire morphology will "
+            "be considered as a single crystal."
+        ),
+    )
+    parser.add_argument(
+        "-cfd",
+        "--freq_cut_donor",
+        default=None,
+        required=False,
+        type=str,
+        help=(
+            "Specify the hopping frequency cut-off for the donor material for "
+            "determining which chromophores belong to the same cluster. "
+            "Chromophores connected by fewer than freq_cut_donor total hops in "
+            "the KMC simulation will be considered as different crystals. "
+            "Use 'auto' to have KMCAnalyse set the cut-off to the final "
+            "minimum of the frequency distribution. Default = None "
+            "(Note: if all cut-offs are specified as None, then the entire "
+            "morphology will be considered as a single crystal."
+        ),
+    )
+    parser.add_argument(
+        "-cfa",
+        "--freq_cut_acceptor",
+        default=None,
+        required=False,
+        type=str,
+        help=(
+            "Specify the hopping frequency cut-off for the acceptor material "
+            "for determining which chromophores belong to the same cluster. "
+            "Chromophores connected by fewer than freq_cut_acceptor total hops "
+            "in the KMC simulation will be considered as different crystals. "
+            "Use 'auto' to have KMCAnalyse set the cut-off to the final "
+            "minimum of the frequency distribution. Default = None "
+            "(Note: if all cut-offs are specified as None, then the entire "
+            "morphology will be considered as a single crystal."
+        ),
+    )
+    parser.add_argument(
+        "-crd",
+        "--sep_cut_donor",
+        default=None,
+        required=False,
+        type=str,
+        help=(
+            "Specify the separation cut-off (in Angstroms) for the donor "
+            "material for determining which chromophores belong to the same "
+            "cluster. Chromophores with separation r > sep_cut_donor will be "
+            "considered as different crystals. Default = None (Note: if all "
+            "cut-offs are specified as None, then the entire morphology will "
+            "be considered as a single crystal)."
+        ),
+    )
+    parser.add_argument(
+        "-cra",
+        "--sep_cut_acceptor",
+        default=None,
+        required=False,
+        type=str,
+        help=(
+            "Specify the separation cut-off (in Angstroms) for the acceptor "
+            "material for determining which chromophores belong to the same "
+            "cluster. Chromophores with separation r > sep_cut_acceptor will "
+            "be considered as different crystals. Default = None (Note: if all"
+            " cut-offs are specified as None, then the entire morphology will "
+            "be considered as a single crystal)."
+        ),
+    )
+    parser.add_argument(
+        "-x",
+        "--xlabel",
+        default="Temperature (Arb. U.)",
+        required=False,
+        help=(
+            "Specify an x-label for the combined plot (only used if -s is "
+            "specified). Default = 'Temperature (Arb. U.)'"
+        ),
+    )
+    parser.add_argument(
+        "-b",
+        "--backend",
+        default=None,
+        required=False,
+        help=(
+            "Specify a backend for matplotlib to use when plotting. "
+            "Default = user defined in the .matplotlibrc."
+        ),
+    )
+    parser.add_argument(
+        "-tcl",
+        "--generate_tcl",
+        action="store_true",
+        required=False,
+        help=(
+            "Specify to create a tcl file to use with VMD in which each resid "
+            "is colored based off of its cluster. Only functions when used in "
+            "conjunction with the '-t' flag. Default = False"
+        ),
+    )
+    args, directory_list = parser.parse_known_args()
+    main(args, directory_list)
