@@ -19,7 +19,7 @@ class carrier:
     def __init__(
         self,
         chromophore_list,
-        parameter_dict,
+        param_dict,
         chromo_ID,
         lifetime,
         carrier_no,
@@ -30,11 +30,11 @@ class carrier:
         self.image = [0, 0, 0]
         self.initial_chromophore = chromophore_list[chromo_ID]
         self.current_chromophore = chromophore_list[chromo_ID]
-        if parameter_dict["hop_limit"] == 0:
+        if param_dict["hop_limit"] == 0:
             self.hop_limit = None
         else:
-            self.hop_limit = parameter_dict["hop_limit"]
-        self.T = parameter_dict["system_temperature"]
+            self.hop_limit = param_dict["hop_limit"]
+        self.T = param_dict["system_temperature"]
         self.lifetime = lifetime
         self.current_time = 0.0
         self.hole_history_matrix = None
@@ -42,13 +42,13 @@ class carrier:
         self.lambda_ij = self.current_chromophore.reorganisation_energy
         if self.current_chromophore.species.lower() == "donor":
             self.carrier_type = "hole"
-            if parameter_dict["record_carrier_history"] is True:
+            if param_dict["record_carrier_history"] is True:
                 self.hole_history_matrix = lil_matrix(
                     (len(chromophore_list), len(chromophore_list)), dtype=int
                 )
         elif self.current_chromophore.species.lower() == "acceptor":
             self.carrier_type = "electron"
-            if parameter_dict["record_carrier_history"] is True:
+            if param_dict["record_carrier_history"] is True:
                 self.electron_history_matrix = lil_matrix(
                     (len(chromophore_list), len(chromophore_list)), dtype=int
                 )
@@ -63,35 +63,35 @@ class carrier:
         # Set the use of average hop rates to false if the key does not exist in
         # the parameter dict
         try:
-            self.use_average_hop_rates = parameter_dict["use_average_hop_rates"]
-            self.average_intra_hop_rate = parameter_dict["average_intra_hop_rate"]
-            self.average_inter_hop_rate = parameter_dict["average_inter_hop_rate"]
+            self.use_average_hop_rates = param_dict["use_average_hop_rates"]
+            self.average_intra_hop_rate = param_dict["average_intra_hop_rate"]
+            self.average_inter_hop_rate = param_dict["average_inter_hop_rate"]
         except KeyError:
             self.use_average_hop_rates = False
         # Set the use of Koopmans' approximation to false if the key does not
         # exist in the parameter dict
         try:
-            self.use_koopmans_approximation = parameter_dict[
+            self.use_koopmans_approximation = param_dict[
                 "use_koopmans_approximation"
             ]
         except KeyError:
             self.use_koopmans_approximation = False
         # Are we using a simple Boltzmann penalty?
         try:
-            self.use_simple_energetic_penalty = parameter_dict[
+            self.use_simple_energetic_penalty = param_dict[
                 "use_simple_energetic_penalty"
             ]
         except KeyError:
             self.use_simple_energetic_penalty = False
         # Are we applying a distance penalty beyond the transfer integral?
         try:
-            self.use_VRH = parameter_dict["use_VRH"]
+            self.use_VRH = param_dict["use_VRH"]
         except KeyError:
             self.use_VRH = False
         if self.use_VRH is True:
             self.VRH_delocalisation = self.current_chromophore.VRH_delocalisation
         try:
-            self.hopping_prefactor = parameter_dict["hopping_prefactor"]
+            self.hopping_prefactor = param_dict["hopping_prefactor"]
         except KeyError:
             self.hopping_prefactor = 1.0
 
@@ -368,7 +368,7 @@ def main(
     #     hf.write_to_file(log_file, ["Taskset command not found, skipping setting of"
     #                                 " processor affinity..."])
     try:
-        if parameter_dict["use_average_hop_rates"] is True:
+        if param_dict["use_average_hop_rates"] is True:
             # Chosen to split hopping by inter-intra molecular hops, so get
             # molecule data
             mol_ID_dict = split_molecules(AA_morphology_dict, chromophore_list)
@@ -384,7 +384,7 @@ def main(
     # Save the pickle as a list of `saveCarrier' instances that contain the
     # bare minimum
     save_data = initialise_save_data(len(chromophore_list), seed)
-    if parameter_dict["record_carrier_history"] is False:
+    if param_dict["record_carrier_history"] is False:
         save_data["hole_history_matrix"] = None
         save_data["electron_history_matrix"] = None
     t0 = T.time()
@@ -408,7 +408,7 @@ def main(
             # Create the carrier instance
             this_carrier = carrier(
                 chromophore_list,
-                parameter_dict,
+                param_dict,
                 start_chromo_ID,
                 lifetime,
                 carrier_no,
@@ -444,7 +444,7 @@ def main(
             for name in importantData:
                 save_data[name].append(this_carrier.__dict__[name])
             # Update the carrierHistoryMatrix
-            if parameter_dict["record_carrier_history"] is True:
+            if param_dict["record_carrier_history"] is True:
                 if this_carrier.carrier_type.lower() == "hole":
                     save_data["hole_history_matrix"] += this_carrier.hole_history_matrix
                 elif this_carrier.carrier_type.lower() == "electron":
