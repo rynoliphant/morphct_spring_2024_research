@@ -18,18 +18,18 @@ log_file = None
 class carrier:
     def __init__(
         self,
-        chromophore_list,
+        chromo_list,
         param_dict,
         chromo_ID,
         lifetime,
         carrier_no,
-        AA_morphology_dict,
+        AA_morphdict,
         mol_ID_dict,
     ):
         self.ID = carrier_no
         self.image = [0, 0, 0]
-        self.initial_chromophore = chromophore_list[chromo_ID]
-        self.current_chromophore = chromophore_list[chromo_ID]
+        self.initial_chromophore = chromo_list[chromo_ID]
+        self.current_chromophore = chromo_list[chromo_ID]
         if param_dict["hop_limit"] == 0:
             self.hop_limit = None
         else:
@@ -44,19 +44,19 @@ class carrier:
             self.carrier_type = "hole"
             if param_dict["record_carrier_history"] is True:
                 self.hole_history_matrix = lil_matrix(
-                    (len(chromophore_list), len(chromophore_list)), dtype=int
+                    (len(chromo_list), len(chromo_list)), dtype=int
                 )
         elif self.current_chromophore.species.lower() == "acceptor":
             self.carrier_type = "electron"
             if param_dict["record_carrier_history"] is True:
                 self.electron_history_matrix = lil_matrix(
-                    (len(chromophore_list), len(chromophore_list)), dtype=int
+                    (len(chromo_list), len(chromo_list)), dtype=int
                 )
         self.no_hops = 0
         self.sim_dims = [
-            [-AA_morphology_dict["lx"] / 2.0, AA_morphology_dict["lx"] / 2.0],
-            [-AA_morphology_dict["ly"] / 2.0, AA_morphology_dict["ly"] / 2.0],
-            [-AA_morphology_dict["lz"] / 2.0, AA_morphology_dict["lz"] / 2.0],
+            [-AA_morphdict["lx"] / 2.0, AA_morphdict["lx"] / 2.0],
+            [-AA_morphdict["ly"] / 2.0, AA_morphdict["ly"] / 2.0],
+            [-AA_morphdict["lz"] / 2.0, AA_morphdict["lz"] / 2.0],
         ]
         self.displacement = None
         self.mol_ID_dict = mol_ID_dict
@@ -95,7 +95,7 @@ class carrier:
         except KeyError:
             self.hopping_prefactor = 1.0
 
-    def calculate_hop(self, chromophore_list):
+    def calculate_hop(self, chromo_list):
         # Terminate if the next hop would be more than the termination limit
         if self.hop_limit is not None:
             if self.no_hops + 1 > self.hop_limit:
@@ -106,7 +106,7 @@ class carrier:
             # Use the average hop values given in the parameter dict to pick a
             # hop
             for neighbor_details in self.current_chromophore.neighbors:
-                neighbor = chromophore_list[neighbor_details[0]]
+                neighbor = chromo_list[neighbor_details[0]]
                 assert neighbor.ID == neighbor_details[0]
                 if (
                     self.mol_ID_dict[self.current_chromophore.ID]
@@ -138,7 +138,7 @@ class carrier:
                 relative_image = self.current_chromophore.neighbors[neighbor_index][1]
                 # All of the energies are in eV currently, so convert them to J
                 if self.use_VRH is True:
-                    neighbor_chromo = chromophore_list[
+                    neighbor_chromo = chromo_list[
                         self.current_chromophore.neighbors[neighbor_index][0]
                     ]
                     neighbor_chromo_posn = neighbor_chromo.posn + (
@@ -197,7 +197,7 @@ class carrier:
         # singleCoreRunKMC.py
         # Take the quickest hop
         self.perform_hop(
-            chromophore_list[hop_times[0][0]], hop_times[0][1], hop_times[0][2]
+            chromo_list[hop_times[0][0]], hop_times[0][1], hop_times[0][2]
         )
         return 0
 
@@ -291,7 +291,7 @@ def initialise_save_data(n_chromos, seed):
     }
 
 
-def split_molecules(input_dictionary, chromophore_list):
+def split_molecules(input_dictionary, chromo_list):
     # Split the full morphology into individual molecules
     # Create a lookup table `neighbor list' for all connected atoms called
     # {bondedAtoms}
@@ -302,7 +302,7 @@ def split_molecules(input_dictionary, chromophore_list):
         molecule_list = update_molecule(mol_ID, molecule_list, bonded_atoms)
     # Here we have a list of len(atoms) where each index gives the molID
     mol_ID_dict = {}
-    for chromo in chromophore_list:
+    for chromo in chromo_list:
         AAID_to_check = chromo.AAIDs[0]
         mol_ID_dict[chromo.ID] = molecule_list[AAID_to_check]
     return mol_ID_dict
@@ -371,7 +371,7 @@ def main(
         if param_dict["use_average_hop_rates"] is True:
             # Chosen to split hopping by inter-intra molecular hops, so get
             # molecule data
-            mol_ID_dict = split_molecules(AA_morphology_dict, chromophore_list)
+            mol_ID_dict = split_molecules(AA_morphdict, chromo_list)
             # molIDDict is a dictionary where the keys are the chromoIDs, and
             # the vals are the molIDs
         else:
@@ -383,7 +383,7 @@ def main(
     killer = termination_signal()
     # Save the pickle as a list of `saveCarrier' instances that contain the
     # bare minimum
-    save_data = initialise_save_data(len(chromophore_list), seed)
+    save_data = initialise_save_data(len(chromo_list), seed)
     if param_dict["record_carrier_history"] is False:
         save_data["hole_history_matrix"] = None
         save_data["electron_history_matrix"] = None
@@ -395,30 +395,30 @@ def main(
             t1 = T.time()
             # Find a random position to start the carrier in
             while True:
-                start_chromo_ID = np.random.randint(0, len(chromophore_list) - 1)
+                start_chromo_ID = np.random.randint(0, len(chromo_list) - 1)
                 if (carrier_type.lower() == "electron") and (
-                    chromophore_list[start_chromo_ID].species.lower() != "acceptor"
+                    chromo_list[start_chromo_ID].species.lower() != "acceptor"
                 ):
                     continue
                 elif (carrier_type.lower() == "hole") and (
-                    chromophore_list[start_chromo_ID].species.lower() != "donor"
+                    chromo_list[start_chromo_ID].species.lower() != "donor"
                 ):
                     continue
                 break
             # Create the carrier instance
             this_carrier = carrier(
-                chromophore_list,
+                chromo_list,
                 param_dict,
                 start_chromo_ID,
                 lifetime,
                 carrier_no,
-                AA_morphology_dict,
+                AA_morphdict,
                 mol_ID_dict,
             )
             terminate_simulation = False
             while terminate_simulation is False:
                 terminate_simulation = bool(
-                    this_carrier.calculate_hop(chromophore_list)
+                    this_carrier.calculate_hop(chromo_list)
                 )
                 if killer.kill_sent is True:
                     raise terminate("Kill command sent, terminating KMC simulation...")
