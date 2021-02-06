@@ -100,55 +100,55 @@ class carrier:
         if self.hop_limit is not None:
             if self.no_hops + 1 > self.hop_limit:
                 return 1
-        # Determine the hop times to all possible neighbours
+        # Determine the hop times to all possible neighbors
         hop_times = []
         if self.use_average_hop_rates is True:
             # Use the average hop values given in the parameter dict to pick a
             # hop
-            for neighbour_details in self.current_chromophore.neighbours:
-                neighbour = chromophore_list[neighbour_details[0]]
-                assert neighbour.ID == neighbour_details[0]
+            for neighbor_details in self.current_chromophore.neighbors:
+                neighbor = chromophore_list[neighbor_details[0]]
+                assert neighbor.ID == neighbor_details[0]
                 if (
                     self.mol_ID_dict[self.current_chromophore.ID]
-                    == self.mol_ID_dict[neighbour.ID]
+                    == self.mol_ID_dict[neighbor.ID]
                 ):
                     hop_rate = self.average_intra_hop_rate
                 else:
                     hop_rate = self.average_inter_hop_rate
                 hop_time = hf.determine_event_tau(hop_rate)
                 # Keep track of the chromophoreID and the corresponding tau
-                hop_times.append([neighbour.ID, hop_time])
+                hop_times.append([neighbor.ID, hop_time])
         else:
             # Obtain the reorganisation energy in J (from eV in the parameter
             # file)
-            for neighbour_index, transfer_integral in enumerate(
-                self.current_chromophore.neighbours_TI
+            for neighbor_index, transfer_integral in enumerate(
+                self.current_chromophore.neighbors_TI
             ):
                 # Ignore any hops with a NoneType transfer integral (usually
                 # due to an orca error)
                 if transfer_integral is None:
                     continue
-                delta_E_ij = self.current_chromophore.neighbours_delta_E[
-                    neighbour_index
+                delta_E_ij = self.current_chromophore.neighbors_delta_E[
+                    neighbor_index
                 ]
                 # Load the specified hopping prefactor
                 prefactor = self.hopping_prefactor
                 # Get the relative image so we can update the carrier image
                 # after the hop
-                relative_image = self.current_chromophore.neighbours[neighbour_index][1]
+                relative_image = self.current_chromophore.neighbors[neighbor_index][1]
                 # All of the energies are in eV currently, so convert them to J
                 if self.use_VRH is True:
-                    neighbour_chromo = chromophore_list[
-                        self.current_chromophore.neighbours[neighbour_index][0]
+                    neighbor_chromo = chromophore_list[
+                        self.current_chromophore.neighbors[neighbor_index][0]
                     ]
-                    neighbour_chromo_posn = neighbour_chromo.posn + (
+                    neighbor_chromo_posn = neighbor_chromo.posn + (
                         np.array(relative_image)
                         * np.array([axis[1] - axis[0] for axis in self.sim_dims])
                     )
                     # Chromophore separation needs converting to m
                     chromophore_separation = (
                         hf.calculate_separation(
-                            self.current_chromophore.posn, neighbour_chromo_posn
+                            self.current_chromophore.posn, neighbor_chromo_posn
                         )
                         * 1E-10
                     )
@@ -176,7 +176,7 @@ class carrier:
                 # Keep track of the chromophoreID and the corresponding tau
                 hop_times.append(
                     [
-                        self.current_chromophore.neighbours[neighbour_index][0],
+                        self.current_chromophore.neighbors[neighbor_index][0],
                         hop_time,
                         relative_image,
                     ]
@@ -293,11 +293,11 @@ def initialise_save_data(n_chromos, seed):
 
 def split_molecules(input_dictionary, chromophore_list):
     # Split the full morphology into individual molecules
-    # Create a lookup table `neighbour list' for all connected atoms called
+    # Create a lookup table `neighbor list' for all connected atoms called
     # {bondedAtoms}
     bonded_atoms = hf.obtain_bonded_list(input_dictionary["bond"])
     molecule_list = [i for i in range(len(input_dictionary["type"]))]
-    # Recursively add all atoms in the neighbour list to this molecule
+    # Recursively add all atoms in the neighbor list to this molecule
     for mol_ID in range(len(molecule_list)):
         molecule_list = update_molecule(mol_ID, molecule_list, bonded_atoms)
     # Here we have a list of len(atoms) where each index gives the molID
@@ -309,13 +309,13 @@ def split_molecules(input_dictionary, chromophore_list):
 
 
 def update_molecule(atom_ID, molecule_list, bonded_atoms):
-    # Recursively add all neighbours of atom number atomID to this molecule
+    # Recursively add all neighbors of atom number atomID to this molecule
     try:
         for bonded_atom in bonded_atoms[atom_ID]:
             # If the moleculeID of the bonded atom is larger than that of the
             # current one, update the bonded atom's ID to the current one's to
             # put it in this molecule, then iterate through all of the bonded
-            # atom's neighbours
+            # atom's neighbors
             if molecule_list[bonded_atom] > molecule_list[atom_ID]:
                 molecule_list[bonded_atom] = molecule_list[atom_ID]
                 molecule_list = update_molecule(
@@ -324,7 +324,7 @@ def update_molecule(atom_ID, molecule_list, bonded_atoms):
             # If the moleculeID of the current atom is larger than that of the
             # bonded one, update the current atom's ID to the bonded one's to
             # put it in this molecule, then iterate through all of the current
-            # atom's neighbours
+            # atom's neighbors
             elif molecule_list[bonded_atom] < molecule_list[atom_ID]:
                 molecule_list[atom_ID] = molecule_list[bonded_atom]
                 molecule_list = update_molecule(atom_ID, molecule_list, bonded_atoms)
