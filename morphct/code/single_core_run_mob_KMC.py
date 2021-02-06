@@ -261,7 +261,7 @@ def save_pickle(save_data, save_pickle_name):
     with open(save_pickle_name, "wb+") as pickle_file:
         pickle.dump(save_data, pickle_file)
     hf.write_to_file(
-        log_file, ["".join(["Pickle file saved successfully as", save_pickle_name])]
+        log_file, f"Pickle file saved successfully as {save_pickle_name}"
     )
 
 
@@ -350,7 +350,10 @@ def main(
         ):
     global log_file
 
-    log_file = os.path.join(KMC_directory, "KMC_log_{:02d}.log".format(CPU_rank))
+    log_file = os.path.join(
+            KMC_directory, "KMC_log_{:02d}.log".format(CPU_rank)
+            )
+    pickle_filename = os.path.join(KMC_directory, f"kmc_{CPU_rank:02d}.pickle")
     # Reset the log file
     with open(log_file, "wb+") as log_file_handle:
         pass
@@ -358,15 +361,6 @@ def main(
     # Set the affinities for this current process to make sure it's maximising
     # available CPU usage
     current_PID = os.getpid()
-    # try:
-    #     affinity_job = sp.Popen(['taskset', '-pc', str(CPU_rank), str(current_PID)],
-    #                             stdin=sp.PIPE, stdout=sp.PIPE,
-    #                             stderr=sp.PIPE).communicate()
-    #     # hf.write_to_file(log_file, affinity_job[0].split('\n'))
-    #     # hf.write_to_file(log_file, affinity_job[1].split('\n'))
-    # except OSError:
-    #     hf.write_to_file(log_file, ["Taskset command not found, skipping setting of"
-    #                                 " processor affinity..."])
     try:
         if param_dict["use_average_hop_rates"] is True:
             # Chosen to split hopping by inter-intra molecular hops, so get
@@ -391,16 +385,16 @@ def main(
     save_time = T.time()
     save_slot = "slot1"
     try:
-        for job_number, [carrier_no, lifetime, carrier_type] in enumerate(jobs_to_run):
+        for job_number, [carrier_no, lifetime, ctype] in enumerate(jobs_to_run):
             t1 = T.time()
             # Find a random position to start the carrier in
             while True:
                 start_chromo_ID = np.random.randint(0, len(chromo_list) - 1)
-                if (carrier_type.lower() == "electron") and (
+                if (ctype.lower() == "electron") and (
                     chromo_list[start_chromo_ID].species.lower() != "acceptor"
                 ):
                     continue
-                elif (carrier_type.lower() == "hole") and (
+                elif (ctype.lower() == "hole") and (
                     chromo_list[start_chromo_ID].species.lower() != "donor"
                 ):
                     continue
@@ -418,10 +412,12 @@ def main(
             terminate_simulation = False
             while terminate_simulation is False:
                 terminate_simulation = bool(
-                    this_carrier.calculate_hop(chromo_list)
+                        this_carrier.calculate_hop(chromo_list)
                 )
                 if killer.kill_sent is True:
-                    raise terminate("Kill command sent, terminating KMC simulation...")
+                    raise terminate(
+                            "Kill command sent, terminating KMC simulation..."
+                            )
             # Now the carrier has finished hopping, let's calculate its vitals
             initial_position = this_carrier.initial_chromophore.posn
             final_position = this_carrier.current_chromophore.posn
@@ -446,11 +442,13 @@ def main(
             # Update the carrierHistoryMatrix
             if param_dict["record_carrier_history"] is True:
                 if this_carrier.carrier_type.lower() == "hole":
-                    save_data["hole_history_matrix"] += this_carrier.hole_history_matrix
+                    save_data["hole_history_matrix"] += (
+                            this_carrier.hole_history_matrix
+                            )
                 elif this_carrier.carrier_type.lower() == "electron":
-                    save_data[
-                        "electron_history_matrix"
-                    ] += this_carrier.electron_history_matrix
+                    save_data["electron_history_matrix"] += (
+                            this_carrier.electron_history_matrix
+                            )
             # Then add in the initial and final positions
             save_data["initial_position"].append(initial_position)
             save_data["final_position"].append(final_position)
@@ -467,47 +465,37 @@ def main(
             else:
                 elapsed_time /= 86400.0
                 time_units = "days."
-            hf.write_to_file(
-                log_file,
-                [
-                    "".join(
-                        [
-                            "{0:s} hopped {1:d} times, over {2:.2e} seconds, into image ".format(
-                                this_carrier.carrier_type.capitalize(),
-                                this_carrier.no_hops,
-                                this_carrier.current_time,
-                            ),
-                            repr(this_carrier.image),
-                            ", for a displacement of {0:.2f}, in {1:.2f} wall-clock {2:s}".format(
-                                this_carrier.displacement, elapsed_time, time_units
-                            ),
-                        ]
-                    )
-                ],
-            )
+
+            write_lines = [
+                    "{0:s} hopped {1:d} times, over {2:.2e} seconds, ".format(
+                        this_carrier.carrier_type.capitalize(),
+                        this_carrier.no_hops,
+                        this_carrier.current_time,
+                        ),
+                    f"into image {repr(this_carrier.image)}",
+                    ", for a displacement of {0:.2f}, in {1:.2f} ".format(
+                        this_carrier.displacement,
+                        elapsed_time
+                        ),
+                    f"wall-clock {time_units:s}"
+                    ]
+            hf.write_to_file(log_file, ["".join(write_lines)])
             # Save the pickle file every hour
             if (t2 - save_time) > 3600:
                 print(
-                    "Completed {0:d} of {1:d} jobs. Making checkpoint at {2:3d}%".format(
+                    "Completed {0:d}/{1:d} jobs. Checkpoint at {2:3d}%".format(
                         job_number,
                         len(jobs_to_run),
-                        int(np.round((job_number + 1) / float(len(jobs_to_run)) * 100)),
+                        np.round((job_number + 1) / len(jobs_to_run) * 100)
                     )
                 )
-                hf.write_to_file(
-                    log_file,
-                    [
-                        "Completed {0:d} of {1:d} jobs. Making checkpoint at {2:3d}%".format(
-                            job_number,
-                            len(jobs_to_run),
-                            int(np.round((job_number + 1) / float(len(jobs_to_run)) * 100)),
+                write_str= "Completed {0:d}/{1:d} jobs {2:3d}%".format(
+                        job_number,
+                        len(jobs_to_run),
+                        round((job_number + 1) / len(jobs_to_run) * 100)
                         )
-                    ],
-                )
-                save_pickle(
-                    save_data,
-                    pickle_file_name.replace("data", "".join([save_slot, "_results"])),
-                )
+                hf.write_to_file(log_file, [write_str])
+                save_pickle(save_data, pickle_filename)
                 if save_slot.lower() == "slot1":
                     save_slot = "slot2"
                 elif save_slot.lower() == "slot2":
@@ -520,7 +508,7 @@ def main(
         hf.write_to_file(
             log_file, ["Saving the pickle file cleanly before termination..."]
         )
-        save_pickle(save_data, pickle_file_name.replace("data", "terminated_results"))
+        save_pickle(save_data, pickle_filename)
         print("Pickle saved! Exiting Python...")
         exit()
     t3 = T.time()
@@ -538,10 +526,13 @@ def main(
         time_units = "days."
     hf.write_to_file(
         log_file,
-        ["All jobs completed in {0:.2f} {1:s}".format(elapsed_time, time_units)],
+        ["All jobs completed in {0:.2f}{1:s}".format(elapsed_time, time_units)],
     )
-    hf.write_to_file(log_file, ["Saving the pickle file cleanly before termination..."])
-    save_pickle(save_data, pickle_file_name.replace("data", "results"))
+    hf.write_to_file(
+            log_file,
+            ["Saving the pickle file cleanly before termination..."]
+            )
+    save_pickle(save_data, pickle_filename)
     hf.write_to_file(log_file, ["Exiting normally..."])
 
 
