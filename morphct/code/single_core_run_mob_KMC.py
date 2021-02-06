@@ -261,7 +261,7 @@ def save_pickle(save_data, save_pickle_name):
     with open(save_pickle_name, "wb+") as pickle_file:
         pickle.dump(save_data, pickle_file)
     hf.write_to_file(
-        log_file, f"Pickle file saved successfully as {save_pickle_name}"
+        log_file, [f"Pickle file saved successfully as {save_pickle_name}"]
     )
 
 
@@ -284,7 +284,9 @@ def initialise_save_data(n_chromos, seed):
         "no_hops": [],
         "displacement": [],
         "hole_history_matrix": lil_matrix((n_chromos, n_chromos), dtype=int),
-        "electron_history_matrix": lil_matrix((n_chromos, n_chromos), dtype=int),
+        "electron_history_matrix": lil_matrix(
+            (n_chromos, n_chromos), dtype=int
+            ),
         "initial_position": [],
         "final_position": [],
         "carrier_type": [],
@@ -357,7 +359,7 @@ def main(
     # Reset the log file
     with open(log_file, "wb+") as log_file_handle:
         pass
-    hf.write_to_file(log_file, f"Found {len(jobs_to_run):d} jobs to run")
+    hf.write_to_file(log_file, [f"Found {len(jobs_to_run):d} jobs to run"])
     # Set the affinities for this current process to make sure it's maximising
     # available CPU usage
     current_PID = os.getpid()
@@ -534,6 +536,7 @@ def main(
             )
     save_pickle(save_data, pickle_filename)
     hf.write_to_file(log_file, ["Exiting normally..."])
+    return save_data
 
 
 if __name__ == "__main__":
