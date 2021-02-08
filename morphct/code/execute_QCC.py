@@ -8,14 +8,14 @@ from morphct.definitions import PROJECT_ROOT, SINGLE_ORCA_RUN_FILE
 from morphct.code import helper_functions as hf
 
 
-def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
+def create_inputs(chromo_list, AA_morphdict, param_dict):
     # Singles first
-    for chromophore in chromophore_list:
+    for chromophore in chromo_list:
         # Include the molecule terminating units on the required atoms of the
         # chromophore
         if chromophore.terminate is True:
             terminating_group_positions = terminate_monomers(
-                chromophore, parameter_dict, AA_morphology_dict
+                chromophore, param_dict, AA_morphdict
             )
             terminating_group_images = [chromophore.image] * len(
                 terminating_group_positions
@@ -24,22 +24,22 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
             terminating_group_positions = None
             terminating_group_images = None
         chromophore.qcc_input = write_qcc_inp(
-            AA_morphology_dict,
+            AA_morphdict,
             chromophore.AAIDs,
             [chromophore.image] * len(chromophore.AAIDs),
             terminating_group_positions,
             terminating_group_images,
         )
     # Determine how many pairs there are first:
-    n_pairs = np.sum([len(chromo.neighbors) for chromo in chromophore_list])
+    n_pairs = np.sum([len(chromo.neighbors) for chromo in chromo_list])
     print(f"There are {n_pairs // 2} total neighbor pairs to consider.")
     # /2 because the forwards and backwards hops are identical
     # Then consider each chromophore against every other chromophore
     qcc_pairs = []
-    for chromo1 in chromophore_list:
+    for chromo1 in chromo_list:
         neighbors_ID = [neighbor[0] for neighbor in chromo1.neighbors]
         neighbors_image = [neighbor[1] for neighbor in chromo1.neighbors]
-        for chromo2 in chromophore_list:
+        for chromo2 in chromo_list:
             # Skip if chromo2 is not one of chromo1's neighbors
             # Also skip if chromo2's ID is < chromo1's ID to prevent
             # duplicates
@@ -64,10 +64,10 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
             # termination or neither
             if chromo1.terminate is True:
                 term_group_pos1 = terminate_monomers(
-                    chromo1, parameter_dict, AA_morphology_dict
+                    chromo1, param_dict, AA_morphdict
                 )
                 term_group_pos2 = terminate_monomers(
-                    chromo2, parameter_dict, AA_morphology_dict
+                    chromo2, param_dict, AA_morphdict
                 )
                 # We don't want to add the terminating hydrogens for adjacent
                 # monomers, so remove the ones that are within a particular
@@ -83,7 +83,7 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
                 ]
                 # Write the dimer input file
                 qcc_input = write_qcc_inp(
-                    AA_morphology_dict,
+                    AA_morphdict,
                     AAIDs,
                     images,
                     term_group_pos1 + term_group_pos2,
@@ -92,7 +92,7 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
             else:
                 # Write the dimer input file
                 qcc_input = write_qcc_inp(
-                    AA_morphology_dict,
+                    AA_morphdict,
                     AAIDs,
                     images,
                     None,
@@ -183,18 +183,18 @@ def write_qcc_inp(
     qcc_input = " ".join(qcc_lines)
     return qcc_input
 
-def terminate_monomers(chromophore, parameter_dict, AA_morphology_dict):
+def terminate_monomers(chromophore, param_dict, AA_morphdict):
     # No CG morphology, so we will use the UA -> AA code definition of which
     # atoms need to have hydrogens added to them.
     new_hydrogen_positions = []
     for atom_index_chromo, atom_index_morph in enumerate(chromophore.AAIDs):
-        atom_type = AA_morphology_dict["type"][atom_index_morph]
-        if atom_type not in parameter_dict["molecule_terminating_connections"].keys():
+        atom_type = AA_morphdict["type"][atom_index_morph]
+        if atom_type not in param_dict["molecule_terminating_connections"].keys():
             continue
         bonded_AAIDs = []
         # Iterate over all termination connections defined for this atomType (in
         # case we are trying to do something mega complicated)
-        for connection_info in parameter_dict["molecule_terminating_connections"][
+        for connection_info in param_dict["molecule_terminating_connections"][
             atom_type
         ]:
             for [bond_name, AAID1, AAID2] in chromophore.bonds:
@@ -207,9 +207,9 @@ def terminate_monomers(chromophore, parameter_dict, AA_morphology_dict):
             if len(bonded_AAIDs) != connection_info[0]:
                 continue
             new_hydrogen_positions += hf.get_terminating_positions(
-                AA_morphology_dict["unwrapped_position"][atom_index_morph],
+                AA_morphdict["unwrapped_position"][atom_index_morph],
                 [
-                    AA_morphology_dict["unwrapped_position"][bonded_AAID]
+                    AA_morphdict["unwrapped_position"][bonded_AAID]
                     for bonded_AAID in bonded_AAIDs
                 ],
                 1,
@@ -219,7 +219,7 @@ def terminate_monomers(chromophore, parameter_dict, AA_morphology_dict):
     return new_hydrogen_positions
 
 
-def get_qcc_jobs(input_dir, parameter_dict, proc_IDs):
+def get_qcc_jobs(input_dir, param_dict, proc_IDs):
     # First delete any previous log files as we're about to start again with the
     # ZINDO/S calculations
     try:
@@ -237,7 +237,7 @@ def get_qcc_jobs(input_dir, parameter_dict, proc_IDs):
         if file_name[-4:] == ".inp":
             qcc_files_to_run.append(os.path.join(input_dir, "pair", file_name))
     qcc_files_to_run.sort()
-    if parameter_dict["overwrite_current_data"] is False:
+    if param_dict["overwrite_current_data"] is False:
         # Do not run any jobs that have already have an output file (and so have
         # at least started to
         # run if not finished)
@@ -271,21 +271,21 @@ def get_qcc_jobs(input_dir, parameter_dict, proc_IDs):
 
 
 def main(
-    AA_morphology_dict,
-    CG_morphology_dict,
-    CG_to_AAID_master,
-    parameter_dict,
-    chromophore_list,
+    AA_morphdict,
+    CG_morphdict,
+    CGtoAAID_list,
+    param_dict,
+    chromo_list,
 ):
     # Get the random seed now for all the child processes
-    if parameter_dict["random_seed_override"] is not None:
-        np.random.seed(parameter_dict["random_seed_override"])
-    create_input_files(chromophore_list, AA_morphology_dict, parameter_dict)
+    if param_dict["random_seed_override"] is not None:
+        np.random.seed(param_dict["random_seed_override"])
+    create_inputs(chromo_list, AA_morphdict, param_dict)
     input_dir = os.path.join(
-        parameter_dict["output_orca_directory"], "chromophores", "input_orca"
+        param_dict["output_orca_directory"], "chromophores", "input_orca"
     )
-    proc_IDs = parameter_dict["proc_IDs"]
-    jobs_list = get_qcc_jobs(input_dir, parameter_dict, proc_IDs)
+    proc_IDs = param_dict["proc_IDs"]
+    jobs_list = get_qcc_jobs(input_dir, param_dict, proc_IDs)
     # Shuffle the jobsList to spread it out over the cores
     np.random.shuffle(jobs_list)
     number_of_inputs = sum([len(qcc_files_to_run) for qcc_files_to_run in jobs_list])
@@ -307,11 +307,11 @@ def main(
                     [
                         "python",
                         SINGLE_ORCA_RUN_FILE,
-                        parameter_dict["output_orca_directory"],
-                        parameter_dict["output_morphology_directory"],
+                        param_dict["output_orca_directory"],
+                        param_dict["output_morphology_directory"],
                         str(CPU_rank),
-                        str(int(parameter_dict["overwrite_current_data"])),
-                        str(int(parameter_dict["remove_orca_inputs"])),
+                        str(int(param_dict["overwrite_current_data"])),
+                        str(int(param_dict["remove_orca_inputs"])),
                     ]
                 )
             )
@@ -320,32 +320,13 @@ def main(
         # Delete the job pickle
         os.system(" ".join(["rm", pickle_name]))
     return (
-        AA_morphology_dict,
-        CG_morphology_dict,
-        CG_to_AAID_master,
-        parameter_dict,
-        chromophore_list,
+        AA_morphdict,
+        CG_morphdict,
+        CGtoAAID_list,
+        param_dict,
+        chromo_list,
     )
 
 
 if __name__ == "__main__":
-    try:
-        pickle_file = sys.argv[1]
-    except:
-        print(
-            "Please specify the pickle file to load to continue the pipeline from this"
-            " point."
-        )
-    pickle_data = hf.load_pickle(pickle_file)
-    AA_morphology_dict = pickle_data[0]
-    CG_morphology_dict = pickle_data[1]
-    CG_to_AAID_master = pickle_data[2]
-    parameter_dict = pickle_data[3]
-    chromophore_list = pickle_data[4]
-    main(
-        AA_morphology_dict,
-        CG_morphology_dict,
-        CG_to_AAID_master,
-        parameter_dict,
-        chromophore_list,
-    )
+    pass
