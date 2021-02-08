@@ -348,6 +348,7 @@ def main(
         chromo_list,
         CPU_rank,
         seed,
+        send_end,
         overwrite=False
         ):
     global log_file
@@ -536,7 +537,7 @@ def main(
             )
     save_pickle(save_data, pickle_filename)
     hf.write_to_file(log_file, ["Exiting normally..."])
-    return save_data
+    send_end.send(save_data)
 
 
 if __name__ == "__main__":
