@@ -4,8 +4,22 @@ import sys
 import multiprocessing as mp
 import numpy as np
 import subprocess as sp
+
+import pyscf
+from pyscf.semiempirical import MINDO3
+
 from morphct.definitions import PROJECT_ROOT, SINGLE_ORCA_RUN_FILE
 from morphct.code import helper_functions as hf
+
+
+def get_homolumo(molstr, verbose=False, tol=1e-6):
+    mol = pyscf.M(atom=molstr)
+    mf = MINDO3(mol).run(verbose=verbose, conv_tol=tol)
+    occ = mf.get_occ()
+    i_lumo = np.argmax(occ<1)
+    energies = mf.mo_energy[i_lumo-2:i_lumo+2]
+    energies *= 27.2114 # convert Eh to eV
+    return energies
 
 
 def create_inputs(chromo_list, AA_morphdict, param_dict):
@@ -138,11 +152,7 @@ def write_qcc_inp(
     lxyz = [AA_morphdict["lx"], AA_morphdict["ly"], AA_morphdict["lz"]]
     # Format the atom positions ready for qcc
     for index, atom_ID in enumerate(AAIDs):
-        # Cut the integer bit off the atomType. To allow atom types like Ca and
-        # Br, where the atom is defined by one upper- and one lower-case letter,
-        # use iter to return the first element of the list of upper case letters'
-        # and the first element of the list of lower case letters in the atom
-        # type (if any) and .join them together.
+        # Cut the integer bit and capitalize to allow two letter atom types
         atom_type = AA_morphdict["type"][atom_ID].strip(numstr).capitalize()
         all_atom_types.append(atom_type)
         # Add in the correct periodic images to the position
@@ -150,10 +160,9 @@ def write_qcc_inp(
             AA_morphdict["unwrapped_position"][atom_ID]
             + np.array([(images[index][i] * lxyz[i]) for i in range(3)])
         )
-    # Now add in the terminating Hydrogens if necessary
+    # Now add in the terminating hydrogens if necessary
     if terminal_pos is not None:
         for ind, pos in enumerate(terminal_pos):
-            # Cut the integer bit off the atomType
             all_atom_types.append("H")
             # Add in the correct periodic images to the position
             all_positions.append(
@@ -189,7 +198,9 @@ def terminate_monomers(chromophore, param_dict, AA_morphdict):
     new_hydrogen_positions = []
     for atom_index_chromo, atom_index_morph in enumerate(chromophore.AAIDs):
         atom_type = AA_morphdict["type"][atom_index_morph]
-        if atom_type not in param_dict["molecule_terminating_connections"].keys():
+        if atom_type not in param_dict[
+                "molecule_terminating_connections"
+                ].keys():
             continue
         bonded_AAIDs = []
         # Iterate over all termination connections defined for this atomType (in
@@ -220,15 +231,7 @@ def terminate_monomers(chromophore, param_dict, AA_morphdict):
 
 
 def get_qcc_jobs(input_dir, param_dict, proc_IDs):
-    # First delete any previous log files as we're about to start again with the
-    # ZINDO/S calculations
-    try:
-        os.unlink(input_dir.replace("/input_orca", "/*.log"))
-    except OSError:
-        pass
     # Obtain a list of files to run
-    single_qcc_file_list = os.listdir(os.path.join(input_dir, "single"))
-    pair_qcc_file_list = os.listdir(os.path.join(input_dir, "pair"))
     qcc_files_to_run = []
     for file_name in single_qcc_file_list:
         if file_name[-4:] == ".inp":
