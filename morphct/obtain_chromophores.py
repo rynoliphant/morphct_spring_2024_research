@@ -5,7 +5,7 @@ import sys
 import numpy as np
 from collections import defaultdict
 from scipy.spatial import Delaunay
-from morphct.code import helper_functions as hf
+from morphct import helper_functions as hf
 
 
 class chromophore:

@@ -8,8 +8,7 @@ import subprocess as sp
 import pyscf
 from pyscf.semiempirical import MINDO3
 
-from morphct.definitions import PROJECT_ROOT, SINGLE_ORCA_RUN_FILE
-from morphct.code import helper_functions as hf
+from morphct import helper_functions as hf
 
 
 def get_homolumo(molstr, verbose=False, tol=1e-6):

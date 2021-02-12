@@ -1,6 +1,6 @@
 import argparse
 import numpy as np
-from morphct.code import helper_functions as hf
+from morphct import helper_functions as hf
 from morphct.utils import fix_images as fi
 
 

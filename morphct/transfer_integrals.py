@@ -5,7 +5,7 @@ import shutil
 import sys
 import numpy as np
 import subprocess as sp
-from morphct.code import helper_functions as hf
+from morphct import helper_functions as hf
 
 
 def calculate_delta_E(chromo1, chromo2):

@@ -5,7 +5,6 @@ import pickle
 import sys
 import multiprocessing as mp
 import numpy as np
-from morphct.definitions import PROJECT_ROOT
 
 
 try:

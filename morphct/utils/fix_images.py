@@ -1,7 +1,7 @@
 import os
 import sys
 import numpy as np
-from morphct.code import helper_functions as hf
+from morphct import helper_functions as hf
 
 
 def check_bonds(morphology, bond_dict):

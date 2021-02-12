@@ -1,4 +1,4 @@
-from morphct.code import helper_functions as hf
+from morphct import helper_functions as hf
 from collections import OrderedDict
 import numpy as np
 import glob

@@ -6,7 +6,7 @@ import traceback
 import numpy as np
 import time as T
 from scipy.sparse import lil_matrix
-from morphct.code import helper_functions as hf
+from morphct import helper_functions as hf
 
 
 elementary_charge = 1.60217657E-19  # C

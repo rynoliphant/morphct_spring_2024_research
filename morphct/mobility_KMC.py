@@ -5,8 +5,7 @@ import pickle
 import sys
 import numpy as np
 import subprocess as sp
-from morphct.definitions import PROJECT_ROOT, SINGLE_RUN_MOB_KMC_FILE
-from morphct.code import helper_functions as hf
+from morphct import helper_functions as hf
 
 
 def main(

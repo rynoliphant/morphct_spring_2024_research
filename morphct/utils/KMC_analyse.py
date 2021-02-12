@@ -6,7 +6,7 @@ import csv
 import numpy as np
 from scipy.optimize import curve_fit
 import scipy.stats
-from morphct.code import helper_functions as hf
+from morphct import helper_functions as hf
 from collections import OrderedDict
 import shutil
 import glob
