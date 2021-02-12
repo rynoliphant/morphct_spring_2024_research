@@ -28,7 +28,11 @@ def convert_out(file_name):
     # Remove final lines and ORCA formatting
     pop_list = []
     for line_no, line in enumerate(xyz_data):
-        if ("*" in line) or ("end" in line) or (len(line.split("> ")[-1][:-1]) < 3):
+        if (
+            ("*" in line)
+            or ("end" in line)
+            or (len(line.split("> ")[-1][:-1]) < 3)
+        ):
             pop_list.append(line_no)
         else:
             xyz_data[line_no] = line.split("> ")[-1]

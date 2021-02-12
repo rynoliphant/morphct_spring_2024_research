@@ -119,7 +119,9 @@ def plot_data(data, title, output_file, xlabel="Order-Semi-Disorder"):
         os.makedirs("output")
     fig, ax = plt.subplots()
 
-    x_data, y_data, y_error = zip(*sorted(zip(data[:, 0], data[:, 1], data[:, 2])))
+    x_data, y_data, y_error = zip(
+        *sorted(zip(data[:, 0], data[:, 1], data[:, 2]))
+    )
     # Plot the errors
     plt.errorbar(x_data, y_data, yerr=y_error, c="r")
     plt.yscale("log")
@@ -164,8 +166,13 @@ def save_mean_data_to_csv(data, prop):
 
 
 def calc_mean_and_dev(
-    combine_list, sequence, x_label, output_file, prop="hole_mobility",
-    cutoff_prop=None, cutoff_val=0
+    combine_list,
+    sequence,
+    x_label,
+    output_file,
+    prop="hole_mobility",
+    cutoff_prop=None,
+    cutoff_val=0,
 ):
     """
     Iterate through the dictionary of lists to get the
@@ -201,13 +208,24 @@ def calc_mean_and_dev(
         # Check the cutoff in each case
         if cutoff_prop is not None:
             p_data = []
-            for val_index, cutoff_check in enumerate(total_data[key][cutoff_prop]):
+            for val_index, cutoff_check in enumerate(
+                total_data[key][cutoff_prop]
+            ):
                 if float(cutoff_check) >= float(cutoff_val):
                     p_data.append(total_data[key][prop][val_index])
                 else:
                     print(
-                        "Skipping", prop, "result from", key, val_index, "as",
-                        cutoff_prop, "value =", cutoff_check, "which is <", cutoff_val
+                        "Skipping",
+                        prop,
+                        "result from",
+                        key,
+                        val_index,
+                        "as",
+                        cutoff_prop,
+                        "value =",
+                        cutoff_check,
+                        "which is <",
+                        cutoff_val,
                     )
         else:
             p_data = total_data[key][prop]
@@ -219,7 +237,9 @@ def calc_mean_and_dev(
             property_list.append([float(key), p_mean, p_error])
         # Else convert to number based on its index in the list
         except:
-            property_list.append([sequence[keys_list.index(key)], p_mean, p_error])
+            property_list.append(
+                [sequence[keys_list.index(key)], p_mean, p_error]
+            )
     # Plot the data
     plot_data(np.array(property_list), prop, output_file, xlabel=x_label)
     # Write all the data into a single file
@@ -261,7 +281,10 @@ def main():
         ),
     )
     parser.add_argument(
-        "-x", "--x_label", required=True, help=("""Set an x label for the final plot""")
+        "-x",
+        "--x_label",
+        required=True,
+        help=("""Set an x label for the final plot"""),
     )
     parser.add_argument(
         "-p",
@@ -322,8 +345,13 @@ def main():
         print(key, val)
 
     calc_mean_and_dev(
-        args.combine, args.sequence, args.x_label, args.output_file, prop=args.prop,
-        cutoff_prop=args.cutoff_prop, cutoff_val=args.cutoff_val,
+        args.combine,
+        args.sequence,
+        args.x_label,
+        args.output_file,
+        prop=args.prop,
+        cutoff_prop=args.cutoff_prop,
+        cutoff_val=args.cutoff_val,
     )
 
 

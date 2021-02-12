@@ -9,9 +9,9 @@ from scipy.sparse import lil_matrix
 from morphct import helper_functions as hf
 
 
-elementary_charge = 1.60217657E-19  # C
-k_B = 1.3806488E-23  # m^{2} kg s^{-2} K^{-1}
-hbar = 1.05457173E-34  # m^{2} kg s^{-1}
+elementary_charge = 1.60217657e-19  # C
+k_B = 1.3806488e-23  # m^{2} kg s^{-2} K^{-1}
+hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 log_file = None
 
 
@@ -89,7 +89,9 @@ class carrier:
         except KeyError:
             self.use_VRH = False
         if self.use_VRH is True:
-            self.VRH_delocalisation = self.current_chromophore.VRH_delocalisation
+            self.VRH_delocalisation = (
+                self.current_chromophore.VRH_delocalisation
+            )
         try:
             self.hopping_prefactor = param_dict["hopping_prefactor"]
         except KeyError:
@@ -135,7 +137,9 @@ class carrier:
                 prefactor = self.hopping_prefactor
                 # Get the relative image so we can update the carrier image
                 # after the hop
-                relative_image = self.current_chromophore.neighbors[neighbor_index][1]
+                relative_image = self.current_chromophore.neighbours[
+                    neighbour_index
+                ][1]
                 # All of the energies are in eV currently, so convert them to J
                 if self.use_VRH is True:
                     neighbor_chromo = chromo_list[
@@ -143,14 +147,16 @@ class carrier:
                     ]
                     neighbor_chromo_posn = neighbor_chromo.posn + (
                         np.array(relative_image)
-                        * np.array([axis[1] - axis[0] for axis in self.sim_dims])
+                        * np.array(
+                            [axis[1] - axis[0] for axis in self.sim_dims]
+                        )
                     )
                     # Chromophore separation needs converting to m
                     chromophore_separation = (
                         hf.calculate_separation(
                             self.current_chromophore.posn, neighbor_chromo_posn
                         )
-                        * 1E-10
+                        * 1e-10
                     )
                     hop_rate = hf.calculate_carrier_hop_rate(
                         self.lambda_ij * elementary_charge,
@@ -185,7 +191,7 @@ class carrier:
         hop_times.sort(key=lambda x: x[1])
         if len(hop_times) == 0:
             # We are trapped here, so create a dummy hop with time 1E99
-            hop_times = [[self.current_chromophore.ID, 1E99, [0, 0, 0]]]
+            hop_times = [[self.current_chromophore.ID, 1e99, [0, 0, 0]]]
         # As long as we're not limiting by the number of hops:
         if self.hop_limit is None:
             # Ensure that the next hop does not put the carrier over its
@@ -265,7 +271,9 @@ def save_pickle(save_data, save_pickle_name):
     )
 
 
-def calculate_displacement(initial_position, final_position, final_image, sim_dims):
+def calculate_displacement(
+    initial_position, final_position, final_image, sim_dims
+):
     displacement = [0.0, 0.0, 0.0]
     for axis in range(3):
         displacement[axis] = (final_position[axis] - initial_position[axis]) + (
@@ -286,7 +294,7 @@ def initialise_save_data(n_chromos, seed):
         "hole_history_matrix": lil_matrix((n_chromos, n_chromos), dtype=int),
         "electron_history_matrix": lil_matrix(
             (n_chromos, n_chromos), dtype=int
-            ),
+        ),
         "initial_position": [],
         "final_position": [],
         "carrier_type": [],
@@ -329,7 +337,9 @@ def update_molecule(atom_ID, molecule_list, bonded_atoms):
             # atom's neighbors
             elif molecule_list[bonded_atom] < molecule_list[atom_ID]:
                 molecule_list[atom_ID] = molecule_list[bonded_atom]
-                molecule_list = update_molecule(atom_ID, molecule_list, bonded_atoms)
+                molecule_list = update_molecule(
+                    atom_ID, molecule_list, bonded_atoms
+                )
             # Else: both the current and the bonded atom are already known to
             # be in this molecule, so we don't have to do anything else.
     except KeyError:
@@ -419,8 +429,8 @@ def main(
                 )
                 if killer.kill_sent is True:
                     raise terminate(
-                            "Kill command sent, terminating KMC simulation..."
-                            )
+                        "Kill command sent, terminating KMC simulation..."
+                    )
             # Now the carrier has finished hopping, let's calculate its vitals
             initial_position = this_carrier.initial_chromophore.posn
             final_position = this_carrier.current_chromophore.posn
@@ -445,9 +455,9 @@ def main(
             # Update the carrierHistoryMatrix
             if param_dict["record_carrier_history"] is True:
                 if this_carrier.carrier_type.lower() == "hole":
-                    save_data["hole_history_matrix"] += (
-                            this_carrier.hole_history_matrix
-                            )
+                    save_data[
+                        "hole_history_matrix"
+                    ] += this_carrier.hole_history_matrix
                 elif this_carrier.carrier_type.lower() == "electron":
                     save_data["electron_history_matrix"] += (
                             this_carrier.electron_history_matrix

@@ -36,7 +36,9 @@ def zero_out_images(morphology):
 
 
 def get_bond_dict(morphology):
-    bond_dict = {atom_id: [] for atom_id, atom_type in enumerate(morphology["type"])}
+    bond_dict = {
+        atom_id: [] for atom_id, atom_type in enumerate(morphology["type"])
+    }
     for bond in morphology["bond"]:
         bond_dict[bond[1]].append(bond[2])
         bond_dict[bond[2]].append(bond[1])
@@ -75,7 +77,9 @@ def main():
         file_directory, split_file_name = os.path.split(file_name)
         hf.write_morphology_xml(
             morphology,
-            os.path.join(file_directory, "".join(["image_fix_", split_file_name])),
+            os.path.join(
+                file_directory, "".join(["image_fix_", split_file_name])
+            ),
         )
 
 

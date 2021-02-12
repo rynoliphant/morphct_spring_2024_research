@@ -20,9 +20,9 @@ from scipy.sparse import lil_matrix
 
 plt = None
 p3 = None
-elementary_charge = 1.60217657E-19  # C
-kB = 1.3806488E-23  # m^{2} kg s^{-2} K^{-1}
-hbar = 1.05457173E-34  # m^{2} kg s^{-1}
+elementary_charge = 1.60217657e-19  # C
+kB = 1.3806488e-23  # m^{2} kg s^{-2} K^{-1}
+hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 temperature = 290  # K
 
 
@@ -32,7 +32,9 @@ def load_KMC_results_pickle(directory):
         with open(KMC_pickle, "rb") as pickle_file:
             carrier_data = pickle.load(pickle_file)
     except FileNotFoundError:
-        print("No final KMC_results.pickle found. Creating it from incomplete parts...")
+        print(
+            "No final KMC_results.pickle found. Creating it from incomplete parts..."
+        )
         create_results_pickle(directory)
         with open(KMC_pickle, "rb") as pickle_file:
             carrier_data = pickle.load(pickle_file)
@@ -66,7 +68,9 @@ def split_carriers_by_type(carrier_data):
         for list_var in list_variables:
             carrier_data_holes[list_var] = []
             carrier_data_electrons[list_var] = []
-            for carrier_index, charge_type in enumerate(carrier_data["carrier_type"]):
+            for carrier_index, charge_type in enumerate(
+                carrier_data["carrier_type"]
+            ):
                 if charge_type.lower() == "hole":
                     carrier_data_holes[list_var].append(
                         carrier_data[list_var][carrier_index]
@@ -82,12 +86,16 @@ def split_carriers_by_type(carrier_data):
         )
         try:
             carrier_data_holes = {
-                "carrier_history_matrix": carrier_data["carrier_history_matrix"],
+                "carrier_history_matrix": carrier_data[
+                    "carrier_history_matrix"
+                ],
                 "seed": carrier_data["seed"],
             }
         except KeyError:
             carrier_data_holes = {
-                "carrier_history_matrix": carrier_data["carrier_history_matrix"],
+                "carrier_history_matrix": carrier_data[
+                    "carrier_history_matrix"
+                ],
                 "seed": 0,
             }
         carrier_data_electrons = None
@@ -126,12 +134,14 @@ def get_carrier_data(carrier_data):
         carrier_key = str(carrier_data["lifetime"][carrier_index])
         if carrier_key not in squared_disps:
             squared_disps[carrier_key] = [
-                (carrier_data["displacement"][carrier_index] * 1E-10) ** 2
+                (carrier_data["displacement"][carrier_index] * 1e-10) ** 2
             ]  # A -> m
-            actual_times[carrier_key] = [carrier_data["current_time"][carrier_index]]
+            actual_times[carrier_key] = [
+                carrier_data["current_time"][carrier_index]
+            ]
         else:
             squared_disps[carrier_key].append(
-                (carrier_data["displacement"][carrier_index] * 1E-10) ** 2
+                (carrier_data["displacement"][carrier_index] * 1e-10) ** 2
             )  # A -> m
             actual_times[carrier_key].append(
                 carrier_data["current_time"][carrier_index]
@@ -157,7 +167,13 @@ def get_carrier_data(carrier_data):
         )
         MSDs.append(np.average(disps))
         MSD_standard_errors.append(np.std(disps) / len(disps))
-    return carrier_history, times, MSDs, time_standard_errors, MSD_standard_errors
+    return (
+        carrier_history,
+        times,
+        MSDs,
+        time_standard_errors,
+        MSD_standard_errors,
+    )
 
 
 def plot_displacement_dist(carrier_data, directory, carrier_type):
@@ -191,7 +207,11 @@ def plot_cluster_size_dist(cluster_freqs, directory):
             return
         plt.figure()
         try:
-            plt.hist(sizes, bins=np.logspace(0, np.ceil(np.max(sizes)), 20), color="b")
+            plt.hist(
+                sizes,
+                bins=np.logspace(0, np.ceil(np.max(sizes)), 20),
+                color="b",
+            )
             plt.xscale("log")
             # tick_labels = np.arange(0, np.ceil(np.max(sizes)) + 1, 1)
             plt.xlim([0, 10 ** (np.ceil(np.max(sizes)))])
@@ -231,9 +251,11 @@ def create_array_for_plot_connections(chromo_list, carrier_history, sim_dims):
     # Iterate through the chromo_list
     for i, chromo in enumerate(chromo_list):
         # Iterate through the neighbors of the chromophore
-        for neighbor in zip(chromo.neighbours):
+        for neighbor in zip(chromo.neighbors):
             index = neighbor[0][0]  # index of the neighbor
-            image = neighbor[0][1]  # check to see if they are in the same rel image
+            image = neighbor[0][
+                1
+            ]  # check to see if they are in the same rel image
             # Only consider one direction.
             if i < index:
                 # Get the vector between the two chromophores.
@@ -243,7 +265,11 @@ def create_array_for_plot_connections(chromo_list, carrier_history, sim_dims):
                 else:
                     vector = chromo_list[index].posn - chromo.posn
                     vector += image * np.array(
-                        [2 * sim_dims[0][1], 2 * sim_dims[1][1], 2 * sim_dims[2][1]]
+                        [
+                            2 * sim_dims[0][1],
+                            2 * sim_dims[1][1],
+                            2 * sim_dims[2][1],
+                        ]
                     )
 
                 # Get the net number of times the path was travelled.
@@ -254,10 +280,16 @@ def create_array_for_plot_connections(chromo_list, carrier_history, sim_dims):
                 # Append the array if the net times travelled is greater than 0
                 if times_travelled > 0:
                     datum = np.hstack(
-                        (chromo.posn, vector, np.array([np.log10(times_travelled)]))
+                        (
+                            chromo.posn,
+                            vector,
+                            np.array([np.log10(times_travelled)]),
+                        )
                     )
                     connections_array = np.vstack((connections_array, datum))
-    return connections_array[1:]  # Return the array excluding the zeros first line.
+    return connections_array[
+        1:
+    ]  # Return the array excluding the zeros first line.
 
 
 def plot_connections(
@@ -286,7 +318,9 @@ def plot_connections(
 
     # Set up the color bar.
     colour_map = plt.get_cmap("inferno")
-    c_norm = matplotlib.colors.Normalize(vmin=np.floor(vmin), vmax=np.ceil(vmax))
+    c_norm = matplotlib.colors.Normalize(
+        vmin=np.floor(vmin), vmax=np.ceil(vmax)
+    )
     scalar_map = cmx.ScalarMappable(norm=c_norm, cmap=colour_map)
     hop_colors = scalar_map.to_rgba(connections_array[:, 6])
 
@@ -404,7 +438,9 @@ def plot_connections(
     cbar = plt.colorbar(
         scalar_map, ticks=tick_location, shrink=0.8, aspect=20
     )  # , fraction=0.046, pad=0.04)
-    cbar.ax.set_yticklabels([r"10$^{{{}}}$".format(int(x)) for x in tick_location])
+    cbar.ax.set_yticklabels(
+        [r"10$^{{{}}}$".format(int(x)) for x in tick_location]
+    )
 
     # Name and save the figure.
     carrier_types = ["hole", "electron"]
@@ -419,9 +455,13 @@ def plot_connections(
     )
     # plt.title(figure_title, y=1.1)
     # 01 for donor 3d network, 02 for acceptor 3d network
-    file_name = "".join(["{:02}_3d_".format(1 + carrier_index), carrier_type, ".png"])
+    file_name = "".join(
+        ["{:02}_3d_".format(1 + carrier_index), carrier_type, ".png"]
+    )
     plt.savefig(
-        os.path.join(directory, "figures", file_name), bbox_inches="tight", dpi=300
+        os.path.join(directory, "figures", file_name),
+        bbox_inches="tight",
+        dpi=300,
     )
     print("Figure saved as", os.path.join(directory, "figures", file_name))
 
@@ -452,19 +492,31 @@ def calc_mobility(lin_fit_X, lin_fit_Y, av_time_error, av_MSD_error):
 
 
 def plot_MSD(
-    times, MSDs, time_standard_errors, MSD_standard_errors, directory, carrier_type
+    times,
+    MSDs,
+    time_standard_errors,
+    MSD_standard_errors,
+    directory,
+    carrier_type,
 ):
     carrier_types = ["hole", "electron"]
     fit_X = np.linspace(np.min(times), np.max(times), 100)
-    gradient, intercept, r_val, p_val, std_err = scipy.stats.linregress(times, MSDs)
+    gradient, intercept, r_val, p_val, std_err = scipy.stats.linregress(
+        times, MSDs
+    )
     print("Standard Error", std_err)
     print("Fitting r_val =", r_val)
     fit_Y = (fit_X * gradient) + intercept
     mobility, mob_error = calc_mobility(
-        fit_X, fit_Y, np.average(time_standard_errors), np.average(MSD_standard_errors)
+        fit_X,
+        fit_Y,
+        np.average(time_standard_errors),
+        np.average(MSD_standard_errors),
     )
     plt.plot(times, MSDs)
-    plt.errorbar(times, MSDs, xerr=time_standard_errors, yerr=MSD_standard_errors)
+    plt.errorbar(
+        times, MSDs, xerr=time_standard_errors, yerr=MSD_standard_errors
+    )
     plt.plot(fit_X, fit_Y, "r")
     plt.xlabel("Time (s)")
     plt.ylabel(r"MSD (m$^{2}$)")
@@ -490,7 +542,9 @@ def plot_MSD(
     plt.clf()
     print("Figure saved as", os.path.join(directory, "figures", file_name))
     plt.semilogx(times, MSDs)
-    plt.errorbar(times, MSDs, xerr=time_standard_errors, yerr=MSD_standard_errors)
+    plt.errorbar(
+        times, MSDs, xerr=time_standard_errors, yerr=MSD_standard_errors
+    )
     plt.semilogx(fit_X, fit_Y, "r")
     plt.xlabel("Time (s)")
     plt.ylabel(r"MSD (m$^{2}$)")
@@ -507,7 +561,9 @@ def plot_MSD(
     # 20 for hole semilog MSD, 21 for electron semilog MSD
     file_name = "".join(
         [
-            "{:02}_semi_log_MSD_".format(20 + carrier_types.index(carrier_type)),
+            "{:02}_semi_log_MSD_".format(
+                20 + carrier_types.index(carrier_type)
+            ),
             carrier_type,
             ".png",
         ]
@@ -516,7 +572,9 @@ def plot_MSD(
     plt.clf()
     print("Figure saved as", os.path.join(directory, "figures", file_name))
     plt.plot(times, MSDs)
-    plt.errorbar(times, MSDs, xerr=time_standard_errors, yerr=MSD_standard_errors)
+    plt.errorbar(
+        times, MSDs, xerr=time_standard_errors, yerr=MSD_standard_errors
+    )
     plt.plot(fit_X, fit_Y, "r")
     plt.xlabel("Time (s)")
     plt.ylabel(r"MSD (m$^{2}$)")
@@ -613,13 +671,17 @@ def plot_hop_vectors(
         # Calculate rotation matrix required to map this onto baseline (0, 0, 1)
         rotation_matrix = hf.get_rotation_matrix(normal, np.array([0, 0, 1]))
         # Find the vector from chromo1 to chromo2 (using the correct rleative image)
-        neighbour_IDs = [
-            neighbour[0] for neighbour in chromo_list[chromo1].neighbours
+        neighbor_IDs = [
+            neighbor[0] for neighbor in chromo_list[chromo1].neighbors
         ]
-        nlist_index = neighbour_IDs.index(chromo2)
-        relative_image = np.array(chromo_list[chromo1].neighbours[nlist_index][1])
-        chromo1_posn = chromo_list[chromo1].posn
-        chromo2_posn = chromo_list[chromo2].posn + (relative_image * box_lengths)
+        nlist_index = neighbor_IDs.index(chromo2)
+        relative_image = np.array(
+            chromophore_list[chromo1].neighbors[nlist_index][1]
+        )
+        chromo1_posn = chromophore_list[chromo1].posn
+        chromo2_posn = chromophore_list[chromo2].posn + (
+            relative_image * box_lengths
+        )
         unrotated_hop_vector = chromo2_posn - chromo1_posn
         # Apply rotation matrix to chromo1-chromo2 vector
         hop_vector = np.matmul(rotation_matrix, unrotated_hop_vector)
@@ -641,7 +703,9 @@ def plot_hop_vectors(
 
     # Set up the color bar.
     colour_map = plt.get_cmap("Greys")
-    c_norm = matplotlib.colors.Normalize(vmin=np.floor(I_min), vmax=np.ceil(I_max))
+    c_norm = matplotlib.colors.Normalize(
+        vmin=np.floor(I_min), vmax=np.ceil(I_max)
+    )
     scalar_map = cmx.ScalarMappable(norm=c_norm, cmap=colour_map)
     hop_colors = scalar_map.to_rgba(intensities)
 
@@ -679,7 +743,9 @@ def plot_hop_vectors(
     cbar = plt.colorbar(
         scalar_map, ticks=tick_location, shrink=0.8, aspect=20
     )  # , fraction=0.046, pad=0.04)
-    cbar.ax.set_yticklabels([r"10$^{{{}}}$".format(int(x)) for x in tick_location])
+    cbar.ax.set_yticklabels(
+        [r"10$^{{{}}}$".format(int(x)) for x in tick_location]
+    )
 
     # Name and save the figure.
     carrier_types = ["hole", "electron"]
@@ -698,19 +764,23 @@ def plot_hop_vectors(
         ["{:02}_hop_vec_".format(36 + carrier_index), carrier_type, ".png"]
     )
     plt.savefig(
-        os.path.join(directory, "figures", file_name), bbox_inches="tight", dpi=300
+        os.path.join(directory, "figures", file_name),
+        bbox_inches="tight",
+        dpi=300,
     )
     print("Figure saved as", os.path.join(directory, "figures", file_name))
     plt.clf()
 
 
-def plot_anisotropy(carrier_data, directory, sim_dims, carrier_type, plot3D_graphs):
+def plot_anisotropy(
+    carrier_data, directory, sim_dims, carrier_type, plot3D_graphs
+):
     sim_extent = [value[1] - value[0] for value in sim_dims]
     xvals = []
     yvals = []
     zvals = []
     colours = []
-    sim_dims_nm = list(map(list, np.array(sim_dims) / 10.))
+    sim_dims_nm = list(map(list, np.array(sim_dims) / 10.0))
     # Get the indices of the carriers that travelled the furthest
     if len(carrier_data["final_position"]) <= 1000:
         carrier_indices_to_use = range(len(carrier_data["final_position"]))
@@ -726,20 +796,20 @@ def plot_anisotropy(carrier_data, directory, sim_dims, carrier_type, plot3D_grap
             position[axis] = (
                 carrier_data["image"][carrier_no][axis] * sim_extent[axis]
             ) + posn[axis]
-        xvals.append(position[0] / 10.)
-        yvals.append(position[1] / 10.)
-        zvals.append(position[2] / 10.)
+        xvals.append(position[0] / 10.0)
+        yvals.append(position[1] / 10.0)
+        zvals.append(position[2] / 10.0)
         colours.append("b")
     anisotropy = calculate_anisotropy(xvals, yvals, zvals)
     if not plot3D_graphs:
         return anisotropy
-    print("----------====================----------")
+    print("----------------------------------------")
     print(
         "{0:s} charge transport anisotropy calculated as {1:f}".format(
             carrier_type.capitalize(), anisotropy
         )
     )
-    print("----------====================----------")
+    print("----------------------------------------")
     # Reduce number of plot markers
     fig = plt.gcf()
     ax = p3.Axes3D(fig)
@@ -937,10 +1007,10 @@ def split_molecules(input_dictionary):
     # Split the full morphology into individual molecules
     molecule_AAIDs = []
     molecule_lengths = []
-    # Create a lookup table `neighbour list' for all connected atoms called {bondedAtoms}
+    # Create a lookup table `neighbor list' for all connected atoms called {bondedAtoms}
     bonded_atoms = hf.obtain_bonded_list(input_dictionary["bond"])
     molecule_list = [i for i in range(len(input_dictionary["type"]))]
-    # Recursively add all atoms in the neighbour list to this molecule
+    # Recursively add all atoms in the neighbor list to this molecule
     for mol_ID in range(len(molecule_list)):
         molecule_list = update_molecule(mol_ID, molecule_list, bonded_atoms)
     # Create a dictionary of the molecule data
@@ -958,12 +1028,12 @@ def split_molecules(input_dictionary):
 
 
 def update_molecule(atom_ID, molecule_list, bonded_atoms):
-    # Recursively add all neighbours of atom number atomID to this molecule
+    # Recursively add all neighbors of atom number atomID to this molecule
     try:
         for bonded_atom in bonded_atoms[atom_ID]:
             # If the moleculeID of the bonded atom is larger than that of the current one,
             # update the bonded atom's ID to the current one's to put it in this molecule,
-            # then iterate through all of the bonded atom's neighbours
+            # then iterate through all of the bonded atom's neighbors
             if molecule_list[bonded_atom] > molecule_list[atom_ID]:
                 molecule_list[bonded_atom] = molecule_list[atom_ID]
                 molecule_list = update_molecule(
@@ -971,10 +1041,12 @@ def update_molecule(atom_ID, molecule_list, bonded_atoms):
                 )
             # If the moleculeID of the current atom is larger than that of the bonded one,
             # update the current atom's ID to the bonded one's to put it in this molecule,
-            # then iterate through all of the current atom's neighbours
+            # then iterate through all of the current atom's neighbors
             elif molecule_list[bonded_atom] < molecule_list[atom_ID]:
                 molecule_list[atom_ID] = molecule_list[bonded_atom]
-                molecule_list = update_molecule(atom_ID, molecule_list, bonded_atoms)
+                molecule_list = update_molecule(
+                    atom_ID, molecule_list, bonded_atoms
+                )
             # Else: both the current and the bonded atom are already known to be in this
             # molecule, so we don't have to do anything else.
     except KeyError:
@@ -983,7 +1055,7 @@ def update_molecule(atom_ID, molecule_list, bonded_atoms):
     return molecule_list
 
 
-def plot_neighbour_hist(
+def plot_neighbor_hist(
     chromo_list,
     chromo_to_mol_ID,
     morphology_shape,
@@ -994,7 +1066,7 @@ def plot_neighbour_hist(
     separation_dist_donor = []
     separation_dist_acceptor = []
     for chromo1 in chromo_list:
-        for chromo2_details in chromo1.neighbours:
+        for chromo2_details in chromo1.neighbors:
             if (chromo2_details is None) or (
                 chromo1.ID == chromo_list[chromo2_details[0]].ID
             ):
@@ -1006,7 +1078,10 @@ def plot_neighbour_hist(
             separation = np.linalg.norm(
                 (
                     np.array(chromo2.posn)
-                    + (np.array(chromo2_details[1]) * np.array(morphology_shape))
+                    + (
+                        np.array(chromo2_details[1])
+                        * np.array(morphology_shape)
+                    )
                 )
                 - chromo1.posn
             )
@@ -1046,12 +1121,14 @@ def plot_neighbour_hist(
                 sep_cuts[material_type],
             )
             plt.axvline(float(sep_cuts[material_type]), c="k")
-        plt.xlabel("".join([material[material_type].capitalize(), r" r$_{i,j}$ (\AA)"]))
+        plt.xlabel(
+            "".join([material[material_type].capitalize(), r" r$_{i,j}$ (\AA)"])
+        )
         plt.ylabel("Frequency (Arb. U.)")
-        # 04 for donor neighbour hist, 05 for acceptor neighbour hist
+        # 04 for donor neighbor hist, 05 for acceptor neighbor hist
         file_name = "".join(
             [
-                "{:02}_neighbour_hist_".format(4 + material_type),
+                "{:02}_neighbor_hist_".format(4 + material_type),
                 material[material_type].lower(),
                 ".png",
             ]
@@ -1059,7 +1136,8 @@ def plot_neighbour_hist(
         plt.savefig(os.path.join(output_dir, file_name), dpi=300)
         plt.close()
         print(
-            "Neighbour histogram figure saved as", os.path.join(output_dir, file_name)
+            "Neighbour histogram figure saved as",
+            os.path.join(output_dir, file_name),
         )
         plt.close()
     return sep_cuts[0], sep_cuts[1]
@@ -1077,7 +1155,7 @@ def plot_orientation_hist(
     orientation_dist_acceptor = []
     for chromo1 in chromo_list:
         orientation_1 = orientations_data[chromo1.ID]
-        for chromo2_details in chromo1.neighbours:
+        for chromo2_details in chromo1.neighbors:
             if (chromo2_details is None) or (
                 chromo1.ID == chromo_list[chromo2_details[0]].ID
             ):
@@ -1126,12 +1204,14 @@ def plot_orientation_hist(
             )
             plt.axvline(float(o_cuts[material_type]), c="k")
             plt.xlabel(
-                r"{:s} Orientations (Deg)".format(material[material_type].capitalize())
+                r"{:s} Orientations (Deg)".format(
+                    material[material_type].capitalize()
+                )
             )
         plt.xlim([0, 90])
         plt.xticks(np.arange(0, 91, 15))
         plt.ylabel("Frequency (Arb. U.)")
-        # 34 for donor neighbour hist, 35 for acceptor neighbour hist
+        # 34 for donor neighbor hist, 35 for acceptor neighbor hist
         file_name = "".join(
             [
                 "{:02}_orientation_hist_".format(34 + material_type),
@@ -1142,7 +1222,8 @@ def plot_orientation_hist(
         plt.savefig(os.path.join(output_dir, file_name), dpi=300)
         plt.close()
         print(
-            "Orientation histogram figure saved as", os.path.join(output_dir, file_name)
+            "Orientation histogram figure saved as",
+            os.path.join(output_dir, file_name),
         )
     return o_cuts[0], o_cuts[1]
 
@@ -1211,7 +1292,9 @@ def get_clusters(
             continue
         print("Obtaining orientations of each chromophore...")
         if cut_off_dict["orientation"][type_index] is not None:
-            orientations = [orientations_all[chromo.ID] for chromo in material_chromos]
+            orientations = [
+                orientations_all[chromo.ID] for chromo in material_chromos
+            ]
         else:
             orientations = None
         print("Calculating clusters...")
@@ -1236,7 +1319,9 @@ def get_clusters(
         species_psi[type_index] = sum(
             [pair for key, pair in cluster_freq.items() if pair > 6]
         ) / len(clusters_list)
-        clusters_total[type_index] = len([key for key, val in cluster_freq.items()])
+        clusters_total[type_index] = len(
+            [key for key, val in cluster_freq.items()]
+        )
         clusters_large[type_index] = len(
             [key for key, val in cluster_freq.items() if val > 6]
         )
@@ -1245,9 +1330,12 @@ def get_clusters(
             cut_off_dict[cut_type][type_index]
             for cut_type in ["separation", "orientation", "TI", "freq"]
         ]
-        print("----------====================----------")
+        print("----------------------------------------")
         print(
-            "Detected", clusters_total[type_index], material_type, "clusters in total."
+            "Detected",
+            clusters_total[type_index],
+            material_type,
+            "clusters in total.",
         )
         print(
             "Detected",
@@ -1255,13 +1343,17 @@ def get_clusters(
             material_type,
             "clusters with size > 6.",
         )
-        print("Largest cluster size =", clusters_biggest[type_index], "chromophores.")
+        print(
+            "Largest cluster size =",
+            clusters_biggest[type_index],
+            "chromophores.",
+        )
         print(
             'Ratio of chromophores in "large" clusters (psi): {:.3f}'.format(
                 species_psi[type_index]
             )
         )
-        print("----------====================----------")
+        print("----------------------------==----------")
         cluster_dicts[type_index] = cluster_dict
         cluster_freqs[type_index] = cluster_freq
     return (
@@ -1325,63 +1417,65 @@ def get_n_list(
         dotcut = np.cos(o_cut * np.pi / 180)
     n_list = []
     for chromophore in chromo_list:
-        n_list.append([neighbour[0] for neighbour in chromophore.neighbours])
+        n_list.append([neighbor[0] for neighbor in chromophore.neighbors])
     printing = False
-    for chromo_ID, neighbours in enumerate(n_list):
+    for chromo_ID, neighbors in enumerate(n_list):
         # if chromo_ID == 47:
         #    printing = True
         remove_list = []
         if printing is True:
             print(chromo_ID)
-            print(chromo_list[chromo_ID].neighbours, "==", n_list[chromo_ID])
-            print(chromo_list[chromo_ID].neighbours_TI)
-        for neighbour_index, neighbour_ID in enumerate(neighbours):
-            ti = chromo_list[chromo_ID].neighbours_TI[neighbour_index]
+            print(chromo_list[chromo_ID].neighbors, "==", n_list[chromo_ID])
+            print(chromo_list[chromo_ID].neighbors_TI)
+        for neighbor_index, neighbor_ID in enumerate(neighbors):
+            ti = chromo_list[chromo_ID].neighbors_TI[neighbor_index]
             if printing is True:
                 print(
-                    "Examining neighbour_index",
-                    neighbour_index,
+                    "Examining neighbor_index",
+                    neighbor_index,
                     "which corresponds to chromo ID",
-                    neighbour_ID,
+                    neighbor_ID,
                 )
                 print("TI =", ti)
             # Check the cut_offs in order of ease of calculation
             # Simple TI lookup first
             if (ti_cut is not None) and (ti < ti_cut):
-                remove_list.append(neighbour_ID)
+                remove_list.append(neighbor_ID)
                 if printing is True:
-                    print("Adding", neighbour_ID, "to remove list as TI =", ti)
+                    print("Adding", neighbor_ID, "to remove list as TI =", ti)
                     print("Remove list now =", remove_list)
                 continue
             # Simple hop_frequency cutoff lookup in the carrier history
             if (freq_cut is not None) and (carrier_history is not None):
                 total_hops = (
-                    carrier_history[chromo_ID, neighbour_ID]
-                    + carrier_history[neighbour_ID, chromo_ID]
+                    carrier_history[chromo_ID, neighbor_ID]
+                    + carrier_history[neighbor_ID, chromo_ID]
                 )
                 if total_hops < freq_cut:
-                    remove_list.append(neighbour_ID)
+                    remove_list.append(neighbor_ID)
                     continue
             # Separation cutoff lookup in the separations matrix depends on the chromo_IDs
             if (r_cut is not None) and (separations is not None):
-                if chromo_ID < neighbour_ID:
-                    separation = separations[chromo_ID, neighbour_ID]
+                if chromo_ID < neighbor_ID:
+                    separation = separations[chromo_ID, neighbor_ID]
                 else:
-                    separation = separations[neighbour_ID, chromo_ID]
+                    separation = separations[neighbor_ID, chromo_ID]
                 if separation > r_cut:
-                    remove_list.append(neighbour_ID)
+                    remove_list.append(neighbor_ID)
                     continue
             # Some dot product manipulation is required to get the orientations right
             if (o_cut is not None) and (orientations is not None):
                 chromo1_normal = orientations[chromo_ID]
-                chromo2_normal = orientations[neighbour_ID]
-                rotation_dot_product = abs(np.dot(chromo1_normal, chromo2_normal))
+                chromo2_normal = orientations[neighbor_ID]
+                rotation_dot_product = abs(
+                    np.dot(chromo1_normal, chromo2_normal)
+                )
                 if rotation_dot_product < dotcut:
-                    remove_list.append(neighbour_ID)
+                    remove_list.append(neighbor_ID)
                     if printing is True:
                         print(
                             "Adding",
-                            neighbour_ID,
+                            neighbor_ID,
                             "to remove list as dot_product =",
                             rotation_dot_product,
                         )
@@ -1390,10 +1484,10 @@ def get_n_list(
         if printing is True:
             print("n_list_current =", n_list[chromo_ID])
             print("Remove list final =", remove_list)
-        for neighbour_ID in remove_list:
-            n_list[chromo_ID].remove(neighbour_ID)
+        for neighbor_ID in remove_list:
+            n_list[chromo_ID].remove(neighbor_ID)
             ##Will need to check the reverse remove.
-            # n_list[neighbour_ID].remove(chromo_ID)
+            # n_list[neighbor_ID].remove(chromo_ID)
         if printing is True:
             print("n_list_after remove =", n_list[chromo_ID])
             exit()
@@ -1475,20 +1569,20 @@ def get_separations(chromo_list, AA_morphdict):
         (len(chromo_list), len(chromo_list)), dtype=float
     )
     for chromo_ID, chromophore in enumerate(chromo_list):
-        for neighbour_details in chromophore.neighbours:
-            neighbour_ID = neighbour_details[0]
-            relative_image = neighbour_details[1]
-            neighbour_posn = chromo_list[neighbour_ID].posn
-            neighbour_chromo_posn = neighbour_posn + (
+        for neighbor_details in chromophore.neighbors:
+            neighbor_ID = neighbor_details[0]
+            relative_image = neighbor_details[1]
+            neighbor_posn = chromo_list[neighbor_ID].posn
+            neighbor_chromo_posn = neighbor_posn + (
                 np.array(relative_image) * np.array(box_dims)
             )
             separation = hf.calculate_separation(
-                chromophore.posn, neighbour_chromo_posn
+                chromophore.posn, neighbor_chromo_posn
             )
-            if chromo_ID < neighbour_ID:
-                separations[chromo_ID, neighbour_ID] = separation
+            if chromo_ID < neighbor_ID:
+                separations[chromo_ID, neighbor_ID] = separation
             else:
-                separations[neighbour_ID, chromo_ID] = separation
+                separations[neighbor_ID, chromo_ID] = separation
     return separations
 
 
@@ -1507,7 +1601,9 @@ def get_electronic_atom_positions(
     if CG_morphdict is not None:
         # Normal operation
         CG_types = sorted(
-            list(set([CG_morphdict["type"][CGID] for CGID in chromophore.CGIDs]))
+            list(
+                set([CG_morphdict["type"][CGID] for CGID in chromophore.CGIDs])
+                )
         )
         active_CG_sites, _ = obtain_electronic_species(
             chromophore.CGIDs,
@@ -1528,7 +1624,9 @@ def get_electronic_atom_positions(
         # to each CG site so the list needs to be flattened afterwards.
         electronically_active_AAIDs = [
             AAID
-            for AAIDs in [flattened_CGtoAAID_list[CGID] for CGID in active_CG_sites]
+            for AAIDs in [
+                flattened_CG_to_AAID_master[CGID] for CGID in active_CG_sites
+            ]
             for AAID in AAIDs
         ]
     else:
@@ -1567,7 +1665,9 @@ def get_electronic_atom_positions(
     return electronically_active_unwrapped_posns
 
 
-def obtain_electronic_species(chromophore_CG_sites, CG_site_types, CG_to_species):
+def obtain_electronic_species(
+    chromophore_CG_sites, CG_site_types, CG_to_species
+):
     electronically_active_sites = []
     current_chromophore_species = None
     for CG_site_ID in chromophore_CG_sites:
@@ -1588,15 +1688,19 @@ def obtain_electronic_species(chromophore_CG_sites, CG_site_types, CG_to_species
     return electronically_active_sites, current_chromophore_species
 
 
-def update_cluster(atom_ID, cluster_list, neighbour_dict):
+def update_cluster(atom_ID, cluster_list, neighbor_dict):
     try:
-        for neighbour in neighbour_dict[atom_ID]:
-            if cluster_list[neighbour] > cluster_list[atom_ID]:
-                cluster_list[neighbour] = cluster_list[atom_ID]
-                cluster_list = update_cluster(neighbour, cluster_list, neighbour_dict)
-            elif cluster_list[neighbour] < cluster_list[atom_ID]:
-                cluster_list[atom_ID] = cluster_list[neighbour]
-                cluster_list = update_cluster(neighbour, cluster_list, neighbour_dict)
+        for neighbor in neighbor_dict[atom_ID]:
+            if cluster_list[neighbor] > cluster_list[atom_ID]:
+                cluster_list[neighbor] = cluster_list[atom_ID]
+                cluster_list = update_cluster(
+                    neighbor, cluster_list, neighbor_dict
+                )
+            elif cluster_list[neighbor] < cluster_list[atom_ID]:
+                cluster_list[atom_ID] = cluster_list[neighbor]
+                cluster_list = update_cluster(
+                    neighbor, cluster_list, neighbor_dict
+                )
     except KeyError:
         pass
     return cluster_list
@@ -1613,7 +1717,7 @@ def write_cluster_tcl_script(output_dir, cluster_lookup, large_cluster):
             *sorted(
                 zip(
                     [len(val) for val in cluster_lookup.values()],
-                    cluster_lookup.keys()
+                    cluster_lookup.keys(),
                 ),
                 reverse=True,
             )
@@ -1635,24 +1739,32 @@ def write_cluster_tcl_script(output_dir, cluster_lookup, large_cluster):
             "\rCreating tcl commands for cluster {0:d} of {1:d}".format(
                 index + 1, len(cluster_order)
             ),
-            end=" "
+            end=" ",
         )
         chromos = cluster_lookup[cluster_ID]
-        chromo_IDs = [chromo.ID for chromo in chromos if chromo.species == "donor"]
-        if len(chromo_IDs) > large_cluster:  # Only make clusters that are ``large''
+        chromo_IDs = [
+            chromo.ID for chromo in chromos if chromo.species == "donor"
+        ]
+        if (
+            len(chromo_IDs) > large_cluster
+        ):  # Only make clusters that are ``large''
             inclust = ""
             for chromo in chromo_IDs:
                 inclust = "".join([inclust, "{:d} ".format(chromo)])
             tcl_text += ["mol material AOEdgy;"]  # Use AOEdgy if donor
             # The +1 makes the largest cluster red rather than blue (looks better
             # with AO, DoF, shadows)
-            tcl_text += ["mol color ColorID {:d};".format(colors[count + 1 % 32])]
+            tcl_text += [
+                "mol color ColorID {:d};".format(colors[count + 1 % 32])
+            ]
             # VMD has 32 unique colors
             tcl_text += ["mol representation VDW 4.0 8.0;"]
             tcl_text += ["mol selection resid {:s};".format(inclust)]
             tcl_text += ["mol addrep 0;"]
             count += 1
-        chromo_IDs = [chromo.ID for chromo in chromos if chromo.species == "acceptor"]
+        chromo_IDs = [
+            chromo.ID for chromo in chromos if chromo.species == "acceptor"
+        ]
         if len(chromo_IDs) > large_cluster:
             inclust = ""
             for chromo in chromo_IDs:
@@ -1660,7 +1772,9 @@ def write_cluster_tcl_script(output_dir, cluster_lookup, large_cluster):
             tcl_text += ["mol material Glass2;"]  # Use Glass2 if acceptor
             # The +1 makes the largest cluster red rather than blue (looks better
             # with AO, DoF, shadows)
-            tcl_text += ["mol color ColorID {:d};".format(colors[count + 1 % 32])]
+            tcl_text += [
+                "mol color ColorID {:d};".format(colors[count + 1 % 32])
+            ]
             tcl_text += ["mol representation VDW 4.0 8.0;"]
             tcl_text += ["mol selection resid {:s};".format(inclust)]
             tcl_text += ["mol addrep 0;"]
@@ -1733,7 +1847,13 @@ def plot_clusters_3D(
         cluster_lookup, colours, large_cluster
     )
     ax.scatter(
-        xs, ys, zs, facecolors=face_colors, edgecolors=edge_colors, alpha=0.6, s=40
+        xs,
+        ys,
+        zs,
+        facecolors=face_colors,
+        edgecolors=edge_colors,
+        alpha=0.6,
+        s=40,
     )
     # Draw boxlines
     # Varying X
@@ -1828,9 +1948,14 @@ def plot_clusters_3D(
     ax.set_zlim([sim_dims[2][0], sim_dims[2][1]])
     # 03 for clusters (material agnostic)
     plt.savefig(
-        os.path.join(output_dir, "03_clusters.png"), bbox_inches="tight", dpi=300
+        os.path.join(output_dir, "03_clusters.png"),
+        bbox_inches="tight",
+        dpi=300,
     )
-    print("3D cluster figure saved as", os.path.join(output_dir, "03_clusters.png"))
+    print(
+        "3D cluster figure saved as",
+        os.path.join(output_dir, "03_clusters.png"),
+    )
     plt.close()
 
 
@@ -1883,18 +2008,22 @@ def plot_energy_levels(output_dir, chromo_list, data_dict):
     for chromo in chromo_list:
         if chromo.species == "donor":
             HOMO_levels.append(chromo.HOMO)
-            for neighbour_index, delta_E_ij in enumerate(chromo.neighbours_delta_E):
+            for neighbor_index, delta_E_ij in enumerate(
+                chromo.neighbors_delta_E
+            ):
                 if (delta_E_ij is not None) and (
-                    chromo.neighbours_TI[neighbour_index] is not None
+                    chromo.neighbors_TI[neighbor_index] is not None
                 ):
                     donor_delta_E_ij.append(delta_E_ij)
                 if "reorganisation_energy" in chromo.__dict__:
                     donor_lambda_ij = chromo.reorganisation_energy
         else:
             LUMO_levels.append(chromo.LUMO)
-            for neighbour_index, delta_E_ij in enumerate(chromo.neighbours_delta_E):
+            for neighbor_index, delta_E_ij in enumerate(
+                chromo.neighbors_delta_E
+            ):
                 if (delta_E_ij is not None) and (
-                    chromo.neighbours_TI[neighbour_index] is not None
+                    chromo.neighbors_TI[neighbor_index] is not None
                 ):
                     acceptor_delta_E_ij.append(delta_E_ij)
                 if "reorganisation_energy" in chromo.__dict__:
@@ -1905,7 +2034,9 @@ def plot_energy_levels(output_dir, chromo_list, data_dict):
         )
         data_dict["donor_delta_E_ij_mean"] = donor_mean
         data_dict["donor_delta_E_ij_std"] = donor_std
-        data_dict["donor_delta_E_ij_err"] = donor_std / np.sqrt(len(donor_delta_E_ij))
+        data_dict["donor_delta_E_ij_err"] = donor_std / np.sqrt(
+            len(donor_delta_E_ij)
+        )
         HOMO_av = np.average(HOMO_levels)
         HOMO_std = np.std(HOMO_levels)
         HOMO_err = HOMO_std / np.sqrt(len(HOMO_levels))
@@ -1962,10 +2093,14 @@ def plot_energy_levels(output_dir, chromo_list, data_dict):
     return data_dict
 
 
-def plot_delta_E_ij(delta_E_ij, gauss_bins, fit_args, data_type, file_name, lambda_ij):
+def plot_delta_E_ij(
+    delta_E_ij, gauss_bins, fit_args, data_type, file_name, lambda_ij
+):
     plt.figure()
     n, bins, patches = plt.hist(
-        delta_E_ij, np.arange(np.min(delta_E_ij), np.max(delta_E_ij), 0.05), color=["b"]
+        delta_E_ij,
+        np.arange(np.min(delta_E_ij), np.max(delta_E_ij), 0.05),
+        color=["b"],
     )
     if fit_args is not None:
         gauss_Y = gaussian(gauss_bins[:-1], *fit_args)
@@ -2010,12 +2145,12 @@ def plot_mixed_hopping_rates(
     T = 290
     for chromo in chromo_list:
         mol1ID = chromo_to_mol_ID[chromo.ID]
-        for index, T_ij in enumerate(chromo.neighbours_TI):
+        for index, T_ij in enumerate(chromo.neighbors_TI):
             if (T_ij is None) or (T_ij == 0):
                 continue
-            chromo2 = chromo_list[chromo.neighbours[index][0]]
+            chromo2 = chromo_list[chromo.neighbors[index][0]]
             mol2ID = chromo_to_mol_ID[chromo2.ID]
-            delta_E = chromo.neighbours_delta_E[index]
+            delta_E = chromo.neighbors_delta_E[index]
             if chromo.sub_species == chromo2.sub_species:
                 lambda_ij = chromo.reorganisation_energy
             else:
@@ -2044,15 +2179,16 @@ def plot_mixed_hopping_rates(
             except KeyError:
                 VRH = False
             if VRH is True:
-                relative_image = chromo.neighbours[index][1]
-                neighbour_chromo_posn = chromo2.posn + (
+                relative_image = chromo.neighbors[index][1]
+                neighbor_chromo_posn = chromo2.posn + (
                     np.array(relative_image)
                     * np.array(
                         [AA_morphdict[axis] for axis in ["lx", "ly", "lz"]]
                     )
                 )
                 chromophore_separation = (
-                    hf.calculate_separation(chromo.posn, neighbour_chromo_posn) * 1E-10
+                    hf.calculate_separation(chromo.posn, neighbor_chromo_posn)
+                    * 1e-10
                 )
                 rate = hf.calculate_carrier_hop_rate(
                     lambda_ij * elementary_charge,
@@ -2080,7 +2216,7 @@ def plot_mixed_hopping_rates(
             if chromo.species == "acceptor":
                 if (
                     cluster_dicts[1][chromo.ID]
-                    == cluster_dicts[1][chromo.neighbours[index][0]]
+                    == cluster_dicts[1][chromo.neighbors[index][0]]
                 ):
                     property_lists["intra_cluster_rates_acceptor"].append(rate)
                     property_lists["intra_cluster_TIs_acceptor"].append(T_ij)
@@ -2090,7 +2226,7 @@ def plot_mixed_hopping_rates(
             else:
                 if (
                     cluster_dicts[0][chromo.ID]
-                    == cluster_dicts[0][chromo.neighbours[index][0]]
+                    == cluster_dicts[0][chromo.neighbors[index][0]]
                 ):
                     property_lists["intra_cluster_rates_donor"].append(rate)
                     property_lists["intra_cluster_TIs_donor"].append(T_ij)
@@ -2178,7 +2314,9 @@ def plot_mixed_hopping_rates(
             property_lists["inter_cluster_TIs_acceptor"],
             ["Intra-cluster", "Inter-cluster"],
             "acceptor",
-            os.path.join(output_dir, "13_acceptor_transfer_integral_clusters.png"),
+            os.path.join(
+                output_dir, "13_acceptor_transfer_integral_clusters.png"
+            ),
             cut_off_dict["TI"][1],
         )
     # Donor Mol Plots:
@@ -2237,30 +2375,44 @@ def plot_mixed_hopping_rates(
             for hop_target in hop_targets:
                 number_of_hops = len(
                     property_lists[
-                        "".join([hop_type, "_", hop_target, "_rates_", material])
+                        "".join(
+                            [hop_type, "_", hop_target, "_rates_", material]
+                        )
                     ]
                 )
                 if number_of_hops == 0:
                     continue
-                other_hop_type = hop_types[int((hop_types.index(hop_type) * -1) + 1)]
+                other_hop_type = hop_types[
+                    int((hop_types.index(hop_type) * -1) + 1)
+                ]
                 proportion = number_of_hops / (
                     number_of_hops
                     + len(
                         property_lists[
                             "".join(
-                                [other_hop_type, "_", hop_target, "_rates_", material]
+                                [
+                                    other_hop_type,
+                                    "_",
+                                    hop_target,
+                                    "_rates_",
+                                    material,
+                                ]
                             )
                         ]
                     )
                 )
                 mean_rate = np.mean(
                     property_lists[
-                        "".join([hop_type, "_", hop_target, "_rates_", material])
+                        "".join(
+                            [hop_type, "_", hop_target, "_rates_", material]
+                        )
                     ]
                 )
                 deviation_rate = np.std(
                     property_lists[
-                        "".join([hop_type, "_", hop_target, "_rates_", material])
+                        "".join(
+                            [hop_type, "_", hop_target, "_rates_", material]
+                        )
                     ]
                 )
                 data_dict[
@@ -2325,8 +2477,8 @@ def plot_stacked_hist_rates(data1, data2, labels, data_type, file_name):
     )
     plt.ylabel("Frequency (Arb. U.)")
     plt.xlabel("".join([data_type.capitalize(), r" k$_{i,j}$ (s$^{-1}$)"]))
-    plt.xlim([1, 1E18])
-    plt.xticks([1E0, 1E3, 1E6, 1E9, 1E12, 1E15, 1E18])
+    plt.xlim([1, 1e18])
+    plt.xticks([1e0, 1e3, 1e6, 1e9, 1e12, 1e15, 1e18])
     # plt.ylim([0, 14000])
     plt.ylim([0, np.max(n) * 1.02])
     plt.legend(loc=2, prop={"size": 18})
@@ -2372,7 +2524,9 @@ def create_results_pickle(directory):
         if "log" not in file_name:
             continue
         try:
-            cores_list.append(os.path.split(file_name)[1].split(".")[0].split("_")[-1])
+            cores_list.append(
+                os.path.split(file_name)[1].split(".")[0].split("_")[-1]
+            )
         except IndexError:
             pass
     cores_list = sorted(list(set(cores_list)))
@@ -2389,10 +2543,14 @@ def create_results_pickle(directory):
             continue
         # If not, find the slot1 and slot2 pickle that is most recent
         slot1 = os.path.join(
-            directory, "KMC", "KMC_slot1_results_{:02d}.pickle".format(int(core))
+            directory,
+            "KMC",
+            "KMC_slot1_results_{:02d}.pickle".format(int(core)),
         )
         slot2 = os.path.join(
-            directory, "KMC", "KMC_slot2_results_{:02d}.pickle".format(int(core))
+            directory,
+            "KMC",
+            "KMC_slot2_results_{:02d}.pickle".format(int(core)),
         )
         if os.path.exists(slot1) and not os.path.exists(slot2):
             keep_list.append(slot1)
@@ -2502,7 +2660,11 @@ def calculate_cut_off_from_dist(
 
 
 def plot_TI_hist(
-    chromo_list, chromo_to_mol_ID, output_dir, TI_cut_donor, TI_cut_acceptor
+    chromophore_list,
+    chromo_to_mol_ID,
+    output_dir,
+    TI_cut_donor,
+    TI_cut_acceptor,
 ):
     # TI_dist [[DONOR], [ACCEPTOR]]
     TI_dist_intra = [[], []]
@@ -2512,17 +2674,17 @@ def plot_TI_hist(
     TI_cuts = [TI_cut_donor, TI_cut_acceptor]
     for material_index, material_type in enumerate(material):
         for chromo1 in chromo_list:
-            for neighbour_index, chromo2_details in enumerate(chromo1.neighbours):
+            for neighbor_index, chromo2_details in enumerate(chromo1.neighbors):
                 chromo2 = chromo_list[chromo2_details[0]]
                 if (chromo2_details is None) or (chromo1.ID >= chromo2.ID):
                     continue
                 if chromo_to_mol_ID[chromo1.ID] == chromo_to_mol_ID[chromo2.ID]:
                     TI_dist_intra[material_index].append(
-                        chromo1.neighbours_TI[neighbour_index]
+                        chromo1.neighbors_TI[neighbor_index]
                     )
                 else:
                     TI_dist_inter[material_index].append(
-                        chromo1.neighbours_TI[neighbour_index]
+                        chromo1.neighbors_TI[neighbor_index]
                     )
         if (len(TI_dist_intra[material_index]) == 0) and (
             len(TI_dist_inter[material_index])
@@ -2533,7 +2695,10 @@ def plot_TI_hist(
             [TI_dist_intra[material_index], TI_dist_inter[material_index]],
             bins=np.linspace(
                 0,
-                np.max(TI_dist_intra[material_index] + TI_dist_inter[material_index]),
+                np.max(
+                    TI_dist_intra[material_index]
+                    + TI_dist_inter[material_index]
+                ),
                 20,
             ),
             color=["r", "b"],
@@ -2558,11 +2723,19 @@ def plot_TI_hist(
             )
             plt.axvline(float(TI_cuts[material_index]), c="k")
         plt.xlim(
-            [0, np.max(TI_dist_intra[material_index] + TI_dist_inter[material_index])]
+            [
+                0,
+                np.max(
+                    TI_dist_intra[material_index]
+                    + TI_dist_inter[material_index]
+                ),
+            ]
         )
         plt.ylim([0, np.max(n) * 1.02])
         plt.ylabel("Frequency (Arb. U.)")
-        plt.xlabel("".join([material[material_index].capitalize(), r" J$_{i,j}$ (eV)"]))
+        plt.xlabel(
+            "".join([material[material_index].capitalize(), r" J$_{i,j}$ (eV)"])
+        )
         plt.legend(loc=1, prop={"size": 18})
         # 10 for donor TI mols dist, 11 for acceptor TI mols dist,
         file_name = "".join(
@@ -2613,12 +2786,16 @@ def plot_frequency_dist(directory, carrier_type, carrier_history, cut_off):
     # plt.xlim([0, 6])
     tick_labels = np.arange(0, np.ceil(np.max(frequencies)) + 1, 1)
     plt.xlim([0, np.ceil(np.max(frequencies))])
-    plt.xticks(tick_labels, [r"10$^{{{}}}$".format(int(x)) for x in tick_labels])
+    plt.xticks(
+        tick_labels, [r"10$^{{{}}}$".format(int(x)) for x in tick_labels]
+    )
     plt.ylabel("Frequency (Arb. U.)")
     # 24 for hole hop frequency dist, 25 for electron hop frequency dist
     file_name = "".join(
         [
-            "{:02}_total_hop_freq_".format(24 + carrier_types.index(carrier_type)),
+            "{:02}_total_hop_freq_".format(
+                24 + carrier_types.index(carrier_type)
+            ),
             carrier_type,
             ".png",
         ]
@@ -2638,7 +2815,9 @@ def plot_net_frequency_dist(directory, carrier_type, carrier_history):
         if coords[1] < coords[0]:
             # Only consider hops in one direction
             continue
-        frequency = np.abs(carrier_history[coords] - carrier_history[coords[::-1]])
+        frequency = np.abs(
+            carrier_history[coords] - carrier_history[coords[::-1]]
+        )
         if frequency > 0:
             frequencies.append(np.log10(frequency))
     plt.figure()
@@ -2647,13 +2826,17 @@ def plot_net_frequency_dist(directory, carrier_type, carrier_history):
     ax = plt.gca()
     tick_labels = np.arange(0, np.ceil(np.max(frequencies)) + 1, 1)
     plt.xlim([0, np.ceil(np.max(frequencies))])
-    plt.xticks(tick_labels, [r"10$^{{{}}}$".format(int(x)) for x in tick_labels])
+    plt.xticks(
+        tick_labels, [r"10$^{{{}}}$".format(int(x)) for x in tick_labels]
+    )
     # plt.ylim([0, 2500])
     plt.ylabel("Frequency (Arb. U.)")
     # 26 for hole hop frequency dist, 27 for electron hop frequency dist
     file_name = "".join(
         [
-            "{:02}_net_hop_freq_".format(26 + carrier_types.index(carrier_type)),
+            "{:02}_net_hop_freq_".format(
+                26 + carrier_types.index(carrier_type)
+            ),
             carrier_type,
             ".png",
         ]
@@ -2675,7 +2858,9 @@ def plot_discrepancy_frequency_dist(directory, carrier_type, carrier_history):
             # Only consider hops in one direction
             continue
         total_hops = carrier_history[coords] + carrier_history[coords[::-1]]
-        net_hops = np.abs(carrier_history[coords] - carrier_history[coords[::-1]])
+        net_hops = np.abs(
+            carrier_history[coords] - carrier_history[coords[::-1]]
+        )
         frequency = total_hops - net_hops
         if frequency == 0:
             net_equals_total += 1
@@ -2690,13 +2875,17 @@ def plot_discrepancy_frequency_dist(directory, carrier_type, carrier_history):
     ax = plt.gca()
     tick_labels = np.arange(0, np.ceil(np.max(frequencies)) + 1, 1)
     plt.xlim([0, np.ceil(np.max(frequencies))])
-    plt.xticks(tick_labels, [r"10$^{{{}}}$".format(int(x)) for x in tick_labels])
+    plt.xticks(
+        tick_labels, [r"10$^{{{}}}$".format(int(x)) for x in tick_labels]
+    )
     # plt.ylim([0, 13000])
     plt.ylabel("Frequency (Arb. U.)")
     # 28 for hole hop frequency dist, 29 for electron hop frequency dist
     file_name = "".join(
         [
-            "{:02}_hop_discrepancy_".format(28 + carrier_types.index(carrier_type)),
+            "{:02}_hop_discrepancy_".format(
+                28 + carrier_types.index(carrier_type)
+            ),
             carrier_type,
             ".png",
         ]
@@ -2709,7 +2898,9 @@ def plot_discrepancy_frequency_dist(directory, carrier_type, carrier_history):
         "paths in this morphology with one-way transport.",
     )
     print(
-        "There are", net_near_total, "paths in this morphology with total - net < 10."
+        "There are",
+        net_near_total,
+        "paths in this morphology with total - net < 10.",
     )
     print("Figure saved as", os.path.join(directory, "figures", file_name))
 
@@ -2733,7 +2924,7 @@ def calculate_mobility(
         directory,
         current_carrier_type,
     )
-    print("----------====================----------")
+    print("----------------------------------------")
     print(
         current_carrier_type.capitalize(),
         "mobility for",
@@ -2741,7 +2932,7 @@ def calculate_mobility(
         "= {0:.2E} +- {1:.2E}".format(mobility, mob_error),
         "cm^{2} V^{-1} s^{-1}",
     )
-    print("----------====================----------")
+    print("----------------------------------------")
     plt.close()
     return mobility, mob_error, r_squared
 
@@ -2794,9 +2985,9 @@ def main(
     # Load in all the required data
     data_dict = {}
     print("\n")
-    print("-----===== KMC_ANALYSE =====-----")
+    print("---------- KMC_ANALYSE ----------")
     print(directory)
-    print("-----=======================-----")
+    print("---------------------------------")
     for carrier_data in carrier_data_list:
         # Now need to split up the carrierData into both electrons and holes
         (carrier_data_holes,
@@ -2814,7 +3005,9 @@ def main(
         # Calculate the mobilities
         complete_carrier_types = []
         complete_carrier_data = []
-        if (carrier_data_holes is not None) and (len(carrier_data_holes["ID"]) > 0):
+        if (carrier_data_holes is not None) and (
+            len(carrier_data_holes["ID"]) > 0
+        ):
             complete_carrier_types.append("hole")
             complete_carrier_data.append(carrier_data_holes)
         if (carrier_data_electrons is not None) and (
@@ -2823,9 +3016,15 @@ def main(
             complete_carrier_types.append("electron")
             complete_carrier_data.append(carrier_data_electrons)
         carrier_history_dict = {}
-        for carrier_type_index, carrier_data in enumerate(complete_carrier_data):
+        for carrier_type_index, carrier_data in enumerate(
+            complete_carrier_data
+        ):
             current_carrier_type = complete_carrier_types[carrier_type_index]
-            print("Considering the transport of {:s}...".format(current_carrier_type))
+            print(
+                "Considering the transport of {:s}...".format(
+                    current_carrier_type
+                )
+            )
             print("Obtaining mean squared displacements...")
             (carrier_history,
              times,
@@ -2834,7 +3033,9 @@ def main(
              MSD_standard_errors) = get_carrier_data(carrier_data)
             carrier_history_dict[current_carrier_type] = carrier_history
             print("Plotting distribution of carrier displacements")
-            plot_displacement_dist(carrier_data, directory, current_carrier_type)
+            plot_displacement_dist(
+                carrier_data, directory, current_carrier_type
+            )
             print("Calculating mobility...")
             mobility, mob_error, r_squared = calculate_mobility(
                 directory,
@@ -2856,7 +3057,11 @@ def main(
             )
             print("Calculating carrier trajectory anisotropy...")
             anisotropy = plot_anisotropy(
-                carrier_data, directory, sim_dims, current_carrier_type, three_D
+                carrier_data,
+                directory,
+                sim_dims,
+                current_carrier_type,
+                three_D
             )
             print("Plotting carrier hop frequency distribution...")
             if current_carrier_type == "hole":
@@ -2874,13 +3079,19 @@ def main(
                     freq_cut_acceptor,
                 )
             print("Plotting carrier net hop frequency distribution...")
-            plot_net_frequency_dist(directory, current_carrier_type, carrier_history)
-            print("Plotting ((total hops) - (net hops)) discrepancy distribution...")
+            plot_net_frequency_dist(
+                directory, current_carrier_type, carrier_history
+            )
+            print(
+                "Plotting ((total hops) - (net hops)) discrepancy distribution..."
+            )
             plot_discrepancy_frequency_dist(
                 directory, current_carrier_type, carrier_history
             )
             if (carrier_history is not None) and three_D:
-                print("Determining carrier hopping connections (network graph)...")
+                print(
+                    "Determining carrier hopping connections (network graph)..."
+                )
                 plot_connections(
                     chromo_list,
                     sim_dims,
@@ -2898,11 +3109,16 @@ def main(
             data_dict["name"] = os.path.split(directory)[1]
             data_dict["{:s}_anisotropy".format(lower_carrier_type)] = anisotropy
             data_dict["{:s}_mobility".format(lower_carrier_type)] = mobility
-            data_dict["{:s}_mobility_r_squared".format(lower_carrier_type)] = r_squared
+            data_dict[
+                "{:s}_mobility_r_squared".format(lower_carrier_type)
+            ] = r_squared
         # Now plot the distributions!
         temp_dir = os.path.join(directory, "figures")
         chromo_to_mol_ID = determine_molecule_IDs(
-            CGtoAAID_list, AA_morphdict, param_dict, chromo_list
+            CGtoAAID_list,
+            AA_morphdict,
+            param_dict,
+            chromo_list
         )
         data_dict = plot_energy_levels(temp_dir, chromo_list, data_dict)
         orientations = get_orientations(
@@ -2912,7 +3128,7 @@ def main(
             CGtoAAID_list,
             param_dict,
         )
-        sep_cut_donor, sep_cut_acceptor = plot_neighbour_hist(
+        sep_cut_donor, sep_cut_acceptor = plot_neighbor_hist(
             chromo_list,
             chromo_to_mol_ID,
             morphology_shape,
@@ -2962,24 +3178,34 @@ def main(
             data_dict["donor_clusters_total"] = clusters_total[0]
             data_dict["donor_clusters_large"] = clusters_large[0]
             data_dict["donor_clusters_biggest"] = clusters_biggest[0]
-            data_dict["donor_clusters_separation_cut"] = repr(clusters_cutoffs[0][0])
-            data_dict["donor_clusters_orientation_cut"] = repr(clusters_cutoffs[0][1])
+            data_dict["donor_clusters_separation_cut"] = repr(
+                clusters_cutoffs[0][0]
+            )
+            data_dict["donor_clusters_orientation_cut"] = repr(
+                clusters_cutoffs[0][1]
+            )
             data_dict["donor_clusters_transfer_integral_cut"] = repr(
                 clusters_cutoffs[0][2]
             )
-            data_dict["donor_clusters_hop_freq_cut"] = repr(clusters_cutoffs[0][3])
+            data_dict["donor_clusters_hop_freq_cut"] = repr(
+                clusters_cutoffs[0][3]
+            )
         if clusters_total[1] > 0:
             data_dict["acceptor_clusters_total"] = clusters_total[1]
             data_dict["acceptor_clusters_large"] = clusters_large[1]
             data_dict["acceptor_clusters_biggest"] = clusters_biggest[1]
-            data_dict["acceptor_clusters_separation_cut"] = repr(clusters_cutoffs[1][0])
+            data_dict["acceptor_clusters_separation_cut"] = repr(
+                clusters_cutoffs[1][0]
+            )
             data_dict["acceptor_clusters_orientation_cut"] = repr(
                 clusters_cutoffs[1][1]
             )
             data_dict["acceptor_clusters_transfer_integral_cut"] = repr(
                 clusters_cutoffs[1][2]
             )
-            data_dict["acceptor_clusters_hop_freq_cut"] = repr(clusters_cutoffs[1][3])
+            data_dict["acceptor_clusters_hop_freq_cut"] = repr(
+                    clusters_cutoffs[1][3]
+                    )
         if three_D:
             print("Plotting 3D cluster location plot...")
             plot_clusters_3D(

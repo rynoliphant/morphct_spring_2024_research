@@ -5,7 +5,9 @@ import glob
 import argparse
 
 
-def stitch_images(montage_dims, images_to_stitch, morphology_name, title, save_file):
+def stitch_images(
+    montage_dims, images_to_stitch, morphology_name, title, save_file
+):
     # First delete previous output to prevent ImageMagick issue
     if title is None:
         title = morphology_name
@@ -83,7 +85,9 @@ def stitch_images(montage_dims, images_to_stitch, morphology_name, title, save_f
     )
     print("Exporting montage...")
     if save_file is None:
-        save_file = os.path.join(directory, "".join([title.replace(" ", "_"), ".png"]))
+        save_file = os.path.join(
+            directory, "".join([title.replace(" ", "_"), ".png"])
+        )
     convert = sp.call(
         [
             "convert",
@@ -111,9 +115,9 @@ def stitch_images(montage_dims, images_to_stitch, morphology_name, title, save_f
     )
     montage.wait()
     print("Removing temporary files...")
-    for file_name in glob.glob(os.path.join(directory, "*_temp.png")) + glob.glob(
-        os.path.join(directory, "*_crop.png")
-    ):
+    for file_name in glob.glob(
+        os.path.join(directory, "*_temp.png")
+    ) + glob.glob(os.path.join(directory, "*_crop.png")):
         os.remove(file_name)
     print("Montage created and saved at ", save_file)
 
@@ -171,7 +175,11 @@ def main():
             os.path.join(os.getcwd(), directory) for directory in directories
         ]
         stitch_images(
-            args.dimensions, images_to_stitch, "Montage", args.title, args.save_as
+            args.dimensions,
+            images_to_stitch,
+            "Montage",
+            args.title,
+            args.save_as,
         )
     else:
         for directory in directories:
