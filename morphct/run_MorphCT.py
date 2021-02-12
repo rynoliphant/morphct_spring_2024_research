@@ -30,7 +30,9 @@ class simulation:
             self.output_morphology_directory = os.path.join(
                 self.output_morph_dir, os.path.splitext(self.morphology)[0]
             )
-            if (self.output_orca_dir is not None) and len(self.output_orca_dir) > 0:
+            if (self.output_orca_dir is not None) and len(
+                self.output_orca_dir
+            ) > 0:
                 self.output_orca_directory = os.path.join(
                     self.output_orca_dir, os.path.splitext(self.morphology)[0]
                 )
@@ -61,7 +63,12 @@ class simulation:
                         os.path.join(
                             self.output_morphology_directory,
                             "code",
-                            "".join([os.path.splitext(self.morphology)[0], ".pickle"]),
+                            "".join(
+                                [
+                                    os.path.splitext(self.morphology)[0],
+                                    ".pickle",
+                                ]
+                            ),
                         )
                     )
                     AA_morphology_dict = pickle_data[0]
@@ -85,7 +92,9 @@ class simulation:
                         "code",
                         "".join(
                             [
-                                os.path.splitext(parameter_dict["morphology"])[0],
+                                os.path.splitext(parameter_dict["morphology"])[
+                                    0
+                                ],
                                 ".pickle",
                             ]
                         ),
@@ -155,7 +164,9 @@ class simulation:
                 chromophore_list = returned_data[4]
                 print("---=== IDENTIFICATION COMPLETED ===---")
             if self.execute_ZINDO is True:
-                print("---=== PERFORMING SEMI-EMPIRICAL ZINDO/S CALCULATIONS... ===---")
+                print(
+                    "---=== PERFORMING SEMI-EMPIRICAL ZINDO/S CALCULATIONS... ===---"
+                )
                 returned_data = execute_ZINDO.main(
                     AA_morphology_dict,
                     CG_morphology_dict,
@@ -170,7 +181,9 @@ class simulation:
                 chromophore_list = returned_data[4]
                 print("---=== CALCULATIONS COMPLETED ===---")
             if self.execute_calculate_transfer_integrals is True:
-                print("---=== DETERMINING ELECTRONIC TRANSFER INTEGRALS... ===---")
+                print(
+                    "---=== DETERMINING ELECTRONIC TRANSFER INTEGRALS... ===---"
+                )
                 returned_data = transfer_integrals.main(
                     AA_morphology_dict,
                     CG_morphology_dict,
@@ -185,7 +198,9 @@ class simulation:
                 chromophore_list = returned_data[4]
                 print("---=== DETERMINATION COMPLETED ===---")
                 if self.remove_orca_inputs is True:
-                    print("remove_orca_inputs is True. Cleaning up orca input dir...")
+                    print(
+                        "remove_orca_inputs is True. Cleaning up orca input dir..."
+                    )
                     orca_input_dir = os.path.join(
                         self.output_orca_directory, "chromophores", "input_orca"
                     )
@@ -194,9 +209,13 @@ class simulation:
                     except FileNotFoundError:
                         print("Directory already empty. Continuing...")
                 if self.remove_orca_outputs is True:
-                    print("remove_orca_outputs is True. Cleaning up orca output dir...")
+                    print(
+                        "remove_orca_outputs is True. Cleaning up orca output dir..."
+                    )
                     orca_output_dir = os.path.join(
-                        self.output_orca_directory, "chromophores", "output_orca"
+                        self.output_orca_directory,
+                        "chromophores",
+                        "output_orca",
                     )
                     try:
                         shutil.rmtree(orca_output_dir)
@@ -282,11 +301,15 @@ class simulation:
             ]:
                 print(
                     "mkdir -p",
-                    os.path.join(self.output_morphology_directory, directory_to_make),
+                    os.path.join(
+                        self.output_morphology_directory, directory_to_make
+                    ),
                 )
                 # Make sure that the mkdir command has finished before moving on
                 os.makedirs(
-                    os.path.join(self.output_morphology_directory, directory_to_make),
+                    os.path.join(
+                        self.output_morphology_directory, directory_to_make
+                    ),
                     exist_ok=True,
                 )
             for temp_directory_to_make in [
@@ -297,11 +320,15 @@ class simulation:
             ]:
                 print(
                     "mkdir -p",
-                    os.path.join(self.output_orca_directory, temp_directory_to_make),
+                    os.path.join(
+                        self.output_orca_directory, temp_directory_to_make
+                    ),
                 )
                 # Make sure that the mkdir command has finished before moving on
                 os.makedirs(
-                    os.path.join(self.output_orca_directory, temp_directory_to_make),
+                    os.path.join(
+                        self.output_orca_directory, temp_directory_to_make
+                    ),
                     exist_ok=True,
                 )
 
@@ -340,7 +367,9 @@ class simulation:
             ]
             input_copy = [
                 self.input_morphology_file,
-                os.path.join(self.output_morphology_directory, "code", "input.xml"),
+                os.path.join(
+                    self.output_morphology_directory, "code", "input.xml"
+                ),
             ]
             print("cp", input_copy[0], input_copy[1])
             shutil.copy(input_copy[0], input_copy[1])

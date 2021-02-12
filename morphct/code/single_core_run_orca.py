@@ -56,7 +56,9 @@ def check_job_output(data_file, job):
             break
     if record_MO_data is False:
         # Molecular orbital data not present in this file
-        print("Molecular orbital data not present for", job, ". Skipping deletion")
+        print(
+            "Molecular orbital data not present for", job, ". Skipping deletion"
+        )
         return False
     print("Molecular orbital data detected. Deleting", job, "...")
     return True
@@ -82,7 +84,9 @@ def main():
     with open(pickle_file_name, "rb") as pickle_file:
         jobs_list = pickle.load(pickle_file)
     jobs_to_run = jobs_list[CPU_rank]
-    hf.write_to_file(log_file, ["Found {:d} jobs to run.".format(len(jobs_to_run))])
+    hf.write_to_file(
+        log_file, ["Found {:d} jobs to run.".format(len(jobs_to_run))]
+    )
     t0 = T.time()
     for job in jobs_to_run:
         t1 = T.time()
@@ -112,7 +116,10 @@ def main():
             except IOError:
                 pass
         orca_job = sp.Popen(
-            [str(orca_path), str(job)], stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE
+            [str(orca_path), str(job)],
+            stdin=sp.PIPE,
+            stdout=sp.PIPE,
+            stderr=sp.PIPE,
         )
         job_PID = orca_job.pid
         # Taskset stuff
@@ -138,15 +145,19 @@ def main():
                 print("Waiting for 10 minutes to try and write again...")
                 T.sleep(600)
                 try:
-                    hf.write_to_file(output_file_name, orca_stdout, mode="output_file")
+                    hf.write_to_file(
+                        output_file_name, orca_stdout, mode="output_file"
+                    )
                     file_written = True
                 except OSError as e2:
                     print(e2)
                     continue
             if not file_written:
                 print("--== CRITICAL ERROR ==--")
-                print("Unable to write file due to above errors. Please ammend"
-                      " appropriately and resubmit your job")
+                print(
+                    "Unable to write file due to above errors. Please ammend"
+                    " appropriately and resubmit your job"
+                )
                 if parameter_dict["remove_orca_inputs"]:
                     print("Deleting the remaining orca inputs...")
                     shutil.rmtree(orca_input_dir)
@@ -162,7 +173,13 @@ def main():
                     log_file,
                     [
                         "Output OK and remove_orca_inputs set.",
-                        "".join(["Deleting ", os.path.splitext(job)[0], " inputs..."]),
+                        "".join(
+                            [
+                                "Deleting ",
+                                os.path.splitext(job)[0],
+                                " inputs...",
+                            ]
+                        ),
                     ],
                 )
                 for extension in [
@@ -219,7 +236,11 @@ def main():
         time_units = "days."
     hf.write_to_file(
         log_file,
-        ["All jobs completed in {0:.2f} {1:s}".format(elapsed_time, time_units)],
+        [
+            "All jobs completed in {0:.2f} {1:s}".format(
+                elapsed_time, time_units
+            )
+        ],
     )
     hf.write_to_file(log_file, ["Exiting normally..."])
 

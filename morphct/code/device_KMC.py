@@ -40,7 +40,9 @@ class morphology_moiety:
                 print("Error in chromophore:")
                 for key, val in chromophore.__dict__.items():
                     print(key, "=", val)
-                raise SystemError("Chromophore species is neither donor nor acceptor")
+                raise SystemError(
+                    "Chromophore species is neither donor nor acceptor"
+                )
         else:
             return "both"
 
@@ -59,7 +61,9 @@ class chromophore_data_container:
 
     def return_specific_chromophore(self, device_position, chromo_ID):
         device_moiety_type = self.device_array[tuple(device_position)]
-        return self.moiety_dictionary[device_moiety_type].chromophore_list[chromo_ID]
+        return self.moiety_dictionary[device_moiety_type].chromophore_list[
+            chromo_ID
+        ]
 
     def return_random_chromophore(self, device_position):
         device_moiety_type = self.device_array[tuple(device_position)]
@@ -67,7 +71,9 @@ class chromophore_data_container:
             self.moiety_dictionary[device_moiety_type].chromophore_list
         )
 
-    def return_closest_chromophore_to_position(self, device_position, desired_position):
+    def return_closest_chromophore_to_position(
+        self, device_position, desired_position
+    ):
         closest_chromo_ID = None
         # Check that there is an eligible device position that exists at these
         # coordinates (i.e. there is a hop taking place within the active layer)
@@ -88,7 +94,9 @@ class chromophore_data_container:
                     return "bottom"
                 elif self.wrapxy:
                     # Bring it in on the reverse side
-                    device_position[axis_no] = self.device_array.shape[axis_no] - 1
+                    device_position[axis_no] = (
+                        self.device_array.shape[axis_no] - 1
+                    )
                 else:
                     return "out of bounds"
         device_moiety_type = self.device_array[tuple(device_position)]
@@ -169,9 +177,16 @@ def main(parameter_dict):
     morphology_data = morphology_data_container(device_array, moiety_dictionary)
     # Write these classes out to a pickle file so that they can be loaded by the
     # child processes later
-    to_pickle = [device_array, chromophore_data, morphology_data, parameter_dict]
+    to_pickle = [
+        device_array,
+        chromophore_data,
+        morphology_data,
+        parameter_dict,
+    ]
     save_directory = os.path.join(
-        parameter_dict["output_device_dir"], parameter_dict["device_morphology"], "code"
+        parameter_dict["output_device_dir"],
+        parameter_dict["device_morphology"],
+        "code",
     )
     if parameter_dict["overwrite_current_data"] is True:
         with open(
@@ -190,11 +205,15 @@ def main(parameter_dict):
     ]
     running_jobs = []
     output_dir = os.path.join(
-        parameter_dict["output_device_dir"], parameter_dict["device_morphology"], "KMC"
+        parameter_dict["output_device_dir"],
+        parameter_dict["device_morphology"],
+        "KMC",
     )
     print("Writing job pickles for each CPU...")
     for proc_ID, jobs in enumerate(jobs_list):
-        pickle_name = os.path.join(output_dir, "KMC_data_{:02d}.pickle".format(proc_ID))
+        pickle_name = os.path.join(
+            output_dir, "KMC_data_{:02d}.pickle".format(proc_ID)
+        )
         with open(pickle_name, "wb+") as pickle_file:
             pickle.dump(jobs, pickle_file)
         print(

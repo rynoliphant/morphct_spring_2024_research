@@ -38,8 +38,12 @@ class morphology:
         # Set the AAMorphology and CGMorphology system sizes to the same as the
         # input file system size
         for box_dimension in ["lx", "ly", "lz", "xy", "xz", "yz"]:
-            CG_morphology_dict[box_dimension] = self.CG_dictionary[box_dimension]
-            AA_morphology_dict[box_dimension] = self.CG_dictionary[box_dimension]
+            CG_morphology_dict[box_dimension] = self.CG_dictionary[
+                box_dimension
+            ]
+            AA_morphology_dict[box_dimension] = self.CG_dictionary[
+                box_dimension
+            ]
         CG_to_AAID_master = []  # This is a list of dictionaries. Elements in
         # the list correspond to molecules (useful for splitting out individual
         # molecules for the xyz conversion) within the element, the dictionary
@@ -63,7 +67,9 @@ class morphology:
                 "morphology",
                 "".join([self.morphology_name, ".xml"]),
             )
-            atomistic_morphology = hf.add_unwrapped_positions(self.CG_dictionary)
+            atomistic_morphology = hf.add_unwrapped_positions(
+                self.CG_dictionary
+            )
             # Now write the morphology xml
             hf.write_morphology_xml(atomistic_morphology, AA_file_name)
             # And finally write the pickle with the CGDictionary as None (to
@@ -272,7 +278,9 @@ class morphology:
         molecule_list = [i for i in range(len(self.CG_dictionary["type"]))]
         # Recursively add all atoms in the neighbour list to this molecule
         for mol_ID in range(len(molecule_list)):
-            molecule_list = self.update_molecule(mol_ID, molecule_list, bonded_atoms)
+            molecule_list = self.update_molecule(
+                mol_ID, molecule_list, bonded_atoms
+            )
         # Create a dictionary of the molecule data
         molecule_data = {}
         for atom_ID in range(len(self.CG_dictionary["type"])):
@@ -316,13 +324,17 @@ class morphology:
             pass
         return molecule_list
 
-    def get_new_type_mappings(self, CG_to_template_dirs, CG_to_template_force_fields):
+    def get_new_type_mappings(
+        self, CG_to_template_dirs, CG_to_template_force_fields
+    ):
         force_field_locations = []
         force_field_mappings = []
         morphology_atom_types = []
         CG_to_template_mappings = {}
         for CG_site, directory in CG_to_template_dirs.items():
-            FF_loc = os.path.join(directory, CG_to_template_force_fields[CG_site])
+            FF_loc = os.path.join(
+                directory, CG_to_template_force_fields[CG_site]
+            )
             if FF_loc not in force_field_locations:
                 force_field_locations.append(FF_loc)
         for FF_loc in force_field_locations:
@@ -346,7 +358,9 @@ class morphology:
                 mapping_for_this_FF[lj_interaction[0]] = atom_type
             force_field_mappings.append(mapping_for_this_FF)
         for CG_site, directory in CG_to_template_dirs.items():
-            FF_loc = os.path.join(directory, CG_to_template_force_fields[CG_site])
+            FF_loc = os.path.join(
+                directory, CG_to_template_force_fields[CG_site]
+            )
             CG_to_template_mappings[CG_site] = force_field_mappings[
                 force_field_locations.index(FF_loc)
             ]
@@ -385,9 +399,12 @@ class atomistic:
                 )
             )
             template_dictionary = self.remap_atom_types(
-                template_dictionary, parameter_dict["new_type_mappings"][CG_atom_type]
+                template_dictionary,
+                parameter_dict["new_type_mappings"][CG_atom_type],
             )
-            template_dictionary = hf.add_unwrapped_positions(template_dictionary)
+            template_dictionary = hf.add_unwrapped_positions(
+                template_dictionary
+            )
             self.AA_templates_dictionary[CG_atom_type] = template_dictionary
         fine_grained = self.run_fine_grainer(ghost_dictionary)
         self.AA_dictionary = fine_grained[0]
@@ -396,7 +413,11 @@ class atomistic:
 
     def return_data(self):
         # Return the important fine-grained results from this class
-        return self.AA_dictionary, self.atom_ID_lookup_table, self.ghost_dictionary
+        return (
+            self.AA_dictionary,
+            self.atom_ID_lookup_table,
+            self.ghost_dictionary,
+        )
 
     def get_CG_monomer_dict(self):
         CG_monomer_dictionary = {
@@ -427,7 +448,9 @@ class atomistic:
         for key in ["image", "mass", "diameter", "type", "body", "charge"]:
             if len(self.CG_dictionary[key]) != 0:
                 for site_ID in self.site_IDs:
-                    CG_monomer_dictionary[key].append(self.CG_dictionary[key][site_ID])
+                    CG_monomer_dictionary[key].append(
+                        self.CG_dictionary[key][site_ID]
+                    )
         # Now rewrite the bonds based on the newsiteIDs
         for key in ["bond", "angle", "dihedral", "improper"]:
             for element in self.CG_dictionary[key]:
@@ -439,7 +462,9 @@ class atomistic:
         # Now update the box parameters
         for key in ["lx", "ly", "lz"]:
             CG_monomer_dictionary[key] = self.CG_dictionary[key]
-        CG_monomer_dictionary = hf.add_unwrapped_positions(CG_monomer_dictionary)
+        CG_monomer_dictionary = hf.add_unwrapped_positions(
+            CG_monomer_dictionary
+        )
         CG_monomer_dictionary["natoms"] = len(CG_monomer_dictionary["position"])
         return CG_monomer_dictionary
 
@@ -454,10 +479,15 @@ class atomistic:
                 template_dict[constraint_type]
             ):
                 new_constraint0 = "-".join(
-                    [template_dict["type"][atom_ID] for atom_ID in constraint[1:]]
+                    [
+                        template_dict["type"][atom_ID]
+                        for atom_ID in constraint[1:]
+                    ]
                 )
                 # Assign the constraint label
-                template_dict[constraint_type][constraint_index][0] = new_constraint0
+                template_dict[constraint_type][constraint_index][
+                    0
+                ] = new_constraint0
         return template_dict
 
     def run_fine_grainer(self, ghost_dictionary):
@@ -496,7 +526,9 @@ class atomistic:
         # Sort the CG sites into monomers so we can iterate over each monomer
         # in order to perform the fine-graining
         monomer_list = self.sort_into_monomers(CG_type_list)
-        current_monomer_index = sum(self.molecule_lengths[: self.molecule_index])
+        current_monomer_index = sum(
+            self.molecule_lengths[: self.molecule_index]
+        )
         atom_ID_lookup_table = {}
         # Calculate the total number of permitted atoms
         total_permitted_atoms = self.get_total_permitted_atoms(monomer_list)
@@ -512,7 +544,9 @@ class atomistic:
             monomer_CG_types = []
             for CG_site in monomer:
                 template_files.append(
-                    self.CG_to_template_files[self.CG_dictionary["type"][CG_site]]
+                    self.CG_to_template_files[
+                        self.CG_dictionary["type"][CG_site]
+                    ]
                 )
                 monomer_CG_types.append(self.CG_dictionary["type"][CG_site])
             if len(set(template_files)) != 1:
@@ -522,7 +556,9 @@ class atomistic:
                 raise SystemError("Not all monomer sites are the same template")
             # Copy the template dictionary for editing for this monomer
             this_monomer_dictionary = copy.deepcopy(
-                self.AA_templates_dictionary[self.CG_dictionary["type"][monomer[0]]]
+                self.AA_templates_dictionary[
+                    self.CG_dictionary["type"][monomer[0]]
+                ]
             )
             for key in ["lx", "ly", "lz"]:  # TODO: Tilts
                 this_monomer_dictionary[key] = self.CG_dictionary[key]
@@ -532,19 +568,25 @@ class atomistic:
                     this_monomer_dictionary["position"]
                 )
             for site_ID in monomer:
-                site_posn = np.array(self.CG_dictionary["unwrapped_position"][site_ID])
+                site_posn = np.array(
+                    self.CG_dictionary["unwrapped_position"][site_ID]
+                )
                 site_translation = site_posn - CG_co_ms[CG_type_list[site_ID]]
                 atom_ID_lookup_table[site_ID] = [
                     CG_type_list[site_ID],
                     [
                         x + no_atoms_in_molecule + self.no_atoms_in_morphology
-                        for x in self.CG_to_template_AAIDs[CG_type_list[site_ID]]
+                        for x in self.CG_to_template_AAIDs[
+                            CG_type_list[site_ID]
+                        ]
                     ],
                 ]
                 # Add the atoms in based on the CG site position
                 for AAID in self.CG_to_template_AAIDs[CG_type_list[site_ID]]:
                     this_monomer_dictionary["unwrapped_position"][AAID] = list(
-                        np.array(this_monomer_dictionary["unwrapped_position"][AAID])
+                        np.array(
+                            this_monomer_dictionary["unwrapped_position"][AAID]
+                        )
                         + site_translation
                     )
                 # Next sort out the rigid bodies
@@ -558,15 +600,23 @@ class atomistic:
                     if len(self.rigid_body_sites[CG_type_list[site_ID]]) == 0:
                         self.rigid_body_sites[CG_type_list[site_ID]] = list(
                             np.arange(
-                                len(self.CG_to_template_AAIDs[CG_type_list[site_ID]])
+                                len(
+                                    self.CG_to_template_AAIDs[
+                                        CG_type_list[site_ID]
+                                    ]
+                                )
                             )
                         )
                     for AAID in self.rigid_body_sites[CG_type_list[site_ID]]:
-                        this_monomer_dictionary["body"][AAID] = current_monomer_index
+                        this_monomer_dictionary["body"][
+                            AAID
+                        ] = current_monomer_index
                         AAID_positions.append(
                             this_monomer_dictionary["unwrapped_position"][AAID]
                         )
-                        AAID_atom_types.append(this_monomer_dictionary["type"][AAID])
+                        AAID_atom_types.append(
+                            this_monomer_dictionary["type"][AAID]
+                        )
                     # Now create the ghost particle describing the rigid body
                     ghost_COM = hf.calc_COM(
                         AAID_positions, list_of_atom_types=AAID_atom_types
@@ -598,8 +648,12 @@ class atomistic:
                                 ghost_dictionary["type"][-2],
                                 ghost_dictionary["type"][-1],
                             ),
-                            "".join(["*" + str(len(ghost_dictionary["type"]) - 2)]),
-                            "".join(["*" + str(len(ghost_dictionary["type"]) - 1)]),
+                            "".join(
+                                ["*" + str(len(ghost_dictionary["type"]) - 2)]
+                            ),
+                            "".join(
+                                ["*" + str(len(ghost_dictionary["type"]) - 1)]
+                            ),
                         ]
                     )
                 else:
@@ -619,7 +673,7 @@ class atomistic:
                     # closest to the CG site.
                     # Find the atom closest to the CG site
                     closest_atom_ID = None
-                    closest_atom_posn = 1E99
+                    closest_atom_posn = 1e99
                     for AAID, AA_position in enumerate(
                         this_monomer_dictionary["unwrapped_position"]
                     ):
@@ -647,11 +701,20 @@ class atomistic:
                         [
                             "{0:s}-{1:s}".format(
                                 ghost_dictionary["type"][-1],
-                                this_monomer_dictionary["type"][closest_atom_ID],
+                                this_monomer_dictionary["type"][
+                                    closest_atom_ID
+                                ],
                             ),
-                            "".join(["*" + str(len(ghost_dictionary["type"]) - 1)]),
                             "".join(
-                                ["_" + str(closest_atom_ID + no_atoms_in_molecule)]
+                                ["*" + str(len(ghost_dictionary["type"]) - 1)]
+                            ),
+                            "".join(
+                                [
+                                    "_"
+                                    + str(
+                                        closest_atom_ID + no_atoms_in_molecule
+                                    )
+                                ]
                             ),
                         ]
                     )
@@ -683,7 +746,9 @@ class atomistic:
                 # Also check that we're not at the final monomer
                 at_final_monomer = False
                 for atom_ID in constraint[2:]:
-                    if (no_atoms_in_molecule + atom_ID + 1) > total_permitted_atoms:
+                    if (
+                        no_atoms_in_molecule + atom_ID + 1
+                    ) > total_permitted_atoms:
                         at_final_monomer = True
                         break
                 if at_final_monomer is True:
@@ -692,9 +757,9 @@ class atomistic:
                 # length:
                 # 3 = Bond, 4 = Angle, 5 = Dihedral, 6 = Improper
                 constraint_type = ["bond", "angle", "dihedral", "improper"]
-                this_monomer_dictionary[constraint_type[len(constraint) - 3]].append(
-                    constraint
-                )
+                this_monomer_dictionary[
+                    constraint_type[len(constraint) - 3]
+                ].append(constraint)
             # Finally, increment the atom IDs to take into account previous
             # monomers in this molecule and then update the AADictionary.
             # Note that the ghost dictionary bond was already updated to have
@@ -726,7 +791,9 @@ class atomistic:
             # Iterate over all termination connections defined for this
             # atom_type (in case we are trying to do something mega
             # complicated)
-            for connection_info in self.molecule_terminating_connections[atom_type]:
+            for connection_info in self.molecule_terminating_connections[
+                atom_type
+            ]:
                 for [bond_name, AAID1, AAID2] in AA_dictionary["bond"]:
                     if AAID1 == atom_index:
                         if AAID2 not in bonded_AAIDs:
@@ -745,7 +812,9 @@ class atomistic:
                     1,
                 )
                 for hydrogen_position in new_hydrogen_positions:
-                    new_hydrogen_data.append([atom_index, list(hydrogen_position)])
+                    new_hydrogen_data.append(
+                        [atom_index, list(hydrogen_position)]
+                    )
         AA_dictionary = self.add_terminating_to_molecule(
             AA_dictionary, new_hydrogen_data
         )
@@ -770,7 +839,9 @@ class atomistic:
         hydrogen_ID = len(AA_dictionary["type"])
         for hydrogen in new_hydrogen_data:
             # hydrogen has the form [BondedAtomID, [position]]
-            AA_dictionary["unwrapped_position"].append([coord for coord in hydrogen[1]])
+            AA_dictionary["unwrapped_position"].append(
+                [coord for coord in hydrogen[1]]
+            )
             AA_dictionary["type"].append("H1")
             AA_dictionary["body"].append(-1)
             AA_dictionary["charge"].append(0.0)
@@ -792,7 +863,9 @@ class atomistic:
         for monomer in monomer_list:
             for CG_site_ID in monomer:
                 CG_site_type = self.CG_dictionary["type"][CG_site_ID]
-                total_permitted_atoms += len(self.CG_to_template_AAIDs[CG_site_type])
+                total_permitted_atoms += len(
+                    self.CG_to_template_AAIDs[CG_site_type]
+                )
         return total_permitted_atoms
 
     def sort_into_monomers(self, type_list_sequence):
@@ -815,7 +888,10 @@ class atomistic:
                     if (
                         (bond[1] in this_monomer)
                         and (bond[2] not in this_monomer)
-                        and (type_list_sequence[bond[2]] not in monomer_types_added)
+                        and (
+                            type_list_sequence[bond[2]]
+                            not in monomer_types_added
+                        )
                     ):
                         this_monomer.append(bond[2])
                         monomer_types_added.append(type_list_sequence[bond[2]])
@@ -823,12 +899,17 @@ class atomistic:
                     elif (
                         (bond[2] in this_monomer)
                         and (bond[1] not in this_monomer)
-                        and (type_list_sequence[bond[1]] not in monomer_types_added)
+                        and (
+                            type_list_sequence[bond[1]]
+                            not in monomer_types_added
+                        )
                     ):
                         this_monomer.append(bond[1])
                         monomer_types_added.append(type_list_sequence[bond[1]])
                         added_new_site = True
-                    elif (bond[1] in this_monomer) and (bond[2] in this_monomer):
+                    elif (bond[1] in this_monomer) and (
+                        bond[2] in this_monomer
+                    ):
                         pass
                     else:
                         continue
@@ -847,7 +928,9 @@ class atomistic:
                 monomer_types_list[-1].append(type_list_sequence[atom])
         return monomer_list
 
-    def update_molecule_dictionary(self, current_monomer_dictionary, AA_dictionary):
+    def update_molecule_dictionary(
+        self, current_monomer_dictionary, AA_dictionary
+    ):
         # Update AA_dictionary with all of the values in
         # current_monomer_dictionary, except ths system dimensions which will
         # be sorted later
@@ -880,7 +963,9 @@ class atomistic:
             site_types = []
             for atom_ID in atom_IDs:
                 site_types.append(AA_template["type"][atom_ID])
-                site_positions.append(AA_template["unwrapped_position"][atom_ID])
+                site_positions.append(
+                    AA_template["unwrapped_position"][atom_ID]
+                )
             # These output as numpy arrays because we can't do maths with lists
             CG_COMs[site_name] = hf.calc_COM(
                 site_positions, list_of_atom_types=site_types
