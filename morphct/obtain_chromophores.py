@@ -643,19 +643,19 @@ def update_chromophore_list_voronoi(
         chromo1neighbor_IDs = [
             neighbor_data[0] for neighbor_data in chromophore1.neighbors
         ]
-        chromo1dissociation_neighbour_IDs = [
-            neighbour_data[0]
-            for neighbour_data in chromophore1.dissociation_neighbours
+        chromo1dissociation_neighbor_IDs = [
+            neighbor_data[0]
+            for neighbor_data in chromophore1.dissociation_neighbors
         ]
-        for neighbour_periodic_ID in neighbour_IDs[periodic_ID]:
-            neighbour_super_cell_chromo = super_cell_chromos[
-                neighbour_periodic_ID
+        for neighbor_periodic_ID in neighbor_IDs[periodic_ID]:
+            neighbor_super_cell_chromo = super_cell_chromos[
+                neighbor_periodic_ID
             ]
             chromophore2 = chromophore_list[
-                neighbour_super_cell_chromo.original_ID
+                neighbor_super_cell_chromo.original_ID
             ]
-            chromo2neighbour_IDs = [
-                neighbour_data[0] for neighbour_data in chromophore2.neighbours
+            chromo2neighbor_IDs = [
+                neighbor_data[0] for neighbor_data in chromophore2.neighbors
             ]
             chromo2dissociation_neighbor_IDs = [
                 neighbor_data[0]
@@ -733,8 +733,8 @@ def determine_neighbors_voronoi(chromophore_list, parameter_dict, sim_dims):
             acceptor_positions = [
                 chromo.position for chromo in acceptor_chromos
             ]
-            donor_neighbours = {}
-            acceptor_neighbours = {}
+            donor_neighbors = {}
+            acceptor_neighbors = {}
             original_donor_chromo_IDs = []
             original_acceptor_chromo_IDs = []
             for chromophore in all_chromos:
@@ -782,14 +782,14 @@ def determine_neighbors_voronoi(chromophore_list, parameter_dict, sim_dims):
             if np.array_equal(chromophore.image, [0, 0, 0]):
                 original_all_chromo_IDs.append(chromophore.periodic_ID)
     print("Calculating Neighbours of All Moieties")
-    all_neighbours = get_voronoi_neighbours(
+    all_neighbors = get_voronoi_neighbors(
         Delaunay(all_positions), all_chromos
     )
-    print("Updating the chromophore list for dissociation neighbours")
+    print("Updating the chromophore list for dissociation neighbors")
     chromophore_list = update_chromophore_list_voronoi(
         original_all_chromo_IDs,
         all_chromos,
-        all_neighbours,
+        all_neighbors,
         chromophore_list,
         sim_dims,
     )
@@ -835,13 +835,13 @@ def determine_neighbors_cut_off(chromophore_list, parameter_dict, sim_dims):
             ):
                 # Only add the neighbors if they haven't already been added so
                 # far
-                chromo1neighbour_IDs = [
-                    neighbour_data[0]
-                    for neighbour_data in chromophore1.neighbours
+                chromo1neighbor_IDs = [
+                    neighbor_data[0]
+                    for neighbor_data in chromophore1.neighbors
                 ]
-                chromo2neighbour_IDs = [
-                    neighbour_data[0]
-                    for neighbour_data in chromophore2.neighbours
+                chromo2neighbor_IDs = [
+                    neighbor_data[0]
+                    for neighbor_data in chromophore2.neighbors
                 ]
                 chromo1dissociation_neighbor_IDs = [
                     neighbor_data[0]
@@ -887,7 +887,7 @@ def determine_neighbors_cut_off(chromophore_list, parameter_dict, sim_dims):
                     # NOTE: Modifying this so that only dissociation neigbours in the
                     # same periodic image are considered.
                     if (
-                        chromophore2.ID not in chromo2dissociation_neighbour_IDs
+                        chromophore2.ID not in chromo2dissociation_neighbor_IDs
                     ) and (
                         np.all(np.isclose(relative_image_of_chromo2, [0, 0, 0]))
                     ):
@@ -895,7 +895,7 @@ def determine_neighbors_cut_off(chromophore_list, parameter_dict, sim_dims):
                             [chromophore2.ID, [0, 0, 0]]
                         )
                     if (
-                        chromophore1.ID not in chromo1dissociation_neighbour_IDs
+                        chromophore1.ID not in chromo1dissociation_neighbor_IDs
                     ) and (
                         np.all(np.isclose(relative_image_of_chromo2, [0, 0, 0]))
                     ):

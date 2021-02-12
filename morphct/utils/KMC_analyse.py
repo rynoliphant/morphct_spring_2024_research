@@ -676,10 +676,10 @@ def plot_hop_vectors(
         ]
         nlist_index = neighbor_IDs.index(chromo2)
         relative_image = np.array(
-            chromophore_list[chromo1].neighbors[nlist_index][1]
+            chromo_list[chromo1].neighbors[nlist_index][1]
         )
-        chromo1_posn = chromophore_list[chromo1].posn
-        chromo2_posn = chromophore_list[chromo2].posn + (
+        chromo1_posn = chromo_list[chromo1].posn
+        chromo2_posn = chromo_list[chromo2].posn + (
             relative_image * box_lengths
         )
         unrotated_hop_vector = chromo2_posn - chromo1_posn
@@ -1416,8 +1416,8 @@ def get_n_list(
         # angle
         dotcut = np.cos(o_cut * np.pi / 180)
     n_list = []
-    for chromophore in chromo_list:
-        n_list.append([neighbor[0] for neighbor in chromophore.neighbors])
+    for chromo in chromo_list:
+        n_list.append([neighbor[0] for neighbor in chromo.neighbors])
     printing = False
     for chromo_ID, neighbors in enumerate(n_list):
         # if chromo_ID == 47:
@@ -1503,9 +1503,9 @@ def get_orientations(
     param_dict,
 ):
     orientations = []
-    for index, chromophore in enumerate(chromo_list):
+    for index, chromo in enumerate(chromo_list):
         positions = get_electronic_atom_positions(
-            chromophore,
+            chromo,
             CG_morphdict,
             AA_morphdict,
             CGtoAAID_list,
@@ -1568,8 +1568,8 @@ def get_separations(chromo_list, AA_morphdict):
     separations = lil_matrix(
         (len(chromo_list), len(chromo_list)), dtype=float
     )
-    for chromo_ID, chromophore in enumerate(chromo_list):
-        for neighbor_details in chromophore.neighbors:
+    for chromo_ID, chromo in enumerate(chromo_list):
+        for neighbor_details in chromo.neighbors:
             neighbor_ID = neighbor_details[0]
             relative_image = neighbor_details[1]
             neighbor_posn = chromo_list[neighbor_ID].posn
@@ -1577,7 +1577,7 @@ def get_separations(chromo_list, AA_morphdict):
                 np.array(relative_image) * np.array(box_dims)
             )
             separation = hf.calculate_separation(
-                chromophore.posn, neighbor_chromo_posn
+                chromo.posn, neighbor_chromo_posn
             )
             if chromo_ID < neighbor_ID:
                 separations[chromo_ID, neighbor_ID] = separation
@@ -1587,7 +1587,7 @@ def get_separations(chromo_list, AA_morphdict):
 
 
 def get_electronic_atom_positions(
-    chromophore,
+    chromo,
     CG_morphdict,
     AA_morphdict,
     CGtoAAID_list,
@@ -1602,11 +1602,11 @@ def get_electronic_atom_positions(
         # Normal operation
         CG_types = sorted(
             list(
-                set([CG_morphdict["type"][CGID] for CGID in chromophore.CGIDs])
+                set([CG_morphdict["type"][CGID] for CGID in chromo.CGIDs])
                 )
         )
         active_CG_sites, _ = obtain_electronic_species(
-            chromophore.CGIDs,
+            chromo.CGIDs,
             CG_morphdict["type"],
             param_dict["CG_site_species"],
         )
@@ -1625,7 +1625,7 @@ def get_electronic_atom_positions(
         electronically_active_AAIDs = [
             AAID
             for AAIDs in [
-                flattened_CG_to_AAID_master[CGID] for CGID in active_CG_sites
+                flattened_CGtoAAID_list[CGID] for CGID in active_CG_sites
             ]
             for AAID in AAIDs
         ]
@@ -1637,8 +1637,8 @@ def get_electronic_atom_positions(
             # species, then the param_dict['CG_site_species'] should
             # only have one entry, and we can set all chromophores to be
             # this species.
-            active_CG_sites = chromophore.CGIDs
-            electronically_active_AAIDs = chromophore.CGIDs
+            active_CG_sites = chromo.CGIDs
+            electronically_active_AAIDs = chromo.CGIDs
         elif (len(param_dict["CG_site_species"]) == 0) and (
             len(param_dict["AA_rigid_body_species"]) > 0
         ):
@@ -1646,7 +1646,7 @@ def get_electronic_atom_positions(
             # the AA_rigid_body_species dictionary to determine which rigid
             # bodies are donors and which are acceptors
             electronically_active_AAIDs = []
-            for AAID in chromophore.CGIDs:
+            for AAID in chromo.CGIDs:
                 if AA_morphdict["body"][AAID] != -1:
                     electronically_active_AAIDs.append(AAID)
         else:
@@ -1666,16 +1666,16 @@ def get_electronic_atom_positions(
 
 
 def obtain_electronic_species(
-    chromophore_CG_sites, CG_site_types, CG_to_species
+    chromo_CG_sites, CG_site_types, CG_to_species
 ):
     electronically_active_sites = []
-    current_chromophore_species = None
-    for CG_site_ID in chromophore_CG_sites:
+    current_chromo_species = None
+    for CG_site_ID in chromo_CG_sites:
         site_type = CG_site_types[CG_site_ID]
         site_species = CG_to_species[site_type]
         if site_species.lower() != "none":
-            if (current_chromophore_species is not None) and (
-                current_chromophore_species != site_species
+            if (current_chromo_species is not None) and (
+                current_chromo_species != site_species
             ):
                 raise SystemError(
                     "Problem - multiple electronic species defined in the same "
@@ -1683,9 +1683,9 @@ def obtain_electronic_species(
                     " to fix this issue for your molecule!"
                 )
             else:
-                current_chromophore_species = site_species
+                current_chromo_species = site_species
                 electronically_active_sites.append(CG_site_ID)
-    return electronically_active_sites, current_chromophore_species
+    return electronically_active_sites, current_chromo_species
 
 
 def update_cluster(atom_ID, cluster_list, neighbor_dict):
@@ -1992,9 +1992,9 @@ def determine_molecule_IDs(
                 CGID_to_mol_ID[AAID] = index
     # Convert to chromo_to_mol_ID
     chromo_to_mol_ID = {}
-    for chromophore in chromo_list:
-        first_CGID = chromophore.CGIDs[0]
-        chromo_to_mol_ID[chromophore.ID] = CGID_to_mol_ID[first_CGID]
+    for chromo in chromo_list:
+        first_CGID = chromo.CGIDs[0]
+        chromo_to_mol_ID[chromo.ID] = CGID_to_mol_ID[first_CGID]
     return chromo_to_mol_ID
 
 
@@ -2186,7 +2186,7 @@ def plot_mixed_hopping_rates(
                         [AA_morphdict[axis] for axis in ["lx", "ly", "lz"]]
                     )
                 )
-                chromophore_separation = (
+                chromo_separation = (
                     hf.calculate_separation(chromo.posn, neighbor_chromo_posn)
                     * 1e-10
                 )
@@ -2197,7 +2197,7 @@ def plot_mixed_hopping_rates(
                     prefactor,
                     T,
                     use_VRH=VRH,
-                    rij=chromophore_separation,
+                    rij=chromo_separation,
                     VRH_delocalisation=VRH_delocalisation,
                     boltz_pen=boltz_pen,
                 )
@@ -2660,7 +2660,7 @@ def calculate_cut_off_from_dist(
 
 
 def plot_TI_hist(
-    chromophore_list,
+    chromo_list,
     chromo_to_mol_ID,
     output_dir,
     TI_cut_donor,

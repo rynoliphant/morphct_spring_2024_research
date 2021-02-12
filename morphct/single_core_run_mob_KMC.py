@@ -137,8 +137,8 @@ class carrier:
                 prefactor = self.hopping_prefactor
                 # Get the relative image so we can update the carrier image
                 # after the hop
-                relative_image = self.current_chromophore.neighbours[
-                    neighbour_index
+                relative_image = self.current_chromophore.neighbors[
+                    neighbor_index
                 ][1]
                 # All of the energies are in eV currently, so convert them to J
                 if self.use_VRH is True:
