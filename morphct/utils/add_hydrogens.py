@@ -91,28 +91,54 @@ def calculate_hydrogen_positions(morphology_dict, hydrogens_to_add):
                         [
                             (
                                 a * (v ** 2 + w ** 2)
-                                - u * ((b * v) + (c * w) - (u * x) - (v * y) - (w * z))
+                                - u
+                                * (
+                                    (b * v)
+                                    + (c * w)
+                                    - (u * x)
+                                    - (v * y)
+                                    - (w * z)
+                                )
                             )
                             * (1 - np.cos(theta))
                             + (x * np.cos(theta))
                             + (
-                                (-(c * v) + (b * w) - (w * y) + (v * z)) * np.sin(theta)
+                                (-(c * v) + (b * w) - (w * y) + (v * z))
+                                * np.sin(theta)
                             ),
                             (
                                 b * (u ** 2 + w ** 2)
-                                - v * ((a * u) + (c * w) - (u * x) - (v * y) - (w * z))
+                                - v
+                                * (
+                                    (a * u)
+                                    + (c * w)
+                                    - (u * x)
+                                    - (v * y)
+                                    - (w * z)
+                                )
                             )
                             * (1 - np.cos(theta))
                             + (y * np.cos(theta))
-                            + (((c * u) - (a * w) + (w * x) - (u * z)) * np.sin(theta)),
+                            + (
+                                ((c * u) - (a * w) + (w * x) - (u * z))
+                                * np.sin(theta)
+                            ),
                             (
                                 c * (u ** 2 + v ** 2)
-                                - w * ((a * u) + (b * v) - (u * x) - (v * y) - (w * z))
+                                - w
+                                * (
+                                    (a * u)
+                                    + (b * v)
+                                    - (u * x)
+                                    - (v * y)
+                                    - (w * z)
+                                )
                             )
                             * (1 - np.cos(theta))
                             + (z * np.cos(theta))
                             + (
-                                (-(b * u) + (a * v) - (v * x) + (u * y)) * np.sin(theta)
+                                (-(b * u) + (a * v) - (v * x) + (u * y))
+                                * np.sin(theta)
                             ),
                         ]
                     )
@@ -134,7 +160,11 @@ def calculate_hydrogen_positions(morphology_dict, hydrogens_to_add):
                 # current_atom_posn[0]*i + current_atom_posn[1]*j
                 # + current_atom_posn[2]*k = 0)
                 first_hydrogen_rotation_axis = np.array(
-                    [1, 1, -(axis_to_bond[0] + axis_to_bond[1]) / axis_to_bond[2]]
+                    [
+                        1,
+                        1,
+                        -(axis_to_bond[0] + axis_to_bond[1]) / axis_to_bond[2],
+                    ]
                 )
                 first_hydrogen_rotation_axis /= np.linalg.norm(
                     first_hydrogen_rotation_axis
@@ -148,25 +178,37 @@ def calculate_hydrogen_positions(morphology_dict, hydrogens_to_add):
                     [
                         (
                             a * (v ** 2 + w ** 2)
-                            - u * ((b * v) + (c * w) - (u * x) - (v * y) - (w * z))
+                            - u
+                            * ((b * v) + (c * w) - (u * x) - (v * y) - (w * z))
                         )
                         * (1 - np.cos(theta))
                         + (x * np.cos(theta))
-                        + ((-(c * v) + (b * w) - (w * y) + (v * z)) * np.sin(theta)),
+                        + (
+                            (-(c * v) + (b * w) - (w * y) + (v * z))
+                            * np.sin(theta)
+                        ),
                         (
                             b * (u ** 2 + w ** 2)
-                            - v * ((a * u) + (c * w) - (u * x) - (v * y) - (w * z))
+                            - v
+                            * ((a * u) + (c * w) - (u * x) - (v * y) - (w * z))
                         )
                         * (1 - np.cos(theta))
                         + (y * np.cos(theta))
-                        + (((c * u) - (a * w) + (w * x) - (u * z)) * np.sin(theta)),
+                        + (
+                            ((c * u) - (a * w) + (w * x) - (u * z))
+                            * np.sin(theta)
+                        ),
                         (
                             c * (u ** 2 + v ** 2)
-                            - w * ((a * u) + (b * v) - (u * x) - (v * y) - (w * z))
+                            - w
+                            * ((a * u) + (b * v) - (u * x) - (v * y) - (w * z))
                         )
                         * (1 - np.cos(theta))
                         + (z * np.cos(theta))
-                        + ((-(b * u) + (a * v) - (v * x) + (u * y)) * np.sin(theta)),
+                        + (
+                            (-(b * u) + (a * v) - (v * x) + (u * y))
+                            * np.sin(theta)
+                        ),
                     ]
                 )
                 hydrogen_positions.append([int(atom_ID), new_position])
@@ -184,32 +226,60 @@ def calculate_hydrogen_positions(morphology_dict, hydrogens_to_add):
                         [
                             (
                                 a * (v ** 2 + w ** 2)
-                                - u * ((b * v) + (c * w) - (u * x) - (v * y) - (w * z))
+                                - u
+                                * (
+                                    (b * v)
+                                    + (c * w)
+                                    - (u * x)
+                                    - (v * y)
+                                    - (w * z)
+                                )
                             )
                             * (1 - np.cos(theta))
                             + (x * np.cos(theta))
                             + (
-                                (-(c * v) + (b * w) - (w * y) + (v * z)) * np.sin(theta)
+                                (-(c * v) + (b * w) - (w * y) + (v * z))
+                                * np.sin(theta)
                             ),
                             (
                                 b * (u ** 2 + w ** 2)
-                                - v * ((a * u) + (c * w) - (u * x) - (v * y) - (w * z))
+                                - v
+                                * (
+                                    (a * u)
+                                    + (c * w)
+                                    - (u * x)
+                                    - (v * y)
+                                    - (w * z)
+                                )
                             )
                             * (1 - np.cos(theta))
                             + (y * np.cos(theta))
-                            + (((c * u) - (a * w) + (w * x) - (u * z)) * np.sin(theta)),
+                            + (
+                                ((c * u) - (a * w) + (w * x) - (u * z))
+                                * np.sin(theta)
+                            ),
                             (
                                 c * (u ** 2 + v ** 2)
-                                - w * ((a * u) + (b * v) - (u * x) - (v * y) - (w * z))
+                                - w
+                                * (
+                                    (a * u)
+                                    + (b * v)
+                                    - (u * x)
+                                    - (v * y)
+                                    - (w * z)
+                                )
                             )
                             * (1 - np.cos(theta))
                             + (z * np.cos(theta))
                             + (
-                                (-(b * u) + (a * v) - (v * x) + (u * y)) * np.sin(theta)
+                                (-(b * u) + (a * v) - (v * x) + (u * y))
+                                * np.sin(theta)
                             ),
                         ]
                     )
-                    hydrogen_positions.append([int(atom_ID), new_hydrogen_position])
+                    hydrogen_positions.append(
+                        [int(atom_ID), new_hydrogen_position]
+                    )
     return hydrogen_positions
 
 
@@ -228,7 +298,9 @@ def add_hydrogens_to_morph(morphology_dict, hydrogen_positions):
         morphology_dict["mass"].append(1.00794)
         morphology_dict["charge"].append(0.0)
         morphology_dict["diameter"].append(0.53)
-        morphology_dict["body"].append(morphology_dict["body"][hydrogen_atom[0]])
+        morphology_dict["body"].append(
+            morphology_dict["body"][hydrogen_atom[0]]
+        )
     return morphology_dict
 
 
@@ -297,7 +369,9 @@ def find_information(args):
     }
 
     if args.molecule_source is None:
-        print("You have not specified the dictionary you want to use to add hydrogens.")
+        print(
+            "You have not specified the dictionary you want to use to add hydrogens."
+        )
         print("Current built-ins are:")
         for key, val in built_ins.items():
             print(key)
@@ -354,7 +428,9 @@ def main():
         hydrogen_positions = calculate_hydrogen_positions(
             morphology_dict, hydrogens_to_add
         )
-        morphology_dict = add_hydrogens_to_morph(morphology_dict, hydrogen_positions)
+        morphology_dict = add_hydrogens_to_morph(
+            morphology_dict, hydrogen_positions
+        )
         morphology_dict = hf.add_wrapped_positions(morphology_dict)
         hf.write_morphology_xml(
             morphology_dict,

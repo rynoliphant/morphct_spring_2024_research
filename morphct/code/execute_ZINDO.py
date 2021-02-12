@@ -29,7 +29,12 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
             [chromophore.image] * len(chromophore.AAIDs),
             terminating_group_positions,
             terminating_group_images,
-            "".join([parameter_dict["output_orca_directory"], chromophore.orca_input]),
+            "".join(
+                [
+                    parameter_dict["output_orca_directory"],
+                    chromophore.orca_input,
+                ]
+            ),
         )
     print("")
     # Determine how many pairs there are first:
@@ -38,13 +43,21 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
         for neighbour in chromo.neighbours:
             if int(neighbour[0]) > chromo.ID:
                 number_of_pairs += 1
-    number_of_pairs = np.sum([len(chromo.neighbours) for chromo in chromophore_list])
-    print("There are", int(number_of_pairs / 2), "total neighbour pairs to consider.")
+    number_of_pairs = np.sum(
+        [len(chromo.neighbours) for chromo in chromophore_list]
+    )
+    print(
+        "There are",
+        int(number_of_pairs / 2),
+        "total neighbour pairs to consider.",
+    )
     # /2 because the forwards and backwards hops are identical
     # Then consider each chromophore against every other chromophore
     for chromophore1 in chromophore_list:
         neighbours_ID = [neighbour[0] for neighbour in chromophore1.neighbours]
-        neighbours_image = [neighbour[1] for neighbour in chromophore1.neighbours]
+        neighbours_image = [
+            neighbour[1] for neighbour in chromophore1.neighbours
+        ]
         for chromophore2 in chromophore_list:
             # Skip if chromophore2 is not one of chromophore1's neighbours
             # Also skip if chromophore2's ID is < chromophore1's ID to prevent
@@ -69,7 +82,8 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
             # Find the dimer AAIDs and relative images for each atom
             AAIDs = chromophore1.AAIDs + chromophore2.AAIDs
             images = [[0, 0, 0] for i in range(len(chromophore1.AAIDs))] + [
-                chromophore2_transformation for i in range(len(chromophore2.AAIDs))
+                chromophore2_transformation
+                for i in range(len(chromophore2.AAIDs))
             ]
             # Now add the terminating groups to both chromophores
             # Note that we would only ever expect both chromophores to require
@@ -91,7 +105,8 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
                     [0, 0, 0] for i in range(len(term_group_posns1))
                 ]
                 terminating_group_images2 = [
-                    chromophore2_transformation for i in range(len(term_group_posns2))
+                    chromophore2_transformation
+                    for i in range(len(term_group_posns2))
                 ]
                 # Write the dimer input file
                 write_orca_inp(
@@ -100,7 +115,9 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
                     images,
                     term_group_posns1 + term_group_posns2,
                     terminating_group_images1 + terminating_group_images2,
-                    "".join([parameter_dict["output_orca_directory"], input_name]),
+                    "".join(
+                        [parameter_dict["output_orca_directory"], input_name]
+                    ),
                 )
             else:
                 # Write the dimer input file
@@ -110,7 +127,9 @@ def create_input_files(chromophore_list, AA_morphology_dict, parameter_dict):
                     images,
                     None,
                     None,
-                    "".join([parameter_dict["output_orca_directory"], input_name]),
+                    "".join(
+                        [parameter_dict["output_orca_directory"], input_name]
+                    ),
                 )
     print("")
 
@@ -119,7 +138,9 @@ def remove_adjacent_terminators(group1, group2):
     pop_list = [[], []]
     for index1, terminating_hydrogen1 in enumerate(group1):
         for index2, terminating_hydrogen2 in enumerate(group2):
-            separation = np.linalg.norm(terminating_hydrogen2 - terminating_hydrogen1)
+            separation = np.linalg.norm(
+                terminating_hydrogen2 - terminating_hydrogen1
+            )
             if separation < 1.2:
                 pop_list[0].append(index1)
                 pop_list[1].append(index2)
@@ -219,9 +240,13 @@ def write_orca_inp(
         )
     # Load the orca input template
     orca_temp_dir = os.path.join(PROJECT_ROOT, "templates")
-    orca_temp_test_dir = os.path.join(PROJECT_ROOT, "code", "unit_testing", "assets")
+    orca_temp_test_dir = os.path.join(
+        PROJECT_ROOT, "code", "unit_testing", "assets"
+    )
     try:
-        with open(os.path.join(orca_temp_dir, "template.inp"), "r") as template_file:
+        with open(
+            os.path.join(orca_temp_dir, "template.inp"), "r"
+        ) as template_file:
             inp_file_lines = template_file.readlines()
     # In case running testbed:
     except FileNotFoundError:
@@ -243,14 +268,17 @@ def terminate_monomers(chromophore, parameter_dict, AA_morphology_dict):
     new_hydrogen_positions = []
     for atom_index_chromo, atom_index_morph in enumerate(chromophore.AAIDs):
         atom_type = AA_morphology_dict["type"][atom_index_morph]
-        if atom_type not in parameter_dict["molecule_terminating_connections"].keys():
+        if (
+            atom_type
+            not in parameter_dict["molecule_terminating_connections"].keys()
+        ):
             continue
         bonded_AAIDs = []
         # Iterate over all termination connections defined for this atomType (in
         # case we are trying to do something mega complicated)
-        for connection_info in parameter_dict["molecule_terminating_connections"][
-            atom_type
-        ]:
+        for connection_info in parameter_dict[
+            "molecule_terminating_connections"
+        ][atom_type]:
             for [bond_name, AAID1, AAID2] in chromophore.bonds:
                 if AAID1 == atom_index_morph:
                     if AAID2 not in bonded_AAIDs:
@@ -286,7 +314,9 @@ def get_orca_jobs(input_dir, parameter_dict, proc_IDs):
     orca_files_to_run = []
     for file_name in single_orca_file_list:
         if file_name[-4:] == ".inp":
-            orca_files_to_run.append(os.path.join(input_dir, "single", file_name))
+            orca_files_to_run.append(
+                os.path.join(input_dir, "single", file_name)
+            )
     for file_name in pair_orca_file_list:
         if file_name[-4:] == ".inp":
             orca_files_to_run.append(os.path.join(input_dir, "pair", file_name))
@@ -299,7 +329,9 @@ def get_orca_jobs(input_dir, parameter_dict, proc_IDs):
         for job_no, job in enumerate(orca_files_to_run):
             try:
                 with open(
-                    job.replace("input_orca", "output_orca").replace(".inp", ".out"),
+                    job.replace("input_orca", "output_orca").replace(
+                        ".inp", ".out"
+                    ),
                     "r",
                 ):
                     pop_list.append(job_no)
@@ -342,7 +374,9 @@ def main(
     jobs_list = get_orca_jobs(input_dir, parameter_dict, proc_IDs)
     # Shuffle the jobsList to spread it out over the cores
     np.random.shuffle(jobs_list)
-    number_of_inputs = sum([len(orca_files_to_run) for orca_files_to_run in jobs_list])
+    number_of_inputs = sum(
+        [len(orca_files_to_run) for orca_files_to_run in jobs_list]
+    )
     print("Found", number_of_inputs, "orca files to run.")
     if number_of_inputs > 0:
         # Create pickle file containing the jobs sorted by ProcID to be picked

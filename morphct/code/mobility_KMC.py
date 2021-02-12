@@ -52,7 +52,9 @@ def main(
     # and electrons and lifetimes to be run simultaneously providing adequate
     # statistics more quickly
     for lifetime in simulation_times:
-        for carrier_no in range(parameter_dict["number_of_holes_per_simulation_time"]):
+        for carrier_no in range(
+            parameter_dict["number_of_holes_per_simulation_time"]
+        ):
             carrier_list.append([carrier_no, lifetime, "hole"])
         for carrier_no in range(
             parameter_dict["number_of_electrons_per_simulation_time"]
@@ -60,17 +62,23 @@ def main(
             carrier_list.append([carrier_no, lifetime, "electron"])
     np.random.shuffle(carrier_list)
     proc_IDs = parameter_dict["proc_IDs"]
-    output_dir = os.path.join(parameter_dict["output_morphology_directory"], "KMC")
+    output_dir = os.path.join(
+        parameter_dict["output_morphology_directory"], "KMC"
+    )
     jobs_list = [
         carrier_list[i : i + (int(np.ceil(len(carrier_list) / len(proc_IDs))))]
         for i in range(
-            0, len(carrier_list), int(np.ceil(len(carrier_list) / float(len(proc_IDs))))
+            0,
+            len(carrier_list),
+            int(np.ceil(len(carrier_list) / float(len(proc_IDs)))),
         )
     ]
     print("Writing job pickles for each CPU...")
     running_jobs = []
     for proc_ID, jobs in enumerate(jobs_list):
-        pickle_name = os.path.join(output_dir, "KMC_data_{:02d}.pickle".format(proc_ID))
+        pickle_name = os.path.join(
+            output_dir, "KMC_data_{:02d}.pickle".format(proc_ID)
+        )
         with open(pickle_name, "wb+") as pickle_file:
             pickle.dump(jobs, pickle_file)
         print(

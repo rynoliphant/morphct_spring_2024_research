@@ -22,11 +22,11 @@ from morphct.code import helper_functions as hf
 
 
 # Physical Constants
-elementary_charge = 1.60217657E-19  # C
-k_B = 1.3806488E-23  # m^{2} kg s^{-2} K^{-1}
-hbar = 1.05457173E-34  # m^{2} kg s^{-1}
+elementary_charge = 1.60217657e-19  # C
+k_B = 1.3806488e-23  # m^{2} kg s^{-2} K^{-1}
+hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 light_speed = 299792458  # ms^{-1}
-epsilon_nought = 8.85418782E-12  # m^{-3} kg^{-1} s^{4} A^{2}
+epsilon_nought = 8.85418782e-12  # m^{-3} kg^{-1} s^{4} A^{2}
 ELECTRON = 0
 HOLE = 1
 
@@ -47,8 +47,8 @@ number_of_extractions = 0  # The total number of charges that have hopped
 #                                 contact
 KMC_iterations = 0
 # DEBUG Nothing is forbidden. Everything is permitted.
-fastest_event_allowed = 1E-99  # 1E-15
-slowest_event_allowed = 1E99  # 1E-9
+fastest_event_allowed = 1e-99  # 1E-15
+slowest_event_allowed = 1e99  # 1E-9
 log_file = None
 
 
@@ -61,7 +61,9 @@ class exciton:
         self.T = parameter_dict["system_temperature"]
         self.lifetime_parameter = parameter_dict["exciton_lifetime"]
         # DEBUG excitons live forever
-        self.recombination_time = -np.log(np.random.random()) * self.lifetime_parameter
+        self.recombination_time = (
+            -np.log(np.random.random()) * self.lifetime_parameter
+        )
         self.r_F = parameter_dict["forster_radius"]
         self.prefactor = parameter_dict["hopping_prefactor"]
         self.number_of_hops = 0
@@ -74,7 +76,9 @@ class exciton:
         self.current_chromophore = copy.deepcopy(self.initial_chromophore)
         self.calculate_behaviour()
         if parameter_dict["record_carrier_history"] is True:
-            self.history = [[self.initial_device_posn, self.initial_chromophore.posn]]
+            self.history = [
+                [self.initial_device_posn, self.initial_chromophore.posn]
+            ]
         else:
             self.history = None
         self.cell_size = parameter_dict["morphology_cell_size"]
@@ -161,11 +165,11 @@ class exciton:
         if global_time >= self.creation_time + self.recombination_time:
             # Exciton has run out of time and is now recombining, so set its
             # next hop_time to None
-            [self.destination_chromophore, self.hop_time, self.destination_image] = [
-                None,
-                None,
-                None,
-            ]
+            [
+                self.destination_chromophore,
+                self.hop_time,
+                self.destination_image,
+            ] = [None, None, None]
             self.removed_time = global_time
             return
         # Otherwise, calculate the fastest hop from the current chromophore
@@ -180,11 +184,11 @@ class exciton:
             # prevent the code from queueing up the exciton again because it has
             # already been popped from the main KMC queue), self.hopTime needs
             # to be None
-            [self.destination_chromophore, self.hop_time, self.destination_image] = [
-                None,
-                None,
-                None,
-            ]
+            [
+                self.destination_chromophore,
+                self.hop_time,
+                self.destination_image,
+            ] = [None, None, None]
             self.removed_time = global_time
 
     def check_dissociation(self):
@@ -230,7 +234,9 @@ class exciton:
             # For the hop, we need to know the change in E_ij for the Boltzmann
             # factor, as well as the distance rij being hopped.
             # In Durham we used a prefactor of sqrt(2) here, can't remember why
-            delta_E_ij = self.current_chromophore.neighbours_delta_E[neighbour_index]
+            delta_E_ij = self.current_chromophore.neighbours_delta_E[
+                neighbour_index
+            ]
             # The current posn inside the wrapped morphology is easy
             current_chromo_posn = self.current_chromophore.posn
             # The hop destination in wrapped morphology is slightly more
@@ -247,9 +253,9 @@ class exciton:
             ][1]
             # Morphology shape so we can work out the actual relative positions
             morphology_shape = [
-                global_morphology_data.return_AA_morphology(self.current_device_posn)[
-                    key
-                ]
+                global_morphology_data.return_AA_morphology(
+                    self.current_device_posn
+                )[key]
                 for key in ["lx", "ly", "lz"]
             ]
             remapped_posn = neighbour_posn + [
@@ -260,7 +266,7 @@ class exciton:
                 hf.calculate_separation(
                     np.array(current_chromo_posn), np.array(remapped_posn)
                 )
-                * 1E-10
+                * 1e-10
             )
             # Note, separations are recorded in angstroems, so spin this down to
             # metres. Additionally, all of the energies are in eV currently, so
@@ -289,7 +295,9 @@ class exciton:
                     [
                         global_chromophore_data.return_specific_chromophore(
                             self.current_device_posn,
-                            self.current_chromophore.neighbours[neighbour_index][0],
+                            self.current_chromophore.neighbours[
+                                neighbour_index
+                            ][0],
                         ),
                         hop_time,
                         neighbour_relative_image,
@@ -308,9 +316,9 @@ class exciton:
             )
             # If the z axis component is > shape[2] or < 0, then forbid this hop
             # by removing it from the hopTimes list.
-            if (new_location[2] >= global_chromophore_data.device_array.shape[2]) or (
-                new_location[2] < 0
-            ):
+            if (
+                new_location[2] >= global_chromophore_data.device_array.shape[2]
+            ) or (new_location[2] < 0):
                 hop_times.pop(0)
             else:
                 break
@@ -334,13 +342,15 @@ class exciton:
             # already-calculated hopTime, but then find the closest chromophore
             # to the destination position in the adjacent device cell.
             target_device_posn = list(
-                np.array(self.current_device_posn) + np.array(self.destination_image)
+                np.array(self.current_device_posn)
+                + np.array(self.destination_image)
             )
             new_chromo = global_chromophore_data.return_closest_chromophore_to_position(
                 target_device_posn, destination_position
             )
             if isinstance(new_chromo, str) and (
-                (new_chromo.lower() == "top") or (new_chromo.lower() == "bottom")
+                (new_chromo.lower() == "top")
+                or (new_chromo.lower() == "bottom")
             ):
                 # This exciton is hopping out of the active layer and into the
                 # contacts.
@@ -399,7 +409,10 @@ class carrier:
         self.T = parameter_dict["system_temperature"]
         self.wrapxy = parameter_dict["wrap_device_xy"]
         self.disable_coulombic = parameter_dict["disable_coulombic"]
-        if self.current_chromophore.sub_species == self.initial_chromophore.sub_species:
+        if (
+            self.current_chromophore.sub_species
+            == self.initial_chromophore.sub_species
+        ):
             self.lambda_ij = self.current_chromophore.reorganisation_energy
         else:
             self.lambda_ij = (
@@ -416,7 +429,9 @@ class carrier:
             self.carrier_type = ELECTRON
         self.relative_permittivity = parameter_dict["relative_permittivity"]
         if parameter_dict["record_carrier_history"] is True:
-            self.history = [[self.initial_device_posn, initial_chromophore.posn]]
+            self.history = [
+                [self.initial_device_posn, initial_chromophore.posn]
+            ]
         else:
             self.history = None
         # Set the use of Koopmans' approximation to false if the key does not
@@ -473,7 +488,7 @@ class carrier:
         ):
             # Ignore any hops with a NoneType transfer integral (usually due to
             # an orca error), or zero
-            if (transfer_integral is None) or (transfer_integral < 1E-10):
+            if (transfer_integral is None) or (transfer_integral < 1e-10):
                 continue
             neighbour_chromophore = global_chromophore_data.return_specific_chromophore(
                 self.current_device_posn,
@@ -489,7 +504,8 @@ class carrier:
                 neighbour_index
             ][1]
             destination_image = list(
-                np.array(self.current_device_posn) + np.array(neighbour_relative_image)
+                np.array(self.current_device_posn)
+                + np.array(neighbour_relative_image)
             )
             # If we're hopping out of this cell and into a new one, make sure
             # that it's in-range if we're not going to wrap it
@@ -503,7 +519,10 @@ class carrier:
                 if neighbour_relative_image != [0, 0, 0]:
                     for axis_no, val in enumerate(destination_image[:-1]):
                         if (
-                            val >= global_chromophore_data.device_array.shape[axis_no]
+                            val
+                            >= global_chromophore_data.device_array.shape[
+                                axis_no
+                            ]
                         ) or (val < 0):
                             skip_this_neighbour = True
                             break
@@ -524,7 +543,8 @@ class carrier:
             # 'Top' or 'Bottom' if it's leaving the device)
             if not isinstance(destination_chromophore, str):
                 if (destination_image in destination_chromophore.occupied) or (
-                    destination_chromophore.species != self.current_chromophore.species
+                    destination_chromophore.species
+                    != self.current_chromophore.species
                 ):
                     continue
             # Otherwise, we're good to go. Calculate the hop as previously (but
@@ -572,7 +592,7 @@ class carrier:
                     hf.calculate_separation(
                         self.current_chromophore.posn, destination_chromo_posn
                     )
-                    * 1E-10
+                    * 1e-10
                 )
                 hop_rate = hf.calculate_carrier_hop_rate(
                     self.lambda_ij * elementary_charge,
@@ -779,15 +799,18 @@ class carrier:
         # 1) Energetic Disorder
         delta_E_ij += chromo_E_ij * elementary_charge
         # 2) Field within the device
-        current_absolute_position = np.array(self.current_device_posn) * cell_size + (
-            np.array(self.current_chromophore.posn) * 1E-10
-        )
+        current_absolute_position = np.array(
+            self.current_device_posn
+        ) * cell_size + (np.array(self.current_chromophore.posn) * 1e-10)
         destination_absolute_position = (
-            np.array(self.current_device_posn) + np.array(neighbour_relative_image)
-        ) * cell_size + (np.array(destination_chromophore.posn) * 1E-10)
+            np.array(self.current_device_posn)
+            + np.array(neighbour_relative_image)
+        ) * cell_size + (np.array(destination_chromophore.posn) * 1e-10)
         # Field has negative sign because device is flipped with anode at +Z and
         # Cathode at 0
-        z_sep = -(destination_absolute_position[2] - current_absolute_position[2])
+        z_sep = -(
+            destination_absolute_position[2] - current_absolute_position[2]
+        )
         charge = elementary_charge * ((2 * self.carrier_type) - 1)
         delta_E_ij += z_sep * current_field_value * charge
         if self.disable_coulombic is not True:
@@ -867,7 +890,10 @@ def calculate_photoinjection_rate(parameter_dict, device_shape):
     # Flux is multiplied by 10 to comvert from mW/cm^{2} to W/m^{2}
     rate = (
         (parameter_dict["incident_flux"] * 10)
-        * (parameter_dict["incident_wavelength"] / (hbar * 2 * np.pi * light_speed))
+        * (
+            parameter_dict["incident_wavelength"]
+            / (hbar * 2 * np.pi * light_speed)
+        )
         * device_shape[0]
         * device_shape[1]
         * parameter_dict["morphology_cell_size"] ** 2
@@ -889,18 +915,22 @@ def decrement_time(event_queue, event_time):
     # A function that increments the global time by whatever the time this event
     # is, and then decrements all of the remaining times in the queue.
     global_time += event_time
-    event_queue = [(event[0] - event_time, event[1], event[2]) for event in event_queue]
+    event_queue = [
+        (event[0] - event_time, event[1], event[2]) for event in event_queue
+    ]
     return event_queue
 
 
-def plot_carrier_Z_profiles(all_carriers, parameter_dict, device_array, output_dir):
+def plot_carrier_Z_profiles(
+    all_carriers, parameter_dict, device_array, output_dir
+):
     carriers_to_plot = []
     # Only consider electrons and holes
     for carrier in all_carriers:
         if "r_F" not in carrier.__dict__:
             carriers_to_plot.append(carrier)
     # Determine the ylims of the zProfile plot
-    z_len = 1E10 * (
+    z_len = 1e10 * (
         np.array(device_array.shape[2]) * parameter_dict["morphology_cell_size"]
     )
     # Now make the plots
@@ -916,7 +946,7 @@ def plot_Z_profile(carrier, z_dim_size, parameter_dict, output_dir):
     for hop_index, hop in enumerate(carrier.history):
         x_vals.append(hop_index)
         current_Z = (
-            1E10
+            1e10
             * ((np.array(hop[0][2]) + 0.5))
             * parameter_dict["morphology_cell_size"]
         ) + np.array(hop[1][2])
@@ -962,11 +992,13 @@ def calculate_coulomb(
         # Greenham2007 and beyond), Ben Lyons (2011/2012), and van der Holst
         # (2011) for more details.
         carrier_posn = np.array(carrier.current_device_posn) * cell_size + (
-            np.array(carrier.current_chromophore.posn) * 1E-10
+            np.array(carrier.current_chromophore.posn) * 1e-10
         )
         if carrier_ID != self_ID:
             # Only consider the current carrier if it is not us!
-            separation = hf.calculate_separation(absolute_position, carrier_posn)
+            separation = hf.calculate_separation(
+                absolute_position, carrier_posn
+            )
             if separation == 0.0:
                 # Destination trial is to site occupied by another carrier.
                 # The occupation matrix should have caught this already in
@@ -1056,7 +1088,8 @@ def calculate_dark_current_injections(device_array, parameter_dict):
     # Calculate the important energy levels
     bandgap = parameter_dict["acceptor_LUMO"] - parameter_dict["donor_HOMO"]
     electron_inject_barrier = (
-        parameter_dict["acceptor_LUMO"] - parameter_dict["cathode_work_function"]
+        parameter_dict["acceptor_LUMO"]
+        - parameter_dict["cathode_work_function"]
     )
     hole_inject_barrier = (
         parameter_dict["anode_work_function"] - parameter_dict["donor_HOMO"]
@@ -1086,13 +1119,15 @@ def calculate_dark_current_injections(device_array, parameter_dict):
                 #    None.__ne__, chromophore.neighbours_delta_E)) > 0):
                 if (
                     (chromophore.posn[2] <= -(AA_morphology["lz"] / 2.0) + 10)
-                    and (chromophore.posn[2] >= -(AA_morphology["lz"] / 2.0) + 5)
+                    and (
+                        chromophore.posn[2] >= -(AA_morphology["lz"] / 2.0) + 5
+                    )
                     and (
                         len(
                             [
                                 _
                                 for _ in chromophore.neighbours_TI
-                                if (_ is not None) and (_ > 1E-5)
+                                if (_ is not None) and (_ > 1e-5)
                             ]
                         )
                         > 0
@@ -1101,8 +1136,11 @@ def calculate_dark_current_injections(device_array, parameter_dict):
                     cathode_inject_chromophores.append(
                         [
                             chromophore,
-                            1E-10
-                            * (chromophore.posn[2] - (-(AA_morphology["lz"] / 2.0))),
+                            1e-10
+                            * (
+                                chromophore.posn[2]
+                                - (-(AA_morphology["lz"] / 2.0))
+                            ),
                         ]
                     )
                     valid_cathode_inj_sites += 1
@@ -1117,7 +1155,9 @@ def calculate_dark_current_injections(device_array, parameter_dict):
                     # same as the energy difference between the chromophore and
                     # literature LUMOs for injection (this is because we don't
                     # record the donor LUMO or the acceptor HOMO)
-                    delta_E = elementary_charge * (bandgap - electron_inject_barrier)
+                    delta_E = elementary_charge * (
+                        bandgap - electron_inject_barrier
+                    )
                 inject_rate = hf.calculate_miller_abrahams_hop_rate(
                     parameter_dict["MA_prefactor"],
                     separation,
@@ -1132,7 +1172,8 @@ def calculate_dark_current_injections(device_array, parameter_dict):
                 )
                 inject_time = site.inject_time
                 cathode_inject_wait_times = push_to_queue(
-                    cathode_inject_wait_times, (inject_time, "cathode-injection", site)
+                    cathode_inject_wait_times,
+                    (inject_time, "cathode-injection", site),
                 )
     # Now consider hole-injecting electrode at top of device (anode):
     z_val = device_shape[2] - 1
@@ -1159,7 +1200,7 @@ def calculate_dark_current_injections(device_array, parameter_dict):
                             [
                                 _
                                 for _ in chromophore.neighbours_TI
-                                if (_ is not None) and (_ > 1E-5)
+                                if (_ is not None) and (_ > 1e-5)
                             ]
                         )
                         > 0
@@ -1168,14 +1209,20 @@ def calculate_dark_current_injections(device_array, parameter_dict):
                     anode_inject_chromophores.append(
                         [
                             chromophore,
-                            1E-10 * ((AA_morphology["lz"] / 2.0) - chromophore.posn[2]),
+                            1e-10
+                            * (
+                                (AA_morphology["lz"] / 2.0)
+                                - chromophore.posn[2]
+                            ),
                         ]
                     )
                     valid_anode_inj_sites += 1
             for [chromophore, separation] in anode_inject_chromophores:
                 if chromophore.species.lower() == "acceptor":
                     # Injecting an electron from the anode (hard)
-                    delta_E = elementary_charge * (bandgap - hole_inject_barrier)
+                    delta_E = elementary_charge * (
+                        bandgap - hole_inject_barrier
+                    )
                 else:
                     # Injecting a hole from the anode (easy)
                     delta_E = elementary_charge * (hole_inject_barrier)
@@ -1193,7 +1240,8 @@ def calculate_dark_current_injections(device_array, parameter_dict):
                 )
                 inject_time = site.inject_time
                 anode_inject_wait_times = push_to_queue(
-                    anode_inject_wait_times, (inject_time, "anode-injection", site)
+                    anode_inject_wait_times,
+                    (inject_time, "anode-injection", site),
                 )
     # plt.figure()
     # plt.hist(injectRates, bins = np.logspace(9, 12, 30))
@@ -1263,21 +1311,25 @@ def push_to_queue(queue, event):
             ],
         )
         raise KeyboardInterrupt
-    if (event[0] == np.float64(1E99)) and (event[1].lower() != "photo"):
+    if (event[0] == np.float64(1e99)) and (event[1].lower() != "photo"):
         log_line_to_write = [
             "---=== TRIED TO QUEUE EVENT WITH CRAZY LONG WAIT TIME ===---"
             "".join([" Event = ", event])
         ]
         if event[2].history is not None:
             log_line_to_write.append(
-                "This carrier has completed {:d} hops.".format(len(event[2].history))
+                "This carrier has completed {:d} hops.".format(
+                    len(event[2].history)
+                )
             )
         hf.write_to_file(log_file, log_line_to_write)
         try:
             event[2].__dict__.pop("history")
         except KeyError:
             pass
-        hf.write_to_file(log_file, ["".join(["Instance = ", repr(event[2].__dict__)])])
+        hf.write_to_file(
+            log_file, ["".join(["Instance = ", repr(event[2].__dict__)])]
+        )
         try:
             hf.write_to_file(
                 log_file,
@@ -1315,12 +1367,12 @@ def push_to_queue(queue, event):
             for carrier2ID, carrier2 in global_carrier_dict.items():
                 if carrier1ID >= carrier2ID:
                     continue
-                carrier1posn = (78 * np.array(carrier1.current_device_posn)) + np.array(
-                    carrier1.current_chromophore.posn
-                )
-                carrier2posn = (78 * np.array(carrier2.current_device_posn)) + np.array(
-                    carrier2.current_chromophore.posn
-                )
+                carrier1posn = (
+                    78 * np.array(carrier1.current_device_posn)
+                ) + np.array(carrier1.current_chromophore.posn)
+                carrier2posn = (
+                    78 * np.array(carrier2.current_device_posn)
+                ) + np.array(carrier2.current_chromophore.posn)
                 hf.write_to_file(
                     log_file,
                     [
@@ -1342,7 +1394,9 @@ def plot_event_time_distribution(event_log, output_dir, fastest, slowest):
     plt.hist(
         [event_log[event_type] for event_type in sorted(event_log.keys())],
         bins=np.logspace(
-            int(np.floor(np.log10(fastest))), int(np.ceil(np.log10(slowest))), 10
+            int(np.floor(np.log10(fastest))),
+            int(np.ceil(np.log10(slowest))),
+            10,
         ),
         color=["r", "g", "c", "m", "b", "y"],
         label=sorted(event_log.keys()),
@@ -1362,7 +1416,9 @@ def gaussian(x, a, x0, sigma):
     return a * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
 
 
-def plot_carrier_trajectories(all_carriers, parameter_dict, device_array, output_dir):
+def plot_carrier_trajectories(
+    all_carriers, parameter_dict, device_array, output_dir
+):
     combinations_to_plot = {"cathode": [], "anode": []}
     pop_list = []
     for index, carrier in enumerate(all_carriers):
@@ -1390,7 +1446,7 @@ def plot3D_trajectory(
 ):
     fig = plt.figure()
     ax = p3.Axes3D(fig)
-    [x_len, y_len, z_len] = 1E10 * (
+    [x_len, y_len, z_len] = 1e10 * (
         np.array(device_array.shape) * parameter_dict["morphology_cell_size"]
     )
     # The conversion is needed to get the box in ang
@@ -1430,7 +1486,7 @@ def plot3D_trajectory(
                 # Additionally, we need to add half of the morphCellSize to whatever
                 # hop[0] is as the origin is in the centre of the box
                 current_posn = (
-                    1E10
+                    1e10
                     * (
                         (np.array(hop[0]) + np.array([0.5, 0.5, 0.5]))
                         * parameter_dict["morphology_cell_size"]
@@ -1438,7 +1494,7 @@ def plot3D_trajectory(
                 ) + np.array(hop[1])
                 next_hop = carrier.history[hop_index + 1]
                 next_posn = (
-                    1E10
+                    1e10
                     * (
                         (np.array(next_hop[0]) + np.array([0.5, 0.5, 0.5]))
                         * parameter_dict["morphology_cell_size"]
@@ -1470,7 +1526,8 @@ def plot3D_trajectory(
 
 def debug_check_occupied(ID, image):
     print(
-        "UPDATED =", globalChromophoreData.returnSpecificChromophore(image, ID).occupied
+        "UPDATED =",
+        globalChromophoreData.returnSpecificChromophore(image, ID).occupied,
     )
 
 
@@ -1510,10 +1567,16 @@ def execute(
             (parameter_dict["acceptor_LUMO"] - parameter_dict["donor_HOMO"])
             -
             # Electron Inject Barrier:
-            (parameter_dict["acceptor_LUMO"] - parameter_dict["cathode_work_function"])
+            (
+                parameter_dict["acceptor_LUMO"]
+                - parameter_dict["cathode_work_function"]
+            )
             -
             # Hole Inject Barrier:
-            (parameter_dict["anode_work_function"] - parameter_dict["donor_HOMO"])
+            (
+                parameter_dict["anode_work_function"]
+                - parameter_dict["donor_HOMO"]
+            )
             -
             # Voltage
             voltage_val
@@ -1524,7 +1587,15 @@ def execute(
     )
     hf.write_to_file(
         log_file,
-        ["".join(["Current E-field value = {:.2E} V/m".format(current_field_value)])],
+        [
+            "".join(
+                [
+                    "Current E-field value = {:.2E} V/m".format(
+                        current_field_value
+                    )
+                ]
+            )
+        ],
     )
     output_figures_dir = os.path.join(
         parameter_dict["output_device_dir"],
@@ -1535,7 +1606,7 @@ def execute(
 
     # DEBUG
     slowest_event = 0
-    fastest_event = 2E99
+    fastest_event = 2e99
     event_times = []
 
     # Need to initalise a bunch of variables
@@ -1584,7 +1655,9 @@ def execute(
     # and locations at the beginning and then not have to do it again, just
     # re-queue up the injectSites as we use them by calling
     # site(calculateInjectTime)
-    injection_data = calculate_dark_current_injections(device_array, parameter_dict)
+    injection_data = calculate_dark_current_injections(
+        device_array, parameter_dict
+    )
     cathode_inject_rate = injection_data[0]
     anode_inject_rate = injection_data[1]
     cathode_inject_queue = injection_data[2]
@@ -1710,7 +1783,11 @@ def execute(
                     # Now push the anode event to the main queue
                     event_queue = push_to_queue(
                         event_queue,
-                        (anode_injection_time, "anode-injection", next_anode_event[2]),
+                        (
+                            anode_injection_time,
+                            "anode-injection",
+                            next_anode_event[2],
+                        ),
                     )
 
             if int(t1 - t0) % 10 == 0:
@@ -1766,7 +1843,9 @@ def execute(
                                 ),
                                 repr(random_device_position),
                                 " (which has type ",
-                                repr(device_array[tuple(random_device_position)]),
+                                repr(
+                                    device_array[tuple(random_device_position)]
+                                ),
                                 ") after {0:d} iterations (global_time = {1:.2e})".format(
                                     KMC_iterations, global_time
                                 ),
@@ -1775,7 +1854,10 @@ def execute(
                     ],
                 )
                 injected_exciton = exciton(
-                    exciton_index, global_time, random_device_position, parameter_dict
+                    exciton_index,
+                    global_time,
+                    random_device_position,
+                    parameter_dict,
                 )
                 if (
                     (injected_exciton.can_dissociate is True)
@@ -1838,9 +1920,12 @@ def execute(
                                 " ".join(
                                     [
                                         "\tExciton #{0:d} depositing electron #{1:d} at".format(
-                                            injected_exciton.ID, injected_electron.ID
+                                            injected_exciton.ID,
+                                            injected_electron.ID,
                                         ),
-                                        repr(injected_exciton.current_device_posn),
+                                        repr(
+                                            injected_exciton.current_device_posn
+                                        ),
                                         repr(
                                             injected_exciton.electron_chromophore.posn
                                         ),
@@ -1849,10 +1934,15 @@ def execute(
                                 " ".join(
                                     [
                                         "\tExciton #{0:d} depositing hole at #{1:d} at".format(
-                                            injected_exciton.ID, injected_hole.ID
+                                            injected_exciton.ID,
+                                            injected_hole.ID,
                                         ),
-                                        repr(injected_exciton.current_device_posn),
-                                        repr(injected_exciton.hole_chromophore.posn),
+                                        repr(
+                                            injected_exciton.current_device_posn
+                                        ),
+                                        repr(
+                                            injected_exciton.hole_chromophore.posn
+                                        ),
                                     ]
                                 ),
                             ],
@@ -1861,7 +1951,8 @@ def execute(
                         # their next hops to the KMC queue
                         injected_electron.calculate_behaviour()
                         if (injected_electron.hop_time is not None) and (
-                            injected_electron.destination_chromophore is not None
+                            injected_electron.destination_chromophore
+                            is not None
                         ):
                             event_queue = push_to_queue(
                                 event_queue,
@@ -1877,7 +1968,11 @@ def execute(
                         ):
                             event_queue = push_to_queue(
                                 event_queue,
-                                (injected_hole.hop_time, "carrier_hop", injected_hole),
+                                (
+                                    injected_hole.hop_time,
+                                    "carrier_hop",
+                                    injected_hole,
+                                ),
                             )
                     else:
                         # Injected onto a site with no connections, so this
@@ -1897,7 +1992,11 @@ def execute(
                     # Push the exciton to the queue
                     event_queue = push_to_queue(
                         event_queue,
-                        (injected_exciton.hop_time, "exciton_hop", injected_exciton),
+                        (
+                            injected_exciton.hop_time,
+                            "exciton_hop",
+                            injected_exciton,
+                        ),
                     )
                 # A photoinjection has just occured, so now queue up a new one
                 photoinjection_time = hf.determine_event_tau(
@@ -1933,11 +2032,16 @@ def execute(
                             "".join(
                                 [
                                     "EVENT: Dark current injection from the {0:s} #{1:d} into ".format(
-                                        inject_site.electrode, number_of_injections
+                                        inject_site.electrode,
+                                        number_of_injections,
                                     ),
                                     repr(inject_site.device_posn),
                                     " (which has type ",
-                                    repr(device_array[tuple(inject_site.device_posn)]),
+                                    repr(
+                                        device_array[
+                                            tuple(inject_site.device_posn)
+                                        ]
+                                    ),
                                     ") chromophore number {0:d} after {1:d} iterations (global_time = {2:.2e})".format(
                                         inject_site.chromophore.ID,
                                         KMC_iterations,
@@ -1968,7 +2072,9 @@ def execute(
                     ):
                         hf.write_to_file(
                             log_file,
-                            ["DARK INJECTION LED TO ELECTRON WITH CRAZY HOPTIME"],
+                            [
+                                "DARK INJECTION LED TO ELECTRON WITH CRAZY HOPTIME"
+                            ],
                         )
                         for carrier_from_list in global_carrier_dict.values():
                             hf.write_to_file(
@@ -1976,7 +2082,9 @@ def execute(
                                 [
                                     " ".join(
                                         [
-                                            repr(carrier_from_list.current_device_posn),
+                                            repr(
+                                                carrier_from_list.current_device_posn
+                                            ),
                                             repr(
                                                 carrier_from_list.current_chromophore.posn
                                             ),
@@ -1985,9 +2093,12 @@ def execute(
                                 ],
                             )
                         hf.write_to_file(
-                            log_file, [str(injected_carrier.current_chromophore.ID)]
+                            log_file,
+                            [str(injected_carrier.current_chromophore.ID)],
                         )
-                        hf.write_to_file(log_file, [repr(injected_carrier.__dict__)])
+                        hf.write_to_file(
+                            log_file, [repr(injected_carrier.__dict__)]
+                        )
                         exit()
                     if (injected_carrier.hop_time is not None) and (
                         injected_carrier.destination_chromophore is not None
@@ -2020,7 +2131,11 @@ def execute(
                     )
                     event_queue = push_to_queue(
                         event_queue,
-                        (anode_injection_time, "anode-injection", next_anode_event[2]),
+                        (
+                            anode_injection_time,
+                            "anode-injection",
+                            next_anode_event[2],
+                        ),
                     )
                     number_of_anode_injections += 1
 
@@ -2057,7 +2172,9 @@ def execute(
                             log_file,
                             [
                                 "EVENT: Exciton #{0:d} dissociating after {1:d} iterations (global_time = {2:.2e})".format(
-                                    hopping_exciton.ID, KMC_iterations, global_time
+                                    hopping_exciton.ID,
+                                    KMC_iterations,
+                                    global_time,
                                 )
                             ],
                         )
@@ -2107,10 +2224,15 @@ def execute(
                                 " ".join(
                                     [
                                         "\tExciton #{0:d} depositing electron #{1:d} at".format(
-                                            hopping_exciton.ID, injected_electron.ID
+                                            hopping_exciton.ID,
+                                            injected_electron.ID,
                                         ),
-                                        repr(hopping_exciton.current_device_posn),
-                                        repr(hopping_exciton.electron_chromophore.posn),
+                                        repr(
+                                            hopping_exciton.current_device_posn
+                                        ),
+                                        repr(
+                                            hopping_exciton.electron_chromophore.posn
+                                        ),
                                     ]
                                 ),
                                 " ".join(
@@ -2118,8 +2240,12 @@ def execute(
                                         "\tExciton #{0:d} depositing hole at #{1:d} at".format(
                                             hopping_exciton.ID, injected_hole.ID
                                         ),
-                                        repr(hopping_exciton.current_device_posn),
-                                        repr(hopping_exciton.hole_chromophore.posn),
+                                        repr(
+                                            hopping_exciton.current_device_posn
+                                        ),
+                                        repr(
+                                            hopping_exciton.hole_chromophore.posn
+                                        ),
                                     ]
                                 ),
                             ],
@@ -2131,7 +2257,8 @@ def execute(
                         # their next hops to the KMC queue
                         injected_electron.calculate_behaviour()
                         if (injected_electron.hop_time is not None) and (
-                            injected_electron.destination_chromophore is not None
+                            injected_electron.destination_chromophore
+                            is not None
                         ):
                             event_queue = push_to_queue(
                                 event_queue,
@@ -2147,14 +2274,20 @@ def execute(
                         ):
                             event_queue = push_to_queue(
                                 event_queue,
-                                (injected_hole.hop_time, "carrier_hop", injected_hole),
+                                (
+                                    injected_hole.hop_time,
+                                    "carrier_hop",
+                                    injected_hole,
+                                ),
                             )
                     else:
                         hf.write_to_file(
                             log_file,
                             [
                                 "EVENT: Exciton #{0:d} recombining after {1:d} iterations (global_time = {2:.2e})".format(
-                                    hopping_exciton.ID, KMC_iterations, global_time
+                                    hopping_exciton.ID,
+                                    KMC_iterations,
+                                    global_time,
                                 )
                             ],
                         )
@@ -2166,28 +2299,40 @@ def execute(
                     initial_pos = np.array(
                         hopping_exciton.initial_device_posn
                     ) * parameter_dict["morphology_cell_size"] + (
-                        np.array(hopping_exciton.initial_chromophore.posn) * 1E-10
+                        np.array(hopping_exciton.initial_chromophore.posn)
+                        * 1e-10
                     )
                     final_pos = np.array(
                         hopping_exciton.current_device_posn
                     ) * parameter_dict["morphology_cell_size"] + (
-                        np.array(hopping_exciton.current_chromophore.posn) * 1E-10
+                        np.array(hopping_exciton.current_chromophore.posn)
+                        * 1e-10
                     )
                     if hopping_exciton.can_dissociate is True:
                         diss_exciton_disp.append(
-                            hf.calculate_separation(initial_pos, final_pos) / 1E-9
+                            hf.calculate_separation(initial_pos, final_pos)
+                            / 1e-9
                         )
-                        diss_exciton_time.append(hopping_exciton.recombination_time)
+                        diss_exciton_time.append(
+                            hopping_exciton.recombination_time
+                        )
                     else:
                         rec_exciton_disp.append(
-                            hf.calculate_separation(initial_pos, final_pos) / 1E-9
+                            hf.calculate_separation(initial_pos, final_pos)
+                            / 1e-9
                         )
-                        rec_exciton_time.append(hopping_exciton.recombination_time)
+                        rec_exciton_time.append(
+                            hopping_exciton.recombination_time
+                        )
                     # END DEBUG
                 else:
                     event_queue = push_to_queue(
                         event_queue,
-                        (hopping_exciton.hop_time, "exciton_hop", hopping_exciton),
+                        (
+                            hopping_exciton.hop_time,
+                            "exciton_hop",
+                            hopping_exciton,
+                        ),
                     )
 
             elif next_event[1].lower() == "carrier_hop":
@@ -2226,18 +2371,25 @@ def execute(
                     # Normal carrier hop, so requeue this carrier
                     event_queue = push_to_queue(
                         event_queue,
-                        (hopping_carrier.hop_time, "carrier_hop", hopping_carrier),
+                        (
+                            hopping_carrier.hop_time,
+                            "carrier_hop",
+                            hopping_carrier,
+                        ),
                     )
                 # Check if we're eligible to recombine
                 if (
                     (hopping_carrier.recombining is True)
                     and (hopping_carrier.ID not in recombining_carrier_IDs)
                     and (
-                        hopping_carrier.recombining_with not in recombining_carrier_IDs
+                        hopping_carrier.recombining_with
+                        not in recombining_carrier_IDs
                     )
                 ):
                     recombining_carrier_IDs.append(hopping_carrier.ID)
-                    recombining_carrier_IDs.append(hopping_carrier.recombining_with)
+                    recombining_carrier_IDs.append(
+                        hopping_carrier.recombining_with
+                    )
                     recombination_time = hf.determine_event_tau(
                         parameter_dict["recombination_rate"],
                         event_type="carrier-recombination",
@@ -2247,7 +2399,8 @@ def execute(
                         log_file=log_file,
                     )
                     event_queue = push_to_queue(
-                        event_queue, (recombination_time, "recombine", hopping_carrier)
+                        event_queue,
+                        (recombination_time, "recombine", hopping_carrier),
                     )
                 # # If this carrier was injected, requeue this injection site in
                 # # the dark_inject_queue to allow another injection. Only
@@ -2281,15 +2434,17 @@ def execute(
                     carrier1posn = np.array(
                         carrier1.current_device_posn
                     ) * parameter_dict["morphology_cell_size"] + (
-                        np.array(carrier1.current_chromophore.posn) * 1E-10
+                        np.array(carrier1.current_chromophore.posn) * 1e-10
                     )
                     carrier2 = global_carrier_dict[carrier1.recombining_with]
                     carrier2posn = np.array(
                         carrier2.current_device_posn
                     ) * parameter_dict["morphology_cell_size"] + (
-                        np.array(carrier2.current_chromophore.posn) * 1E-10
+                        np.array(carrier2.current_chromophore.posn) * 1e-10
                     )
-                    separation = hf.calculate_separation(carrier2posn, carrier1posn)
+                    separation = hf.calculate_separation(
+                        carrier2posn, carrier1posn
+                    )
                     recombining_carrier_IDs.remove(carrier2.ID)
                     # Calculate the increment to the
                     # number_of_electrical_recombinations counter (this will be
@@ -2299,22 +2454,42 @@ def execute(
                     for recombining_carrier in [carrier1, carrier2]:
                         if (
                             (recombining_carrier.carrier_type == HOLE)
-                            and isinstance(recombining_carrier.injected_from, str)
-                            and (recombining_carrier.injected_from.lower() == "anode")
+                            and isinstance(
+                                recombining_carrier.injected_from, str
+                            )
+                            and (
+                                recombining_carrier.injected_from.lower()
+                                == "anode"
+                            )
                         ) or (
                             (recombining_carrier.carrier_type == ELECTRON)
-                            and isinstance(recombining_carrier.injected_from, str)
-                            and (recombining_carrier.injected_from.lower() == "cathode")
+                            and isinstance(
+                                recombining_carrier.injected_from, str
+                            )
+                            and (
+                                recombining_carrier.injected_from.lower()
+                                == "cathode"
+                            )
                         ):
                             delta_electrical_recombinations += 1
                         elif (
                             (recombining_carrier.carrier_type == ELECTRON)
-                            and isinstance(recombining_carrier.injected_from, str)
-                            and (recombining_carrier.injected_from.lower() == "anode")
+                            and isinstance(
+                                recombining_carrier.injected_from, str
+                            )
+                            and (
+                                recombining_carrier.injected_from.lower()
+                                == "anode"
+                            )
                         ) or (
                             (recombining_carrier.carrier_type == HOLE)
-                            and isinstance(recombining_carrier.injected_from, str)
-                            and (recombining_carrier.injected_from.lower() == "cathode")
+                            and isinstance(
+                                recombining_carrier.injected_from, str
+                            )
+                            and (
+                                recombining_carrier.injected_from.lower()
+                                == "cathode"
+                            )
                         ):
                             delta_electrical_recombinations -= 1
                     recombining_carrier_IDs.remove(carrier1.ID)
@@ -2323,7 +2498,8 @@ def execute(
                             log_file,
                             [
                                 "{0:f} <= {1:f}".format(
-                                    separation, parameter_dict["coulomb_capture_radius"]
+                                    separation,
+                                    parameter_dict["coulomb_capture_radius"],
                                 )
                             ],
                         )
@@ -2364,7 +2540,8 @@ def execute(
                             log_file,
                             [
                                 "{0:f} > {1:f}".format(
-                                    separation, parameter_dict["coulomb_capture_radius"]
+                                    separation,
+                                    parameter_dict["coulomb_capture_radius"],
                                 )
                             ],
                         )
@@ -2383,7 +2560,7 @@ def execute(
                         # Update their recombination flags
                         carrier1.recombining = False
                         carrier1.recombining_with = None
-                        if separation != 1E99:
+                        if separation != 1e99:
                             # If recombining carrier was already extracted, then skip this
                             carrier2.recombining = False
                             carrier2.recombining_with = None
@@ -2410,17 +2587,27 @@ def execute(
             [
                 "Kill command recieved...",
                 "Plotting output graphs before terminating...",
-                " ".join(["---=== Results from CPU rank", sys.argv[2], "===---"]),
+                " ".join(
+                    ["---=== Results from CPU rank", sys.argv[2], "===---"]
+                ),
                 "Run terminated after {0:d} iterations (global_time = {1:.2e}) after {2:.2f} seconds.".format(
                     KMC_iterations, global_time, time
                 ),
-                "Number of photoinjections = {:d}".format(number_of_photoinjections),
+                "Number of photoinjections = {:d}".format(
+                    number_of_photoinjections
+                ),
                 "Number of cathode injections = {:d}".format(
                     number_of_cathode_injections
                 ),
-                "Number of anode injections = {:d}".format(number_of_anode_injections),
-                "Number of dissociations = {:d}".format(number_of_dissociations),
-                "Number of recombinations = {:d}".format(number_of_recombinations),
+                "Number of anode injections = {:d}".format(
+                    number_of_anode_injections
+                ),
+                "Number of dissociations = {:d}".format(
+                    number_of_dissociations
+                ),
+                "Number of recombinations = {:d}".format(
+                    number_of_recombinations
+                ),
                 "Number of extractions = {:d}".format(number_of_extractions),
             ],
         )
@@ -2517,9 +2704,15 @@ def execute(
             "Run completed after {0:d} iterations (global_time = {1:.2e}) after {2:.2f} seconds.".format(
                 KMC_iterations, global_time, time
             ),
-            "Number of photoinjections = {:d}".format(number_of_photoinjections),
-            "Number of cathode injections = {:d}".format(number_of_cathode_injections),
-            "Number of anode injections = {:d}".format(number_of_anode_injections),
+            "Number of photoinjections = {:d}".format(
+                number_of_photoinjections
+            ),
+            "Number of cathode injections = {:d}".format(
+                number_of_cathode_injections
+            ),
+            "Number of anode injections = {:d}".format(
+                number_of_anode_injections
+            ),
             "Number of dissociations = {:d}".format(number_of_dissociations),
             "Number of recombinations = {:d}".format(number_of_recombinations),
             "Number of extractions = {:d}".format(number_of_extractions),
@@ -2541,7 +2734,9 @@ def slurm_time_in_S(slurm_time):
     # Expects slurmTime in HH:MM:SS
     split_time = slurm_time.split(":")
     time_in_S = (
-        int(split_time[0]) * 60 ** 2 + int(split_time[1]) * 60 + int(split_time[2])
+        int(split_time[0]) * 60 ** 2
+        + int(split_time[1]) * 60
+        + int(split_time[2])
     )
     return time_in_S
 
@@ -2566,19 +2761,26 @@ def main():
     jobs_file_name = os.path.join(
         KMC_directory, "KMC_data_{:02d}.pickle".format(CPU_rank)
     )
-    device_data_file_name = KMC_directory.replace("/KMC", "/code/device_data.pickle")
+    device_data_file_name = KMC_directory.replace(
+        "/KMC", "/code/device_data.pickle"
+    )
 
     with open(device_data_file_name, "rb") as pickle_file:
-        [device_array, chromophore_data, morphology_data, parameter_dict] = pickle.load(
-            pickle_file
-        )
+        [
+            device_array,
+            chromophore_data,
+            morphology_data,
+            parameter_dict,
+        ] = pickle.load(pickle_file)
     with open(jobs_file_name, "rb") as pickle_file:
         jobs_to_run = pickle.load(pickle_file)
     if parameter_dict["output_log_to_stdout"] is True:
         print("Redirecting log to standard out.")
         log_file = "stdout"
     else:
-        log_file = os.path.join(KMC_directory, "KMC_log_{:02d}.log".format(CPU_rank))
+        log_file = os.path.join(
+            KMC_directory, "KMC_log_{:02d}.log".format(CPU_rank)
+        )
         # Reset the log file
         with open(log_file, "wb+") as log_file_handle:
             pass
@@ -2586,7 +2788,10 @@ def main():
         log_file,
         [
             "".join(
-                ["Found {:d} jobs to run:".format(len(jobs_to_run)), repr(jobs_to_run)]
+                [
+                    "Found {:d} jobs to run:".format(len(jobs_to_run)),
+                    repr(jobs_to_run),
+                ]
             )
         ],
     )
@@ -2596,7 +2801,9 @@ def main():
     if parameter_dict["disable_coulombic"] is True:
         hf.write_to_file(log_file, ["COULOMBIC INTERACTIONS DISABLED"])
     if parameter_dict["disable_dark_injection"] is True:
-        hf.write_to_file(log_file, ["DARK CURRENT INJECTION (FROM CONTACTS) DISABLED"])
+        hf.write_to_file(
+            log_file, ["DARK CURRENT INJECTION (FROM CONTACTS) DISABLED"]
+        )
     # hf.write_to_file(log_file, ['Found ' + str(len(jobs_to_run)) + ' jobs to run.'])
     # Set the affinities for this current process to make sure it's maximising
     # available CPU usage

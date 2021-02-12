@@ -11,7 +11,9 @@ from morphct.code import helper_functions as hf
 
 class orcaError(Exception):
     def __init__(self, file_name):
-        self.string = "".join(["No molecular orbital data present for ", file_name])
+        self.string = "".join(
+            ["No molecular orbital data present for ", file_name]
+        )
 
     def __str__(self):
         return self.string
@@ -174,7 +176,9 @@ def increase_grid(input_file):
 def increase_grid_no_soscf(input_file):
     with open(input_file, "r") as file_name:
         original_lines = file_name.readlines()
-    original_lines[3] = "!ZINDO/S SlowConv Grid7 NoFinalGrid NoSOSCF SloppySCF\n"
+    original_lines[
+        3
+    ] = "!ZINDO/S SlowConv Grid7 NoFinalGrid NoSOSCF SloppySCF\n"
     original_lines.append("\n%scf MaxIter 500 end")
     with open(input_file, "w+") as file_name:
         file_name.writelines(original_lines)
@@ -244,16 +248,22 @@ def rerun_fails(failed_chromo_files, parameter_dict, chromophore_list):
     ]
     # As before, split the list of reruns based on the number of processors
     jobs_list = [
-        input_files[i : i + (int(np.ceil(len(input_files) / len(proc_IDs)))) + 1]
+        input_files[
+            i : i + (int(np.ceil(len(input_files) / len(proc_IDs)))) + 1
+        ]
         for i in range(
-            0, len(input_files), int(np.ceil(len(input_files) / float(len(proc_IDs))))
+            0,
+            len(input_files),
+            int(np.ceil(len(input_files) / float(len(proc_IDs)))),
         )
     ]
     print(jobs_list)
     # Write the jobs pickle for single_core_run_orca to obtain
     with open(
         os.path.join(
-            parameter_dict["output_orca_directory"], "chromophores", "orca_jobs.pickle"
+            parameter_dict["output_orca_directory"],
+            "chromophores",
+            "orca_jobs.pickle",
         ),
         "wb+",
     ) as pickle_file:
@@ -347,7 +357,9 @@ def update_single_chromophore_list(chromophore_list, parameter_dict):
         # Update the chromophores in the chromophore_list with their
         # energy_levels
         try:
-            energy_levels = load_orca_output(os.path.join(orca_output_dir, file_name))
+            energy_levels = load_orca_output(
+                os.path.join(orca_output_dir, file_name)
+            )
             chromophore.HOMO_1 = energy_levels[0]
             chromophore.HOMO = energy_levels[1]
             chromophore.LUMO = energy_levels[2]
@@ -421,11 +433,15 @@ def update_pair_chromophore_list(chromophore_list, parameter_dict):
     )
     failed_pair_chromos = {}
     for chromo_location, chromophore in enumerate(chromophore_list):
-        neighbour_IDs = [neighbour_data[0] for neighbour_data in chromophore.neighbours]
+        neighbour_IDs = [
+            neighbour_data[0] for neighbour_data in chromophore.neighbours
+        ]
         for neighbour_loc, neighbour_ID in enumerate(neighbour_IDs):
             if chromophore.ID > neighbour_ID:
                 continue
-            file_name = "pair/{0:05d}-{1:05d}.out".format(chromophore.ID, neighbour_ID)
+            file_name = "pair/{0:05d}-{1:05d}.out".format(
+                chromophore.ID, neighbour_ID
+            )
             print("\rDetermining energy levels for", file_name, end=" ")
             if sys.stdout is not None:
                 sys.stdout.flush()
@@ -442,7 +458,11 @@ def update_pair_chromophore_list(chromophore_list, parameter_dict):
                 if file_name in failed_pair_chromos.keys():
                     failed_pair_chromos.pop(file_name)
             except orcaError:
-                failed_pair_chromos[file_name] = [1, chromo_location, neighbour_ID]
+                failed_pair_chromos[file_name] = [
+                    1,
+                    chromo_location,
+                    neighbour_ID,
+                ]
                 continue
             # Calculate the delta_E between the two single chromophores
             try:
@@ -475,7 +495,9 @@ def update_pair_chromophore_list(chromophore_list, parameter_dict):
             # Update both the current chromophore and the neighbour (for the
             # reverse hop)
             chromophore.neighbours_delta_E[neighbour_loc] = delta_E
-            chromophore_list[neighbour_ID].neighbours_delta_E[reverse_loc] = -delta_E
+            chromophore_list[neighbour_ID].neighbours_delta_E[
+                reverse_loc
+            ] = -delta_E
             chromophore.neighbours_TI[neighbour_loc] = TI
             chromophore_list[neighbour_ID].neighbours_TI[reverse_loc] = TI
             # DEBUG ASSERTIONS
@@ -506,13 +528,19 @@ def update_pair_chromophore_list(chromophore_list, parameter_dict):
             # Check the chromophoreList has been updated after updating the
             # chromophore instance
             assert (
-                chromophore_list[chromophore.ID].neighbours_delta_E[neighbour_loc]
+                chromophore_list[chromophore.ID].neighbours_delta_E[
+                    neighbour_loc
+                ]
                 == chromophore.neighbours_delta_E[neighbour_loc]
             )
             # Check the Delta_E of the forward and backward hops are *= -1
             assert (
-                chromophore_list[chromophore.ID].neighbours_delta_E[neighbour_loc]
-                == -chromophore_list[neighbour_ID].neighbours_delta_E[reverse_loc]
+                chromophore_list[chromophore.ID].neighbours_delta_E[
+                    neighbour_loc
+                ]
+                == -chromophore_list[neighbour_ID].neighbours_delta_E[
+                    reverse_loc
+                ]
             )
             # END DEBUG ASSERTIONS
     print("")
@@ -536,18 +564,26 @@ def update_pair_chromophore_list(chromophore_list, parameter_dict):
                 # chromophores's neighbourList
                 neighbour_loc = [
                     neighbour_data[0]
-                    for neighbour_data in chromophore_list[chromo1_ID].neighbours
+                    for neighbour_data in chromophore_list[
+                        chromo1_ID
+                    ].neighbours
                 ].index(chromo2_ID)
                 # Get the location of the current chromophore's ID in the
                 # neighbour's neighbourList
                 reverse_loc = [
                     neighbour_data[0]
-                    for neighbour_data in chromophore_list[chromo2_ID].neighbours
+                    for neighbour_data in chromophore_list[
+                        chromo2_ID
+                    ].neighbours
                 ].index(chromo1_ID)
                 # Update both the current chromophore and the neighbour (for the reverse
                 # hop)
-                chromophore_list[chromo1_ID].neighbours_delta_E[neighbour_loc] = delta_E
-                chromophore_list[chromo2_ID].neighbours_delta_E[reverse_loc] = -delta_E
+                chromophore_list[chromo1_ID].neighbours_delta_E[
+                    neighbour_loc
+                ] = delta_E
+                chromophore_list[chromo2_ID].neighbours_delta_E[
+                    reverse_loc
+                ] = -delta_E
                 chromophore_list[chromo1_ID].neighbours_TI[neighbour_loc] = TI
                 chromophore_list[chromo2_ID].neighbours_TI[reverse_loc] = TI
         successful_reruns = []
@@ -604,8 +640,12 @@ def update_pair_chromophore_list(chromophore_list, parameter_dict):
             ].index(chromo1_ID)
             # Update both the current chromophore and the neighbour (for the
             # reverse hop)
-            chromophore_list[chromo1_ID].neighbours_delta_E[neighbour_loc] = delta_E
-            chromophore_list[chromo2_ID].neighbours_delta_E[reverse_loc] = -delta_E
+            chromophore_list[chromo1_ID].neighbours_delta_E[
+                neighbour_loc
+            ] = delta_E
+            chromophore_list[chromo2_ID].neighbours_delta_E[
+                reverse_loc
+            ] = -delta_E
             chromophore_list[chromo1_ID].neighbours_TI[neighbour_loc] = TI
             chromophore_list[chromo2_ID].neighbours_TI[reverse_loc] = TI
             # This rerun was successful so remove this chromophore from the
@@ -646,8 +686,12 @@ def scale_energies(chromophore_list, parameter_dict):
     # find the average energy level for each chromophore and then map that
     # average to the literature value.
     # First, get the energy level data
-    chromophore_species = {k: [] for k in parameter_dict["chromophore_species"].keys()}
-    chromophore_MO_info = {k: {} for k in parameter_dict["chromophore_species"].keys()}
+    chromophore_species = {
+        k: [] for k in parameter_dict["chromophore_species"].keys()
+    }
+    chromophore_MO_info = {
+        k: {} for k in parameter_dict["chromophore_species"].keys()
+    }
     for chromo in chromophore_list:
         chromophore_species[chromo.sub_species].append(chromo.get_MO_energy())
 
@@ -655,7 +699,9 @@ def scale_energies(chromophore_list, parameter_dict):
         lit_DOS_std = parameter_dict["chromophore_species"][sub_species][
             "target_DOS_std"
         ]
-        lit_MO = parameter_dict["chromophore_species"][sub_species]["literature_MO"]
+        lit_MO = parameter_dict["chromophore_species"][sub_species][
+            "literature_MO"
+        ]
         chromophore_MO_info[sub_species]["target_DOS_std"] = lit_DOS_std
         chromophore_MO_info[sub_species]["av_MO"] = np.average(chromo_energy)
         chromophore_MO_info[sub_species]["std_MO"] = np.std(chromo_energy)
@@ -665,7 +711,9 @@ def scale_energies(chromophore_list, parameter_dict):
 
     for chromo in chromophore_list:
         E_shift = chromophore_MO_info[chromo.sub_species]["E_shift"]
-        target_DOS_std = chromophore_MO_info[chromo.sub_species]["target_DOS_std"]
+        target_DOS_std = chromophore_MO_info[chromo.sub_species][
+            "target_DOS_std"
+        ]
         std_MO = chromophore_MO_info[chromo.sub_species]["std_MO"]
         av_MO = chromophore_MO_info[chromo.sub_species]["av_MO"]
 
@@ -717,7 +765,9 @@ def main(
         for chromophore in chromophore_list:
             if chromophore.HOMO is None:
                 run_singles = True
-    if (run_singles is True) or (parameter_dict["overwrite_current_data"] is True):
+    if (run_singles is True) or (
+        parameter_dict["overwrite_current_data"] is True
+    ):
         print("Beginning analysis of single chromophores...")
         chromophore_list = update_single_chromophore_list(
             chromophore_list, parameter_dict
@@ -743,12 +793,16 @@ def main(
         if parameter_dict["remove_orca_outputs"] is True:
             for chromophore in chromophore_list:
                 try:
-                    os.remove(os.path.join(orca_output_dir, chromophore.orca_output))
+                    os.remove(
+                        os.path.join(orca_output_dir, chromophore.orca_output)
+                    )
                 except FileNotFoundError:
                     # Already deleted
                     pass
     else:
-        print("All single chromophore calculations already performed. Skipping...")
+        print(
+            "All single chromophore calculations already performed. Skipping..."
+        )
     # Then, check the pairs
     run_pairs = False
     if parameter_dict["overwrite_current_data"] is False:
@@ -758,7 +812,9 @@ def main(
                 if neighbour is None:
                     run_pairs = True
                     break
-    if (run_pairs is True) or (parameter_dict["overwrite_current_data"] is True):
+    if (run_pairs is True) or (
+        parameter_dict["overwrite_current_data"] is True
+    ):
         print("Beginning analysis of chromophore pairs...")
         chromophore_list = update_pair_chromophore_list(
             chromophore_list, parameter_dict
@@ -786,7 +842,8 @@ def main(
         if parameter_dict["remove_orca_outputs"] is True:
             for chromophore in chromophore_list:
                 neighbour_IDs = [
-                    neighbour_data[0] for neighbour_data in chromophore.neighbours
+                    neighbour_data[0]
+                    for neighbour_data in chromophore.neighbours
                 ]
                 for neighbour_loc, neighbour_ID in enumerate(neighbour_IDs):
                     file_name = "pair/{0:05d}-{1:05d}.out".format(
@@ -798,7 +855,9 @@ def main(
                     # Already deleted
                     pass
     else:
-        print("All pair chromophore calculations already performed. Skipping...")
+        print(
+            "All pair chromophore calculations already performed. Skipping..."
+        )
     return (
         AA_morphology_dict,
         CG_morphology_dict,
@@ -821,7 +880,9 @@ def check_forward_backward_hop_T_ij(chromophore_list):
             assert chromo2_ID == chromophore_list[chromo2_ID].ID
             chromo2 = chromophore_list[chromo2_ID]
             neighbour2_index = 0
-            for neighbour2_index, chromo1_details in enumerate(chromo2.neighbours):
+            for neighbour2_index, chromo1_details in enumerate(
+                chromo2.neighbours
+            ):
                 if chromo1_details[0] != chromo1_ID:
                     continue
                 chromo2_to_1_TI = chromo2.neighbours_TI[neighbour2_index]
@@ -896,17 +957,23 @@ def check_forward_backward_hop_E_ij(chromophore_list):
                 for neighbour_data in chromophore_list[neighbour_ID].neighbours
             ].index(chromophore.ID)
             assert (
-                neighbour_ID == chromophore_list[chromo_ID].neighbours[neighbour_loc][0]
+                neighbour_ID
+                == chromophore_list[chromo_ID].neighbours[neighbour_loc][0]
             )
             assert (
-                chromo_ID == chromophore_list[neighbour_ID].neighbours[reverse_loc][0]
+                chromo_ID
+                == chromophore_list[neighbour_ID].neighbours[reverse_loc][0]
             )
             # Update both the current chromophore and the neighbour (for the
             # reverse hop)
             try:
                 assert (
-                    chromophore_list[chromo_ID].neighbours_delta_E[neighbour_loc]
-                    == -chromophore_list[neighbour_ID].neighbours_delta_E[reverse_loc]
+                    chromophore_list[chromo_ID].neighbours_delta_E[
+                        neighbour_loc
+                    ]
+                    == -chromophore_list[neighbour_ID].neighbours_delta_E[
+                        reverse_loc
+                    ]
                 )
             except AssertionError:
                 print("\nHOP FROM", chromo_ID, "TO", neighbour_ID)
@@ -930,9 +997,13 @@ def check_forward_backward_hop_E_ij(chromophore_list):
                 print("--== Delta E_ij ==--")
                 print(
                     "FORWARD:",
-                    chromophore_list[chromo_ID].neighbours_delta_E[neighbour_loc],
+                    chromophore_list[chromo_ID].neighbours_delta_E[
+                        neighbour_loc
+                    ],
                     "backward:",
-                    chromophore_list[neighbour_ID].neighbours_delta_E[reverse_loc],
+                    chromophore_list[neighbour_ID].neighbours_delta_E[
+                        reverse_loc
+                    ],
                 )
                 if chromophore.species.lower() == "donor":
                     donor_errors += 1

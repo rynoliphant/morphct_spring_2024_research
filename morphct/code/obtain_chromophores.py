@@ -20,8 +20,12 @@ class chromophore:
         sim_dims,
     ):
         self.ID = chromo_ID
-        self.orca_input = "/chromophores/input_orca/single/{:05d}.inp".format(self.ID)
-        self.orca_output = "/chromophores/output_orca/single/{:05d}.out".format(self.ID)
+        self.orca_input = "/chromophores/input_orca/single/{:05d}.inp".format(
+            self.ID
+        )
+        self.orca_output = "/chromophores/output_orca/single/{:05d}.out".format(
+            self.ID
+        )
         self.CGIDs = chromophore_CG_sites
         # Determine whether this chromophore is a donor or an acceptor, as well
         # as the site types that have been defined as the electronically active
@@ -29,16 +33,23 @@ class chromophore:
         if CG_morphology_dict is not None:
             # Normal operation
             self.CG_types = sorted(
-                list(set([CG_morphology_dict["type"][CGID] for CGID in self.CGIDs]))
+                list(
+                    set(
+                        [
+                            CG_morphology_dict["type"][CGID]
+                            for CGID in self.CGIDs
+                        ]
+                    )
+                )
             )
             active_CG_sites, self.sub_species = self.obtain_electronic_species(
                 chromophore_CG_sites,
                 CG_morphology_dict["type"],
                 parameter_dict["CG_site_species"],
             )
-            self.species = parameter_dict["chromophore_species"][self.sub_species][
-                "species"
-            ]
+            self.species = parameter_dict["chromophore_species"][
+                self.sub_species
+            ]["species"]
             self.reorganisation_energy = parameter_dict["chromophore_species"][
                 self.sub_species
             ]["reorganisation_energy"]
@@ -59,7 +70,8 @@ class chromophore:
             self.AAIDs = [
                 AAID
                 for AAIDs in [
-                    flattened_CG_to_AAID_master[CGID] for CGID in chromophore_CG_sites
+                    flattened_CG_to_AAID_master[CGID]
+                    for CGID in chromophore_CG_sites
                 ]
                 for AAID in AAIDs
             ]
@@ -70,7 +82,8 @@ class chromophore:
             electronically_active_AAIDs = [
                 AAID
                 for AAIDs in [
-                    flattened_CG_to_AAID_master[CGID] for CGID in active_CG_sites
+                    flattened_CG_to_AAID_master[CGID]
+                    for CGID in active_CG_sites
                 ]
                 for AAID in AAIDs
             ]
@@ -84,13 +97,15 @@ class chromophore:
                 # this species.
                 active_CG_sites = chromophore_CG_sites
                 electronically_active_AAIDs = chromophore_CG_sites
-                self.sub_species = list(parameter_dict["CG_site_species"].values())[0]
-                self.species = parameter_dict["chromophore_species"][self.sub_species][
-                    "species"
-                ]
-                self.reorganisation_energy = parameter_dict["chromophore_species"][
+                self.sub_species = list(
+                    parameter_dict["CG_site_species"].values()
+                )[0]
+                self.species = parameter_dict["chromophore_species"][
                     self.sub_species
-                ]["reorganisation_energy"]
+                ]["species"]
+                self.reorganisation_energy = parameter_dict[
+                    "chromophore_species"
+                ][self.sub_species]["reorganisation_energy"]
                 self.VRH_delocalisation = parameter_dict["chromophore_species"][
                     self.sub_species
                 ]["VRH_delocalisation"]
@@ -109,7 +124,10 @@ class chromophore:
                 for sub_species, rigid_bodies in parameter_dict[
                     "AA_rigid_body_species"
                 ].items():
-                    if AA_morphology_dict["body"][active_CG_sites[0]] in rigid_bodies:
+                    if (
+                        AA_morphology_dict["body"][active_CG_sites[0]]
+                        in rigid_bodies
+                    ):
                         self.sub_species = sub_species
                         self.species = parameter_dict["chromophore_species"][
                             self.sub_species
@@ -117,9 +135,9 @@ class chromophore:
                         self.reorganisation_energy = parameter_dict[
                             "chromophore_species"
                         ][self.sub_species]["reorganisation_energy"]
-                        self.VRH_delocalisation = parameter_dict["chromophore_species"][
-                            self.sub_species
-                        ]["VRH_delocalisation"]
+                        self.VRH_delocalisation = parameter_dict[
+                            "chromophore_species"
+                        ][self.sub_species]["VRH_delocalisation"]
                         break
                 try:
                     self.species
@@ -127,7 +145,9 @@ class chromophore:
                     for key, val in self.__dict__:
                         print(key, val)
                     raise SystemError(
-                        "Chromophore {:d} has no species! Exiting...".format(self.ID)
+                        "Chromophore {:d} has no species! Exiting...".format(
+                            self.ID
+                        )
                     )
             else:
                 raise SystemError(
@@ -144,10 +164,13 @@ class chromophore:
             for AAID in electronically_active_AAIDs
         ]
         electronically_active_types = [
-            AA_morphology_dict["type"][AAID] for AAID in electronically_active_AAIDs
+            AA_morphology_dict["type"][AAID]
+            for AAID in electronically_active_AAIDs
         ]
         self.unwrapped_posn, self.posn, self.image = self.obtain_chromophore_COM(
-            electronically_active_unwrapped_posns, electronically_active_types, sim_dims
+            electronically_active_unwrapped_posns,
+            electronically_active_types,
+            sim_dims,
         )
         # A list of the important bonds for this chromophore from the morphology
         # would be useful when determining if a terminating group is already
@@ -157,7 +180,10 @@ class chromophore:
             # Determine if this chromophore is a repeat unit and therefore will
             # need terminating before orca
             CG_types = set(
-                [CG_morphology_dict["type"][CGID] for CGID in chromophore_CG_sites]
+                [
+                    CG_morphology_dict["type"][CGID]
+                    for CGID in chromophore_CG_sites
+                ]
             )
             # self.terminate = True if any of the CGTypes in this chromophore
             # are defined as having termination conditions in the parameter file
@@ -165,12 +191,21 @@ class chromophore:
                 CG_type in CG_types
                 for CG_type in [
                     connection[0]
-                    for connection in parameter_dict["molecule_terminating_connections"]
+                    for connection in parameter_dict[
+                        "molecule_terminating_connections"
+                    ]
                 ]
             )
         else:
             try:
-                if len(parameter_dict["molecule_terminating_connections"].keys()) == 0:
+                if (
+                    len(
+                        parameter_dict[
+                            "molecule_terminating_connections"
+                        ].keys()
+                    )
+                    == 0
+                ):
                     # Small molecules in atomistic morphology therefore no
                     # terminations needed
                     self.terminate = False
@@ -277,7 +312,11 @@ class chromophore:
 
 
 def calculate_chromophores(
-    CG_morphology_dict, AA_morphology_dict, CG_to_AAID_master, parameter_dict, sim_dims
+    CG_morphology_dict,
+    AA_morphology_dict,
+    CG_to_AAID_master,
+    parameter_dict,
+    sim_dims,
 ):
     # We make the assumption that a chromophore consists of one of each of the
     # CG site types described by the same template file. For instance, if we
@@ -382,7 +421,11 @@ def calculate_chromophores_AA(
     for AA_site_ID, chromophore_ID in enumerate(chromophore_list):
         AA_site_type = AA_morphology_dict["type"][AA_site_ID]
         chromophore_list = update_chromophores_AA(
-            AA_site_ID, chromophore_list, bonded_atoms, parameter_dict, rigid_bodies
+            AA_site_ID,
+            chromophore_list,
+            bonded_atoms,
+            parameter_dict,
+            rigid_bodies,
         )
     chromophore_data = {}
     for atom_ID, chromo_ID in enumerate(chromophore_list):
@@ -445,7 +488,10 @@ def update_chromophores(
             # Also, check that the type to be added is of the same electronic
             # species as the ones added previously, or == 'None'
             if (bonded_type not in types_in_this_chromophore) and (
-                (parameter_dict["CG_site_species"][bonded_type].lower() == "none")
+                (
+                    parameter_dict["CG_site_species"][bonded_type].lower()
+                    == "none"
+                )
                 or (
                     parameter_dict["CG_site_species"][bonded_type].lower()
                     == list(
@@ -510,7 +556,8 @@ def update_chromophores_AA(
             if rigid_bodies is not None:
                 # Skip if the bonded atom belongs to a different rigid body
                 if (
-                    (rigid_bodies[bonded_atom] != -1) and (rigid_bodies[atom_ID] != -1)
+                    (rigid_bodies[bonded_atom] != -1)
+                    and (rigid_bodies[atom_ID] != -1)
                 ) and (rigid_bodies[bonded_atom] != rigid_bodies[atom_ID]):
                     continue
             # If the atomID of the bonded atom is larger than that of the
@@ -557,7 +604,10 @@ def create_super_cell(chromophore_list, box_size):
                 for z_image in range(-1, 2):
                     chromophore.super_cell_posns.append(
                         np.array(chromophore.posn)
-                        + (np.array([x_image, y_image, z_image]) * (np.array(box_size)))
+                        + (
+                            np.array([x_image, y_image, z_image])
+                            * (np.array(box_size))
+                        )
                     )
                     chromophore.super_cell_images.append(
                         np.array([x_image, y_image, z_image])
@@ -589,18 +639,25 @@ def update_chromophore_list_voronoi(
     # [0, 0, 0]
     for periodic_ID in IDs_to_update:
         # Obtain the real chromophore corresponding to this periodic_ID
-        chromophore1 = chromophore_list[super_cell_chromos[periodic_ID].original_ID]
+        chromophore1 = chromophore_list[
+            super_cell_chromos[periodic_ID].original_ID
+        ]
         assert np.array_equal(super_cell_chromos[periodic_ID].image, [0, 0, 0])
         # Get latest neighbour information
         chromo1neighbour_IDs = [
             neighbour_data[0] for neighbour_data in chromophore1.neighbours
         ]
         chromo1dissociation_neighbour_IDs = [
-            neighbour_data[0] for neighbour_data in chromophore1.dissociation_neighbours
+            neighbour_data[0]
+            for neighbour_data in chromophore1.dissociation_neighbours
         ]
         for neighbour_periodic_ID in neighbour_IDs[periodic_ID]:
-            neighbour_super_cell_chromo = super_cell_chromos[neighbour_periodic_ID]
-            chromophore2 = chromophore_list[neighbour_super_cell_chromo.original_ID]
+            neighbour_super_cell_chromo = super_cell_chromos[
+                neighbour_periodic_ID
+            ]
+            chromophore2 = chromophore_list[
+                neighbour_super_cell_chromo.original_ID
+            ]
             chromo2neighbour_IDs = [
                 neighbour_data[0] for neighbour_data in chromophore2.neighbours
             ]
@@ -677,7 +734,9 @@ def determine_neighbours_voronoi(chromophore_list, parameter_dict, sim_dims):
         if parameter_dict["permit_hops_through_opposing_chromophores"]:
             # Need to only consider the neighbours of like chromophore species
             donor_positions = [chromo.position for chromo in donor_chromos]
-            acceptor_positions = [chromo.position for chromo in acceptor_chromos]
+            acceptor_positions = [
+                chromo.position for chromo in acceptor_chromos
+            ]
             donor_neighbours = {}
             acceptor_neighbours = {}
             original_donor_chromo_IDs = []
@@ -686,9 +745,13 @@ def determine_neighbours_voronoi(chromophore_list, parameter_dict, sim_dims):
                 if np.array_equal(chromophore.image, [0, 0, 0]):
                     original_all_chromo_IDs.append(chromophore.periodic_ID)
                     if chromophore.species.lower() == "donor":
-                        original_donor_chromo_IDs.append(chromophore.periodic_ID)
+                        original_donor_chromo_IDs.append(
+                            chromophore.periodic_ID
+                        )
                     elif chromophore.species.lower() == "acceptor":
-                        original_acceptor_chromo_IDs.append(chromophore.periodic_ID)
+                        original_acceptor_chromo_IDs.append(
+                            chromophore.periodic_ID
+                        )
             if len(donor_positions) > 0:
                 print("Calculating Neighbours of donor Moieties")
                 donor_neighbours = get_voronoi_neighbours(
@@ -723,10 +786,16 @@ def determine_neighbours_voronoi(chromophore_list, parameter_dict, sim_dims):
             if np.array_equal(chromophore.image, [0, 0, 0]):
                 original_all_chromo_IDs.append(chromophore.periodic_ID)
     print("Calculating Neighbours of All Moieties")
-    all_neighbours = get_voronoi_neighbours(Delaunay(all_positions), all_chromos)
+    all_neighbours = get_voronoi_neighbours(
+        Delaunay(all_positions), all_chromos
+    )
     print("Updating the chromophore list for dissociation neighbours")
     chromophore_list = update_chromophore_list_voronoi(
-        original_all_chromo_IDs, all_chromos, all_neighbours, chromophore_list, sim_dims
+        original_all_chromo_IDs,
+        all_chromos,
+        all_neighbours,
+        chromophore_list,
+        sim_dims,
     )
     return chromophore_list
 
@@ -771,10 +840,12 @@ def determine_neighbours_cut_off(chromophore_list, parameter_dict, sim_dims):
                 # Only add the neighbours if they haven't already been added so
                 # far
                 chromo1neighbour_IDs = [
-                    neighbour_data[0] for neighbour_data in chromophore1.neighbours
+                    neighbour_data[0]
+                    for neighbour_data in chromophore1.neighbours
                 ]
                 chromo2neighbour_IDs = [
-                    neighbour_data[0] for neighbour_data in chromophore2.neighbours
+                    neighbour_data[0]
+                    for neighbour_data in chromophore2.neighbours
                 ]
                 chromo1dissociation_neighbour_IDs = [
                     neighbour_data[0]
@@ -789,7 +860,10 @@ def determine_neighbours_cut_off(chromophore_list, parameter_dict, sim_dims):
                 if chromophore1.species == chromophore2.species:
                     if (
                         (chromophore1.species.lower() == "donor")
-                        and (separation >= parameter_dict["maximum_hole_hop_distance"])
+                        and (
+                            separation
+                            >= parameter_dict["maximum_hole_hop_distance"]
+                        )
                     ) or (
                         (chromophore1.species.lower() == "acceptor")
                         and (
@@ -816,13 +890,17 @@ def determine_neighbours_cut_off(chromophore_list, parameter_dict, sim_dims):
                 else:
                     # NOTE: Modifying this so that only dissociation neigbours in the
                     # same periodic image are considered.
-                    if (chromophore2.ID not in chromo2dissociation_neighbour_IDs) and (
+                    if (
+                        chromophore2.ID not in chromo2dissociation_neighbour_IDs
+                    ) and (
                         np.all(np.isclose(relative_image_of_chromo2, [0, 0, 0]))
                     ):
                         chromophore1.dissociation_neighbours.append(
                             [chromophore2.ID, [0, 0, 0]]
                         )
-                    if (chromophore1.ID not in chromo1dissociation_neighbour_IDs) and (
+                    if (
+                        chromophore1.ID not in chromo1dissociation_neighbour_IDs
+                    ) and (
                         np.all(np.isclose(relative_image_of_chromo2, [0, 0, 0]))
                     ):
                         chromophore2.dissociation_neighbours.append(

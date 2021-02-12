@@ -15,7 +15,9 @@ class ExitHOOMD(Exception):
     a particular reason (e.g. minimum KE found)"""
 
     def __init__(self, string):
-        self.string = "".join([string, " at timestep = {:d}".format(get_step())])
+        self.string = "".join(
+            [string, " at timestep = {:d}".format(get_step())]
+        )
 
     def __str__(self):
         return self.string
@@ -81,7 +83,9 @@ class md_phase:
             self.output_morph_dir,
             os.path.splitext(self.morphology)[0],
             "morphology",
-            "".join(["energies_", os.path.splitext(self.morphology)[0], ".log"]),
+            "".join(
+                ["energies_", os.path.splitext(self.morphology)[0], ".log"]
+            ),
         )
         # Determine which quantities should be logged during the simulation
         # phase
@@ -169,7 +173,9 @@ class md_phase:
                 callback=self.check_KE, period=self.duration / 1000.0
             )
         print(
-            "---=== BEGINNING MOLECULAR DYNAMICS PHASE", self.phase_number + 1, "===---"
+            "---=== BEGINNING MOLECULAR DYNAMICS PHASE",
+            self.phase_number + 1,
+            "===---",
         )
         # Run the MD simulation
         try:
@@ -200,9 +206,20 @@ class md_phase:
         # Clean up all references to this simulation
         self.rigid_int.disable()
         self.non_rigid_int.disable()
-        del self.system, self.dump_dcd, self.step, self.rigid_int, self.non_rigid_int
+        del (
+            self.system,
+            self.dump_dcd,
+            self.step,
+            self.rigid_int,
+            self.non_rigid_int,
+        )
         del self.rigid_group, self.non_rigid_group, callback, self.dump_xml
-        del self.pair_class, self.bond_class, self.angle_class, self.dihedral_class
+        del (
+            self.pair_class,
+            self.bond_class,
+            self.angle_class,
+            self.dihedral_class,
+        )
         del self.improper_class, self.energy_log
         init.reset()
 
@@ -236,7 +253,9 @@ class md_phase:
         # First find all of the forcefields specified in the par file
         all_FF_names = {}
         for CG_site, directory in self.CG_to_template_dirs.items():
-            FF_loc = os.path.join(directory, self.CG_to_template_force_fields[CG_site])
+            FF_loc = os.path.join(
+                directory, self.CG_to_template_force_fields[CG_site]
+            )
             if FF_loc not in list(all_FF_names.values()):
                 all_FF_names[CG_site] = FF_loc
         FF_list = []
@@ -244,7 +263,8 @@ class md_phase:
         for CG_site in list(all_FF_names.keys()):
             FF_list.append(
                 hf.load_FF_xml(
-                    all_FF_names[CG_site], mapping=self.new_type_mappings[CG_site]
+                    all_FF_names[CG_site],
+                    mapping=self.new_type_mappings[CG_site],
                 )
             )
         # Combine all of the individual, mapped FFs into one master field
@@ -266,7 +286,9 @@ class md_phase:
         self.pair_class = None
         if self.pair_type.lower() != "none":
             # Log the correct pairType energy
-            self.log_quantities.append("".join(["pair_", self.pair_type, "_energy"]))
+            self.log_quantities.append(
+                "".join(["pair_", self.pair_type, "_energy"])
+            )
             # HOOMD crashes if you don't specify all pair combinations, so need
             # to make sure we do this.
             atom_types = sorted(
@@ -303,11 +325,17 @@ class md_phase:
                             atom_type2,
                             A=np.sqrt(
                                 (self.dpd_coeffs[atom_index1][1] * self.e_scale)
-                                * (self.dpd_coeffs[atom_index2][1] * self.e_scale)
+                                * (
+                                    self.dpd_coeffs[atom_index2][1]
+                                    * self.e_scale
+                                )
                             ),
                             r_cut=np.sqrt(
                                 (self.dpd_coeffs[atom_index1][2] * self.s_scale)
-                                * (self.dpd_coeffs[atom_index2][1] * self.s_scale)
+                                * (
+                                    self.dpd_coeffs[atom_index2][1]
+                                    * self.s_scale
+                                )
                             ),
                             gamma=self.pair_dpd_gamma_val,
                         )
@@ -343,11 +371,17 @@ class md_phase:
                             atom_type2,
                             epsilon=np.sqrt(
                                 (self.lj_coeffs[atom_index1][1] * self.e_scale)
-                                * (self.lj_coeffs[atom_index2][1] * self.e_scale)
+                                * (
+                                    self.lj_coeffs[atom_index2][1]
+                                    * self.e_scale
+                                )
                             ),
                             sigma=np.sqrt(
                                 (self.lj_coeffs[atom_index1][2] * self.s_scale)
-                                * (self.lj_coeffs[atom_index2][2] * self.s_scale)
+                                * (
+                                    self.lj_coeffs[atom_index2][2]
+                                    * self.s_scale
+                                )
                             ),
                         )
                         try:
@@ -418,7 +452,7 @@ class md_phase:
                         if bond_type[0] not in no_anchor_bond_types:
                             no_anchor_bond_types.append(bond_type[0])
             for bond_type in anchor_bond_types:
-                self.bond_class.bond_coeff.set(bond_type, k=1E6, r0=0)
+                self.bond_class.bond_coeff.set(bond_type, k=1e6, r0=0)
             for bond_type in no_anchor_bond_types:
                 self.bond_class.bond_coeff.set(bond_type, k=0, r0=0)
         else:
@@ -429,7 +463,9 @@ class md_phase:
         # Set Angle Coeffs
         self.angle_class = None
         if len(self.angle_coeffs) > 0:
-            self.log_quantities.append("".join(["angle_", self.angle_type, "_energy"]))
+            self.log_quantities.append(
+                "".join(["angle_", self.angle_type, "_energy"])
+            )
             if self.angle_type.lower() == "harmonic":
                 self.angle_class = angle.harmonic()
                 for angle_coeff in self.angle_coeffs:
@@ -635,7 +671,9 @@ def main(
         pass
     # Perform each molecular dynamics phase as specified in the parXX.py
     for phase_no in range(parameter_dict["number_of_phases"]):
-        input_file = "phase{0:d}_{1:s}".format(phase_no, parameter_dict["morphology"])
+        input_file = "phase{0:d}_{1:s}".format(
+            phase_no, parameter_dict["morphology"]
+        )
         output_file = "phase{0:d}_{1:s}".format(
             phase_no + 1, parameter_dict["morphology"]
         )
@@ -708,7 +746,9 @@ def main(
             parameter_dict["output_morph_dir"],
             os.path.splitext(parameter_dict["morphology"])[0],
             "code",
-            "".join([os.path.splitext(parameter_dict["morphology"])[0], ".pickle"]),
+            "".join(
+                [os.path.splitext(parameter_dict["morphology"])[0], ".pickle"]
+            ),
         ),
     )
     return (
@@ -734,7 +774,15 @@ def remove_ghost_particles(last_phase_xml, output_file_name, sigma=1.0):
     # delete particles from the system
     atom_IDs_to_remove.sort(reverse=True)
     # Now delete the atoms from the morphology
-    atom_attribs = ["position", "image", "type", "mass", "diameter", "body", "charge"]
+    atom_attribs = [
+        "position",
+        "image",
+        "type",
+        "mass",
+        "diameter",
+        "body",
+        "charge",
+    ]
     for atom_ID in atom_IDs_to_remove:
         for key in atom_attribs:
             final_morphology[key].pop(atom_ID)

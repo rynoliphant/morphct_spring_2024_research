@@ -9,9 +9,9 @@ from scipy.sparse import lil_matrix
 from morphct.code import helper_functions as hf
 
 
-elementary_charge = 1.60217657E-19  # C
-k_B = 1.3806488E-23  # m^{2} kg s^{-2} K^{-1}
-hbar = 1.05457173E-34  # m^{2} kg s^{-1}
+elementary_charge = 1.60217657e-19  # C
+k_B = 1.3806488e-23  # m^{2} kg s^{-2} K^{-1}
+hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 log_file = None
 
 
@@ -64,8 +64,12 @@ class carrier:
         # the parameter dict
         try:
             self.use_average_hop_rates = parameter_dict["use_average_hop_rates"]
-            self.average_intra_hop_rate = parameter_dict["average_intra_hop_rate"]
-            self.average_inter_hop_rate = parameter_dict["average_inter_hop_rate"]
+            self.average_intra_hop_rate = parameter_dict[
+                "average_intra_hop_rate"
+            ]
+            self.average_inter_hop_rate = parameter_dict[
+                "average_inter_hop_rate"
+            ]
         except KeyError:
             self.use_average_hop_rates = False
         # Set the use of Koopmans' approximation to false if the key does not
@@ -89,7 +93,9 @@ class carrier:
         except KeyError:
             self.use_VRH = False
         if self.use_VRH is True:
-            self.VRH_delocalisation = self.current_chromophore.VRH_delocalisation
+            self.VRH_delocalisation = (
+                self.current_chromophore.VRH_delocalisation
+            )
         try:
             self.hopping_prefactor = parameter_dict["hopping_prefactor"]
         except KeyError:
@@ -135,7 +141,9 @@ class carrier:
                 prefactor = self.hopping_prefactor
                 # Get the relative image so we can update the carrier image
                 # after the hop
-                relative_image = self.current_chromophore.neighbours[neighbour_index][1]
+                relative_image = self.current_chromophore.neighbours[
+                    neighbour_index
+                ][1]
                 # All of the energies are in eV currently, so convert them to J
                 if self.use_VRH is True:
                     neighbour_chromo = chromophore_list[
@@ -143,14 +151,16 @@ class carrier:
                     ]
                     neighbour_chromo_posn = neighbour_chromo.posn + (
                         np.array(relative_image)
-                        * np.array([axis[1] - axis[0] for axis in self.sim_dims])
+                        * np.array(
+                            [axis[1] - axis[0] for axis in self.sim_dims]
+                        )
                     )
                     # Chromophore separation needs converting to m
                     chromophore_separation = (
                         hf.calculate_separation(
                             self.current_chromophore.posn, neighbour_chromo_posn
                         )
-                        * 1E-10
+                        * 1e-10
                     )
                     hop_rate = hf.calculate_carrier_hop_rate(
                         self.lambda_ij * elementary_charge,
@@ -185,7 +195,7 @@ class carrier:
         hop_times.sort(key=lambda x: x[1])
         if len(hop_times) == 0:
             # We are trapped here, so create a dummy hop with time 1E99
-            hop_times = [[self.current_chromophore.ID, 1E99, [0, 0, 0]]]
+            hop_times = [[self.current_chromophore.ID, 1e99, [0, 0, 0]]]
         # As long as we're not limiting by the number of hops:
         if self.hop_limit is None:
             # Ensure that the next hop does not put the carrier over its
@@ -261,11 +271,14 @@ def save_pickle(save_data, save_pickle_name):
     with open(save_pickle_name, "wb+") as pickle_file:
         pickle.dump(save_data, pickle_file)
     hf.write_to_file(
-        log_file, ["".join(["Pickle file saved successfully as", save_pickle_name])]
+        log_file,
+        ["".join(["Pickle file saved successfully as", save_pickle_name])],
     )
 
 
-def calculate_displacement(initial_position, final_position, final_image, sim_dims):
+def calculate_displacement(
+    initial_position, final_position, final_image, sim_dims
+):
     displacement = [0.0, 0.0, 0.0]
     for axis in range(3):
         displacement[axis] = (final_position[axis] - initial_position[axis]) + (
@@ -284,7 +297,9 @@ def initialise_save_data(n_chromos, seed):
         "no_hops": [],
         "displacement": [],
         "hole_history_matrix": lil_matrix((n_chromos, n_chromos), dtype=int),
-        "electron_history_matrix": lil_matrix((n_chromos, n_chromos), dtype=int),
+        "electron_history_matrix": lil_matrix(
+            (n_chromos, n_chromos), dtype=int
+        ),
         "initial_position": [],
         "final_position": [],
         "carrier_type": [],
@@ -327,7 +342,9 @@ def update_molecule(atom_ID, molecule_list, bonded_atoms):
             # atom's neighbours
             elif molecule_list[bonded_atom] < molecule_list[atom_ID]:
                 molecule_list[atom_ID] = molecule_list[bonded_atom]
-                molecule_list = update_molecule(atom_ID, molecule_list, bonded_atoms)
+                molecule_list = update_molecule(
+                    atom_ID, molecule_list, bonded_atoms
+                )
             # Else: both the current and the bonded atom are already known to
             # be in this molecule, so we don't have to do anything else.
     except KeyError:
@@ -354,11 +371,15 @@ def main():
     )
     with open(pickle_file_name, "rb") as pickle_file:
         jobs_to_run = pickle.load(pickle_file)
-    log_file = os.path.join(KMC_directory, "KMC_log_{:02d}.log".format(CPU_rank))
+    log_file = os.path.join(
+        KMC_directory, "KMC_log_{:02d}.log".format(CPU_rank)
+    )
     # Reset the log file
     with open(log_file, "wb+") as log_file_handle:
         pass
-    hf.write_to_file(log_file, ["Found {:d} jobs to run".format(len(jobs_to_run))])
+    hf.write_to_file(
+        log_file, ["Found {:d} jobs to run".format(len(jobs_to_run))]
+    )
     # Set the affinities for this current process to make sure it's maximising
     # available CPU usage
     current_PID = os.getpid()
@@ -421,13 +442,18 @@ def main():
     save_time = T.time()
     save_slot = "slot1"
     try:
-        for job_number, [carrier_no, lifetime, carrier_type] in enumerate(jobs_to_run):
+        for job_number, [carrier_no, lifetime, carrier_type] in enumerate(
+            jobs_to_run
+        ):
             t1 = T.time()
             # Find a random position to start the carrier in
             while True:
-                start_chromo_ID = np.random.randint(0, len(chromophore_list) - 1)
+                start_chromo_ID = np.random.randint(
+                    0, len(chromophore_list) - 1
+                )
                 if (carrier_type.lower() == "electron") and (
-                    chromophore_list[start_chromo_ID].species.lower() != "acceptor"
+                    chromophore_list[start_chromo_ID].species.lower()
+                    != "acceptor"
                 ):
                     continue
                 elif (carrier_type.lower() == "hole") and (
@@ -451,7 +477,9 @@ def main():
                     this_carrier.calculate_hop(chromophore_list)
                 )
                 if killer.kill_sent is True:
-                    raise terminate("Kill command sent, terminating KMC simulation...")
+                    raise terminate(
+                        "Kill command sent, terminating KMC simulation..."
+                    )
             # Now the carrier has finished hopping, let's calculate its vitals
             initial_position = this_carrier.initial_chromophore.posn
             final_position = this_carrier.current_chromophore.posn
@@ -476,7 +504,9 @@ def main():
             # Update the carrierHistoryMatrix
             if parameter_dict["record_carrier_history"] is True:
                 if this_carrier.carrier_type.lower() == "hole":
-                    save_data["hole_history_matrix"] += this_carrier.hole_history_matrix
+                    save_data[
+                        "hole_history_matrix"
+                    ] += this_carrier.hole_history_matrix
                 elif this_carrier.carrier_type.lower() == "electron":
                     save_data[
                         "electron_history_matrix"
@@ -509,7 +539,9 @@ def main():
                             ),
                             repr(this_carrier.image),
                             ", for a displacement of {0:.2f}, in {1:.2f} wall-clock {2:s}".format(
-                                this_carrier.displacement, elapsed_time, time_units
+                                this_carrier.displacement,
+                                elapsed_time,
+                                time_units,
                             ),
                         ]
                     )
@@ -521,7 +553,11 @@ def main():
                     "Completed {0:d} of {1:d} jobs. Making checkpoint at {2:3d}%".format(
                         job_number,
                         len(jobs_to_run),
-                        int(np.round((job_number + 1) / float(len(jobs_to_run)) * 100)),
+                        int(
+                            np.round(
+                                (job_number + 1) / float(len(jobs_to_run)) * 100
+                            )
+                        ),
                     )
                 )
                 hf.write_to_file(
@@ -530,13 +566,21 @@ def main():
                         "Completed {0:d} of {1:d} jobs. Making checkpoint at {2:3d}%".format(
                             job_number,
                             len(jobs_to_run),
-                            int(np.round((job_number + 1) / float(len(jobs_to_run)) * 100)),
+                            int(
+                                np.round(
+                                    (job_number + 1)
+                                    / float(len(jobs_to_run))
+                                    * 100
+                                )
+                            ),
                         )
                     ],
                 )
                 save_pickle(
                     save_data,
-                    pickle_file_name.replace("data", "".join([save_slot, "_results"])),
+                    pickle_file_name.replace(
+                        "data", "".join([save_slot, "_results"])
+                    ),
                 )
                 if save_slot.lower() == "slot1":
                     save_slot = "slot2"
@@ -550,7 +594,9 @@ def main():
         hf.write_to_file(
             log_file, ["Saving the pickle file cleanly before termination..."]
         )
-        save_pickle(save_data, pickle_file_name.replace("data", "terminated_results"))
+        save_pickle(
+            save_data, pickle_file_name.replace("data", "terminated_results")
+        )
         print("Pickle saved! Exiting Python...")
         exit()
     t3 = T.time()
@@ -568,9 +614,15 @@ def main():
         time_units = "days."
     hf.write_to_file(
         log_file,
-        ["All jobs completed in {0:.2f} {1:s}".format(elapsed_time, time_units)],
+        [
+            "All jobs completed in {0:.2f} {1:s}".format(
+                elapsed_time, time_units
+            )
+        ],
     )
-    hf.write_to_file(log_file, ["Saving the pickle file cleanly before termination..."])
+    hf.write_to_file(
+        log_file, ["Saving the pickle file cleanly before termination..."]
+    )
     save_pickle(save_data, pickle_file_name.replace("data", "results"))
     hf.write_to_file(log_file, ["Exiting normally..."])
 

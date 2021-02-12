@@ -104,7 +104,9 @@ def rename_old(old_parameter_dict):
     except KeyError:
         pass
     try:
-        old_parameter_dict["execute_ZINDO"] = old_parameter_dict.pop("execute_zindo")
+        old_parameter_dict["execute_ZINDO"] = old_parameter_dict.pop(
+            "execute_zindo"
+        )
     except KeyError:
         pass
     try:
@@ -198,7 +200,9 @@ def add_missing_parameters(old_parameter_dict):
 def rewrite_parameter_file(new_parameter_dict, new_parameter_file):
     # Then update the empty template with all of the right variables
     with open(
-        os.path.join(os.path.split(par_template.__file__)[0], "empty_par_template.py"),
+        os.path.join(
+            os.path.split(par_template.__file__)[0], "empty_par_template.py"
+        ),
         "r",
     ) as empty_file:
         lines = empty_file.readlines()
@@ -310,7 +314,9 @@ def get_parameter_file(directory):
             continue
     # Remove previous backups
     parameter_files = [
-        file_name for file_name in parameter_files if ".bak_par" not in file_name
+        file_name
+        for file_name in parameter_files
+        if ".bak_par" not in file_name
     ]
     if len(parameter_files) == 0:
         print("No parameter file found to back up.")
@@ -333,19 +339,27 @@ def load_pickle_data(old_pickle_file, directory):
         # This pickle is from a python 2 version of MorphCT. We can inject
         # a line into the obtainChromophores.py to try and fix the import
         # error
-        print("Pickle is from Python 2, updating the code so it can be imported...")
+        print(
+            "Pickle is from Python 2, updating the code so it can be imported..."
+        )
         code_file_names = ["obtainChromophores.py", "helperFunctions.py"]
         for code_file_name in code_file_names:
             print("Updating", "".join([code_file_name, "..."]))
-            with open(os.path.join(directory, code_file_name), "r") as code_file:
+            with open(
+                os.path.join(directory, code_file_name), "r"
+            ) as code_file:
                 code_lines = code_file.readlines()
             for line_number, line in enumerate(code_lines):
                 if "import cPickle as pickle" in line:
                     code_lines[line_number] = "import pickle\n"
                 elif ("#" not in line) and ("print" in line):
                     n_spaces = len(line) - len(line.lstrip())
-                    code_lines[line_number] = "".join([" " * n_spaces, "print()\n"])
-            with open(os.path.join(directory, code_file_name), "w+") as code_file:
+                    code_lines[line_number] = "".join(
+                        [" " * n_spaces, "print()\n"]
+                    )
+            with open(
+                os.path.join(directory, code_file_name), "w+"
+            ) as code_file:
                 code_file.writelines(code_lines)
         pickle_data = hf.load_pickle(old_pickle_file)
     return pickle_data
@@ -358,7 +372,9 @@ def convert_KMC(morphology_directory):
     print("Updating KMC result keys to PEP8 format...")
     KMC_data = add_underscores(KMC_data)
     print("Rewriting KMC results file...")
-    new_file_name = os.path.join(morphology_directory, "KMC", "KMC_results.pickle")
+    new_file_name = os.path.join(
+        morphology_directory, "KMC", "KMC_results.pickle"
+    )
     with open(new_file_name, "wb+") as pickle_file:
         pickle.dump(KMC_data, pickle_file)
     print("Updated KMC results file written to", new_file_name)
@@ -370,7 +386,9 @@ def load_KMC_results_pickle(directory):
         with open(KMC_pickle, "rb") as pickle_file:
             carrier_data = pickle.load(pickle_file)
     except FileNotFoundError:
-        print("No final KMC_results.pickle found. Creating it from incomplete parts...")
+        print(
+            "No final KMC_results.pickle found. Creating it from incomplete parts..."
+        )
         success = create_results_pickle(directory)
         if not success:
             return False
@@ -475,7 +493,9 @@ def main():
     )
     args, input_list = parser.parse_known_args()
     if args.pickle_mode:
-        print("Update_pickle is running in `pickle mode' (see -h for more details).")
+        print(
+            "Update_pickle is running in `pickle mode' (see -h for more details)."
+        )
     else:
         print("Update_pickle is running in `directory mode' (default).")
     # Iterate over all input strings (directories or pickles)
@@ -514,7 +534,9 @@ def main():
                         old_parameter_file = os.path.join(
                             directory, parameter_file.replace(".py", ".bak_par")
                         )
-                        new_parameter_file = os.path.join(directory, parameter_file)
+                        new_parameter_file = os.path.join(
+                            directory, parameter_file
+                        )
                         print("Found parameter file at", new_parameter_file)
                         parameter_found = True
                     if os.path.isfile(old_parameter_file):
@@ -525,7 +547,10 @@ def main():
                         print("Skipping creating a new backup...")
                     else:
                         print(
-                            "Backing up", new_parameter_file, "to", old_parameter_file
+                            "Backing up",
+                            new_parameter_file,
+                            "to",
+                            old_parameter_file,
                         )
                         shutil.copy(new_parameter_file, old_parameter_file)
             else:
@@ -578,7 +603,9 @@ def main():
             pickle_data = load_pickle_data(old_pickle_file, directory)
             print("Deleting copied code to keep things tidy...")
             os.remove(os.path.join(PROJECT_ROOT, "code", "helperFunctions.py"))
-            os.remove(os.path.join(PROJECT_ROOT, "code", "obtainChromophores.py"))
+            os.remove(
+                os.path.join(PROJECT_ROOT, "code", "obtainChromophores.py")
+            )
         AA_morphology_dict = pickle_data[0]
         CG_morphology_dict = pickle_data[1]
         CG_to_AAID_master = pickle_data[2]
@@ -591,7 +618,9 @@ def main():
         ]
 
         # Update the parameter dict and pickle files to include the new data
-        new_parameter_dict = convert_params(old_parameter_dict, new_parameter_file)
+        new_parameter_dict = convert_params(
+            old_parameter_dict, new_parameter_file
+        )
 
         # #DEBUG
         # # Temp for Mike jobs

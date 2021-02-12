@@ -18,5 +18,6 @@ def main():
         os.path.join(cwd, "submit.sh"),
     )
     shutil.copy(
-        os.path.join(PROJECT_ROOT, "templates", "par.py"), os.path.join(cwd, "par.py")
+        os.path.join(PROJECT_ROOT, "templates", "par.py"),
+        os.path.join(cwd, "par.py"),
     )
