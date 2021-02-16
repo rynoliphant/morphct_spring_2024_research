@@ -1,14 +1,11 @@
-import os
-import pickle
-import sys
 import multiprocessing as mp
 import numpy as np
-import subprocess as sp
 
 import pyscf
 from pyscf.semiempirical import MINDO3
 
 from morphct import helper_functions as hf
+from morphct import transfer_integrals as ti
 
 
 def get_homolumo(molstr, verbose=False, tol=1e-6, send_end=None):
@@ -22,6 +19,76 @@ def get_homolumo(molstr, verbose=False, tol=1e-6, send_end=None):
         send_end.send(energies)
         return
     return energies
+
+
+def singles_homolumo(chromo_list, filename=None, nprocs=None):
+    if nprocs is not None:
+        nprocs = mp.cpu_count()
+    p = mp.Pool(processes=nprocs)
+    data = p.map(get_homolumo, [i.qcc_input for i in chromo_list])
+    p.close()
+    data = np.stack(data)
+    if filename is not None:
+        np.savetxt(filename, data)
+    return data
+
+
+def dimer_homolumo(qcc_pairs, filename=None, nprocs=None):
+    if nprocs is not None:
+        nprocs = mp.cpu_count()
+
+    p = mp.Pool(processes=nprocs)
+    data = p.map(eqcc.get_homolumo, [qcc_input for pair,qcc_input in qcc_pairs])
+    p.close()
+
+    dimer_data = [i for i in zip([pair for pair,qcc_input in qcc_pairs],data)]
+    if filename is not None:
+        with open(filename, "w") as f:
+            f.writelines(
+                f"{pair[0]} {pair[1]} {en[0]} {en[1]} {en[2]} {en[3]}\n"
+                for pair,en in dimer_data
+            )
+    return dimer_data
+
+
+def get_dimerdata(filename):
+    dimer_data = []
+    with open(filename, "r") as f:
+        for i in f.readlines():
+            a,b,c,d,e,f = i.split()
+            dimer_data.append(
+                ((int(a),int(b)),(float(c),float(d),float(e),float(f)))
+            )
+    return dimer_data
+
+
+def get_singlesdata(filename):
+    return np.loadtxt(filename)
+
+
+def set_energyvalues(chromo_list, s_filename, d_filename):
+    s_data = get_singlesdata(s_filename)
+    d_data = get_dimerdata(d_filename)
+
+    for i,chromo in enumerate(chromo_list):
+        chromo.HOMO_1, chromo.HOMO, chromo.LUMO, chromo.LUMO_1 = s_data[i]
+
+    for (i,j), (HOMO_1, HOMO, LUMO, LUMO_1) in d_data:
+        chromo1 = chromo_list[i]
+        chromo2 = chromo_list[j]
+        neighborind1 = [i[0] for i in chromo1.neighbors].index(j)
+        neighborind2 = [i[0] for i in chromo2.neighbors].index(i)
+        deltaE = ti.calculate_delta_E(chromo1,chromo2)
+        chromo1.neighbors_delta_E[neighborind1] = deltaE
+        chromo2.neighbors_delta_E[neighborind2] = -deltaE
+
+        assert chromo1.species == chromo2.species
+        if chromo1.species.lower() == "donor":
+            TI = ti.calculate_TI(HOMO - HOMO_1, deltaE)
+        else:
+            TI = ti.calculate_TI(LUMO - LUMO_1, deltaE)
+        chromo1.neighbors_TI[neighborind1] = TI
+        chromo2.neighbors_TI[neighborind2] = TI
 
 
 def create_inputs(chromo_list, AA_morphdict, param_dict):
@@ -230,8 +297,6 @@ def terminate_monomers(chromophore, param_dict, AA_morphdict):
     # Return terminatingGroups (positions of those hydrogens to be added to the
     # qcc input)
     return new_hydrogen_positions
-
-
 
 
 if __name__ == "__main__":
