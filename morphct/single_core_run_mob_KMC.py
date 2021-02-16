@@ -4,7 +4,7 @@ import signal
 import sys
 import traceback
 import numpy as np
-import time as T
+import time
 from scipy.sparse import lil_matrix
 from morphct import helper_functions as hf
 
@@ -27,9 +27,9 @@ class carrier:
         mol_ID_dict,
     ):
         self.ID = carrier_no
-        self.image = [0, 0, 0]
-        self.initial_chromophore = chromo_list[chromo_ID]
-        self.current_chromophore = chromo_list[chromo_ID]
+        self.image = np.array([0, 0, 0])
+        self.initial_chromo = chromo_list[chromo_ID]
+        self.current_chromo = chromo_list[chromo_ID]
         if param_dict["hop_limit"] == 0:
             self.hop_limit = None
         else:
@@ -39,25 +39,22 @@ class carrier:
         self.current_time = 0.0
         self.hole_history_matrix = None
         self.electron_history_matrix = None
-        self.lambda_ij = self.current_chromophore.reorganisation_energy
-        if self.current_chromophore.species.lower() == "donor":
+        self.lambda_ij = self.current_chromo.reorganisation_energy
+        n = len(chromo_list)
+        if self.current_chromo.species.lower() == "donor":
             self.carrier_type = "hole"
             if param_dict["record_carrier_history"] is True:
-                self.hole_history_matrix = lil_matrix(
-                    (len(chromo_list), len(chromo_list)), dtype=int
-                )
-        elif self.current_chromophore.species.lower() == "acceptor":
+                self.hole_history_matrix = lil_matrix((n, n), dtype=int)
+        elif self.current_chromo.species.lower() == "acceptor":
             self.carrier_type = "electron"
             if param_dict["record_carrier_history"] is True:
-                self.electron_history_matrix = lil_matrix(
-                    (len(chromo_list), len(chromo_list)), dtype=int
-                )
+                self.electron_history_matrix = lil_matrix((n, n), dtype=int)
         self.no_hops = 0
-        self.sim_dims = [
+        self.sim_dims = np.array([
             [-AA_morphdict["lx"] / 2.0, AA_morphdict["lx"] / 2.0],
             [-AA_morphdict["ly"] / 2.0, AA_morphdict["ly"] / 2.0],
             [-AA_morphdict["lz"] / 2.0, AA_morphdict["lz"] / 2.0],
-        ]
+        ])
         self.displacement = None
         self.mol_ID_dict = mol_ID_dict
         # Set the use of average hop rates to false if the key does not exist in
@@ -89,9 +86,7 @@ class carrier:
         except KeyError:
             self.use_VRH = False
         if self.use_VRH is True:
-            self.VRH_delocalisation = (
-                self.current_chromophore.VRH_delocalisation
-            )
+            self.VRH_delocalisation = (self.current_chromo.VRH_delocalisation)
         try:
             self.hopping_prefactor = param_dict["hopping_prefactor"]
         except KeyError:
@@ -107,11 +102,11 @@ class carrier:
         if self.use_average_hop_rates is True:
             # Use the average hop values given in the parameter dict to pick a
             # hop
-            for neighbor_details in self.current_chromophore.neighbors:
+            for neighbor_details in self.current_chromo.neighbors:
                 neighbor = chromo_list[neighbor_details[0]]
                 assert neighbor.ID == neighbor_details[0]
                 if (
-                    self.mol_ID_dict[self.current_chromophore.ID]
+                    self.mol_ID_dict[self.current_chromo.ID]
                     == self.mol_ID_dict[neighbor.ID]
                 ):
                     hop_rate = self.average_intra_hop_rate
@@ -124,37 +119,35 @@ class carrier:
             # Obtain the reorganisation energy in J (from eV in the parameter
             # file)
             for neighbor_index, transfer_integral in enumerate(
-                self.current_chromophore.neighbors_TI
+                self.current_chromo.neighbors_TI
             ):
                 # Ignore any hops with a NoneType transfer integral (usually
                 # due to an orca error)
                 if transfer_integral is None:
                     continue
-                delta_E_ij = self.current_chromophore.neighbors_delta_E[
+                delta_E_ij = self.current_chromo.neighbors_delta_E[
                     neighbor_index
                 ]
                 # Load the specified hopping prefactor
                 prefactor = self.hopping_prefactor
                 # Get the relative image so we can update the carrier image
                 # after the hop
-                relative_image = self.current_chromophore.neighbors[
-                    neighbor_index
-                ][1]
+                rel_image = np.array(
+                        self.current_chromo.neighbors[neighbor_index][1]
+                        )
                 # All of the energies are in eV currently, so convert them to J
                 if self.use_VRH is True:
                     neighbor_chromo = chromo_list[
-                        self.current_chromophore.neighbors[neighbor_index][0]
+                        self.current_chromo.neighbors[neighbor_index][0]
                     ]
-                    neighbor_chromo_posn = neighbor_chromo.posn + (
-                        np.array(relative_image)
-                        * np.array(
-                            [axis[1] - axis[0] for axis in self.sim_dims]
-                        )
+                    neighbor_chromo_pos = (
+                            neighbor_chromo.pos + rel_image
+                            * (sim_dims[:,1] - sim_dims[:,0])
                     )
                     # Chromophore separation needs converting to m
-                    chromophore_separation = (
+                    chromo_separation = (
                         hf.calculate_separation(
-                            self.current_chromophore.posn, neighbor_chromo_posn
+                            self.current_chromo.pos, neighbor_chromo_pos
                         )
                         * 1e-10
                     )
@@ -165,7 +158,7 @@ class carrier:
                         prefactor,
                         self.T,
                         use_VRH=True,
-                        rij=chromophore_separation,
+                        rij=chromo_separation,
                         VRH_delocalisation=self.VRH_delocalisation,
                         boltz_pen=self.use_simple_energetic_penalty,
                     )
@@ -182,16 +175,16 @@ class carrier:
                 # Keep track of the chromophoreID and the corresponding tau
                 hop_times.append(
                     [
-                        self.current_chromophore.neighbors[neighbor_index][0],
+                        self.current_chromo.neighbors[neighbor_index][0],
                         hop_time,
-                        relative_image,
+                        rel_image,
                     ]
                 )
         # Sort by ascending hop time
         hop_times.sort(key=lambda x: x[1])
         if len(hop_times) == 0:
             # We are trapped here, so create a dummy hop with time 1E99
-            hop_times = [[self.current_chromophore.ID, 1e99, [0, 0, 0]]]
+            hop_times = [[self.current_chromo.ID, 1e99, [0, 0, 0]]]
         # As long as we're not limiting by the number of hops:
         if self.hop_limit is None:
             # Ensure that the next hop does not put the carrier over its
@@ -207,26 +200,12 @@ class carrier:
         )
         return 0
 
-    def perform_hop(self, destination_chromophore, hop_time, relative_image):
-        initial_ID = self.current_chromophore.ID
-        destination_ID = destination_chromophore.ID
-        self.image = list(np.array(self.image) + np.array(relative_image))
-        # OLD WAY TO CALCULATE SELF.IMAGE #
-        # initial_position = self.current_chromophore.posn
-        # destination_position = destination_chromophore.posn
-        # delta_position = destination_position - initial_position
-        # for axis in range(3):
-        #     half_box_length = (self.sim_dims[axis][1] - self.sim_dims[axis][0]) / 2.0
-        #     while delta_position[axis] > half_box_length:
-        #         # Crossed over a negative boundary, decrement image by 1
-        #         delta_position[axis] -= half_box_length * 2.0
-        #         self.image[axis] -= 1
-        #     while delta_position[axis] < - half_box_length:
-        #         # Crossed over a positive boundary, increment image by 1
-        #         delta_position[axis] += half_box_length * 2.0
-        #         self.image[axis] += 1
+    def perform_hop(self, destination_chromo, hop_time, rel_image):
+        initial_ID = self.current_chromo.ID
+        destination_ID = destination_chromo.ID
+        self.image += rel_image
         # Carrier image now sorted, so update its current position
-        self.current_chromophore = destination_chromophore
+        self.current_chromo = destination_chromo
         # Increment the simulation time
         self.current_time += hop_time
         # Increment the hop counter
@@ -271,16 +250,12 @@ def save_pickle(save_data, save_pickle_name):
     )
 
 
-def calculate_displacement(
-    initial_position, final_position, final_image, sim_dims
-):
-    displacement = [0.0, 0.0, 0.0]
-    for axis in range(3):
-        displacement[axis] = (final_position[axis] - initial_position[axis]) + (
-            final_image[axis] * (sim_dims[axis][1] - sim_dims[axis][0])
-        )
-    return np.linalg.norm(np.array(displacement))
-
+def calculate_displacement(init_pos, final_pos, final_image, sim_dims):
+    displacement = (
+            final_pos - init_pos + final_image *
+            (sim_dims[:,1] - sim_dims[:,0])
+            )
+    return np.linalg.norm(displacement)
 
 def initialise_save_data(n_chromos, seed):
     return {
@@ -394,12 +369,12 @@ def main(
     if param_dict["record_carrier_history"] is False:
         save_data["hole_history_matrix"] = None
         save_data["electron_history_matrix"] = None
-    t0 = T.time()
-    save_time = T.time()
+    t0 = time.perf_counter()
+    save_time = time.perf_counter()
     save_slot = "slot1"
     try:
         for job_number, [carrier_no, lifetime, ctype] in enumerate(jobs_to_run):
-            t1 = T.time()
+            t1 = time.perf_counter()
             # Find a random position to start the carrier in
             while True:
                 start_chromo_ID = np.random.randint(0, len(chromo_list) - 1)
@@ -432,8 +407,8 @@ def main(
                         "Kill command sent, terminating KMC simulation..."
                     )
             # Now the carrier has finished hopping, let's calculate its vitals
-            initial_position = this_carrier.initial_chromophore.posn
-            final_position = this_carrier.current_chromophore.posn
+            initial_position = this_carrier.initial_chromo.pos
+            final_position = this_carrier.current_chromo.pos
             final_image = this_carrier.image
             sim_dims = this_carrier.sim_dims
             this_carrier.displacement = calculate_displacement(
@@ -465,7 +440,7 @@ def main(
             # Then add in the initial and final positions
             save_data["initial_position"].append(initial_position)
             save_data["final_position"].append(final_position)
-            t2 = T.time()
+            t2 = time.perf_counter()
             elapsed_time = float(t2) - float(t1)
             if elapsed_time < 60:
                 time_units = "seconds."
@@ -513,7 +488,7 @@ def main(
                     save_slot = "slot2"
                 elif save_slot.lower() == "slot2":
                     save_slot = "slot1"
-                save_time = T.time()
+                save_time = time.perf_counter()
     except Exception as error_message:
         print(traceback.format_exc())
         print("Saving the pickle file cleanly before termination...")
@@ -524,7 +499,7 @@ def main(
         save_pickle(save_data, pickle_filename)
         print("Pickle saved! Exiting Python...")
         exit()
-    t3 = T.time()
+    t3 = time.perf_counter()
     elapsed_time = float(t3) - float(t0)
     if elapsed_time < 60:
         time_units = "seconds."
