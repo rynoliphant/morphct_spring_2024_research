@@ -11,13 +11,16 @@ from pyscf.semiempirical import MINDO3
 from morphct import helper_functions as hf
 
 
-def get_homolumo(molstr, verbose=False, tol=1e-6):
+def get_homolumo(molstr, verbose=False, tol=1e-6, send_end=None):
     mol = pyscf.M(atom=molstr)
     mf = MINDO3(mol).run(verbose=verbose, conv_tol=tol)
     occ = mf.get_occ()
     i_lumo = np.argmax(occ<1)
     energies = mf.mo_energy[i_lumo-2:i_lumo+2]
     energies *= 27.2114 # convert Eh to eV
+    if send_end is not None:
+        send_end.send(energies)
+        return
     return energies
 
 
