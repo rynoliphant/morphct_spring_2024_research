@@ -8,20 +8,60 @@ from morphct import helper_functions as hf
 from morphct import transfer_integrals as ti
 
 
-def get_homolumo(molstr, verbose=False, tol=1e-6, send_end=None):
+def get_homolumo(molstr, verbose=0, tol=1e-6):
+    """
+    Get the HOMO-1, HOMO, LUMO, LUMO+1 energies for the given input string
+    using the MINDO3 method in pySCF.
+
+    Parameters
+    ----------
+    molstr : str
+        Input string for pySCF containing elements and positions in Angstroms
+        (e.g., "C 0.0 0.0 0.0; H 1.54 0.0 0.0")
+    verbose : False or int
+        Verbosity level of the MINDO calculation output. 0 will silence output,
+        4 will show convergence. (default 0)
+    tol : float
+        Tolerance of the MINDO convergence (default 1e-6)
+
+    Returns
+    -------
+    numpy.array
+        Array containing HOMO-1, HOMO, LUMO, LUMO+1 energies in eV
+    """
     mol = pyscf.M(atom=molstr)
     mf = MINDO3(mol).run(verbose=verbose, conv_tol=tol)
     occ = mf.get_occ()
     i_lumo = np.argmax(occ<1)
     energies = mf.mo_energy[i_lumo-2:i_lumo+2]
     energies *= 27.2114 # convert Eh to eV
-    if send_end is not None:
-        send_end.send(energies)
-        return
     return energies
 
 
 def singles_homolumo(chromo_list, filename=None, nprocs=None):
+    """
+    Obtain the HOMO-1, HOMO, LUMO, LUMO+1 energies in eV for all single
+    chromophores
+
+    Parameters
+    ----------
+    chromo_list : list of morphct.obtain_chromophores.Chromophore
+        Chromophores to calculate energies of. Each Chromophore must have
+        qcc_input attribute set.
+    filename : str
+        Path to file where singles energies will be saved. If None, energies
+        will not be saved. (default None)
+    nprocs : int
+        Number of processes passed to multiprocessing.Pool. If None,
+        multiprocessing.cpu_count will used to determine optimal number.
+        (default None)
+
+    Returns
+    -------
+    data : numpy.array
+        Array of energies where each row corresponds to the MO energies of each
+        chromophore in the list.
+    """
     if nprocs is not None:
         nprocs = mp.cpu_count()
     p = mp.Pool(processes=nprocs)
@@ -34,6 +74,29 @@ def singles_homolumo(chromo_list, filename=None, nprocs=None):
 
 
 def dimer_homolumo(qcc_pairs, filename=None, nprocs=None):
+    """
+    Obtain the HOMO-1, HOMO, LUMO, LUMO+1 energies in eV for all chromophore
+    pairs
+
+    Parameters
+    ----------
+    qcc_pairs : list of (tuple and string)
+        Each list item contains a tuple with the indices of the pair and the
+        qcc input string. qcc_pairs is returned by create_inputs.
+    filename : str
+        Path to file where the pair energies will be saved. If None, energies
+        will not be saved. (default None)
+    nprocs : int
+        Number of processes passed to multiprocessing.Pool. If None,
+        multiprocessing.cpu_count will used to determine optimal number.
+        (default None)
+
+    Returns
+    -------
+    dimer_data : list of (tuple or ints, numpy.array)
+        Each list item contains the indices of the pair and an array of its MO
+        energies.
+    """
     if nprocs is not None:
         nprocs = mp.cpu_count()
 
@@ -52,6 +115,20 @@ def dimer_homolumo(qcc_pairs, filename=None, nprocs=None):
 
 
 def get_dimerdata(filename):
+    """
+    Read in the saved data created by dimer_homolumo().
+
+    Parameters
+    ----------
+    filename : str
+        Path to file where the dimer energies were saved.
+
+    Returns
+    -------
+    dimer_data : list of (tuple or ints, numpy.array)
+        Each list item contains the indices of the pair and an array of its MO
+        energies.
+    """
     dimer_data = []
     with open(filename, "r") as f:
         for i in f.readlines():
@@ -63,10 +140,39 @@ def get_dimerdata(filename):
 
 
 def get_singlesdata(filename):
+    """
+    Read in the saved data created by singles_homolumo().
+
+    Parameters
+    ----------
+    filename : str
+        Path to file where the singles energies were saved.
+
+    Returns
+    -------
+    numpy.array
+        Array of energies where each row corresponds to the MO energies of each
+        chromophore in the list.
+    """
     return np.loadtxt(filename)
 
 
 def set_energyvalues(chromo_list, s_filename, d_filename):
+    """
+    Set the energy attributes of the Chromophore objects.
+    Run singles_homolumo and dimer_homolumo first to get the energy files.
+    Energy values set by this function:
+        HOMO_1, HOMO, LUMO, LUMO_1, neighbors_delta_E, neighbors_TI
+
+    Parameters
+    ----------
+    chromo_list : list of morphct.obtain_chromophores.Chromophore
+        Set the energy values of the chromphores in this list.
+    s_filename : str
+        Path to file where the singles energies were saved.
+    d_filename : str
+        Path to file where the pair energies were saved.
+    """
     s_data = get_singlesdata(s_filename)
     d_data = get_dimerdata(d_filename)
 
@@ -92,6 +198,15 @@ def set_energyvalues(chromo_list, s_filename, d_filename):
 
 
 def create_inputs(chromo_list, AA_morphdict, param_dict):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     # Singles first
     for chromophore in chromo_list:
         # Include the molecule terminating units on the required atoms of the
@@ -186,6 +301,15 @@ def create_inputs(chromo_list, AA_morphdict, param_dict):
 
 
 def remove_adjacent_terminators(group1, group2):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     pop_list = [[], []]
     for index1, terminal_hydrogen1 in enumerate(group1):
         for index2, terminal_hydrogen2 in enumerate(group2):
@@ -214,6 +338,15 @@ def write_qcc_inp(
     terminal_pos,
     terminal_images,
 ):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     qcc_lines = []
     all_atom_types = []
     all_positions = []
@@ -262,6 +395,15 @@ def write_qcc_inp(
     return qcc_input
 
 def terminate_monomers(chromophore, param_dict, AA_morphdict):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     # No CG morphology, so we will use the UA -> AA code definition of which
     # atoms need to have hydrogens added to them.
     new_hydrogen_positions = []
