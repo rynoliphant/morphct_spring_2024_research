@@ -1,18 +1,18 @@
-import glob
-import os
 import math
+import multiprocessing as mp
+import os
 import pickle
-import sys
-import numpy as np
-import subprocess as sp
-from morphct import helper_functions as hf
 import signal
-import traceback
 import time
+import traceback
+
+import numpy as np
 from scipy.sparse import lil_matrix
 
+from morphct import helper_functions as hf
 
-elementary_charge = 1.60217657e-19  # C
+
+elem_chrg = 1.60217657e-19  # C
 k_B = 1.3806488e-23  # m^{2} kg s^{-2} K^{-1}
 hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 log_file = None
@@ -155,9 +155,9 @@ class carrier:
                         * 1e-10
                     )
                     hop_rate = hf.calculate_carrier_hop_rate(
-                        self.lambda_ij * elementary_charge,
-                        transfer_integral * elementary_charge,
-                        delta_E_ij * elementary_charge,
+                        self.lambda_ij * elem_chrg,
+                        transfer_integral * elem_chrg,
+                        delta_E_ij * elem_chrg,
                         prefactor,
                         self.T,
                         use_VRH=True,
@@ -167,9 +167,9 @@ class carrier:
                     )
                 else:
                     hop_rate = hf.calculate_carrier_hop_rate(
-                        self.lambda_ij * elementary_charge,
-                        transfer_integral * elementary_charge,
-                        delta_E_ij * elementary_charge,
+                        self.lambda_ij * elem_chrg,
+                        transfer_integral * elem_chrg,
+                        delta_E_ij * elem_chrg,
                         prefactor,
                         self.T,
                         boltz_pen=self.use_simple_energetic_penalty,
