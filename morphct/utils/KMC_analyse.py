@@ -12,7 +12,6 @@ import shutil
 import glob
 import re
 import argparse
-import copy
 from scipy.signal import argrelextrema
 from scipy.ndimage import gaussian_filter
 from scipy.sparse import lil_matrix
@@ -20,7 +19,7 @@ from scipy.sparse import lil_matrix
 
 plt = None
 p3 = None
-elementary_charge = 1.60217657e-19  # C
+elem_chrg = 1.60217657e-19  # C
 kB = 1.3806488e-23  # m^{2} kg s^{-2} K^{-1}
 hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 temperature = 290  # K
@@ -260,10 +259,10 @@ def create_array_for_plot_connections(chromo_list, carrier_history, sim_dims):
             if i < index:
                 # Get the vector between the two chromophores.
                 if not np.count_nonzero(image):
-                    vector = chromo_list[index].posn - chromo.posn
+                    vector = chromo_list[index].pos - chromo.pos
                 # Account for periodic boundary conditions if not in same relative image.
                 else:
-                    vector = chromo_list[index].posn - chromo.posn
+                    vector = chromo_list[index].pos - chromo.pos
                     vector += image * np.array(
                         [
                             2 * sim_dims[0][1],
@@ -281,7 +280,7 @@ def create_array_for_plot_connections(chromo_list, carrier_history, sim_dims):
                 if times_travelled > 0:
                     datum = np.hstack(
                         (
-                            chromo.posn,
+                            chromo.pos,
                             vector,
                             np.array([np.log10(times_travelled)]),
                         )
@@ -476,15 +475,14 @@ def calc_mobility(lin_fit_X, lin_fit_Y, av_time_error, av_MSD_error):
     # Diffusion coeff D = d(MSD)/dt * 1/2n (n = 3 = number of dimensions)
     # Ref: Carbone2014a (Carbone and Troisi)
     diffusion_coeff = numerator / (6 * denominator)
-    # The error in the mobility is proportionally the same as the error in the diffusion coefficient as the
-    # other variables are constants with zero error
+    # The error in the mobility is proportionally the same as the error in the
+    # diffusion coefficient as the other variables are constants without error
     diff_error = diffusion_coeff * np.sqrt(
         (av_MSD_error / numerator) ** 2 + (av_time_error / denominator) ** 2
     )
     # Use Einstein-Smoluchowski relation
-    mobility = (
-        elementary_charge * diffusion_coeff / (kB * temperature)
-    )  # This is in m^{2} / Vs
+    # This is in m^{2} / Vs
+    mobility = (elem_chrg * diffusion_coeff / (kB * temperature))
     # Convert to cm^{2}/ Vs
     mobility *= 100 ** 2
     mob_error = (diff_error / diffusion_coeff) * mobility
@@ -660,12 +658,12 @@ def plot_hop_vectors(
     intensities = []
     for (chromo1, chromo2) in non_zero_coords:
         # Find the normal of chromo1 plane (first three atoms)
-        triplet_posn = [
+        triplet_pos = [
             np.array(AA_morphdict["position"][AAID])
             for AAID in chromo_list[chromo1].AAIDs[:3]
         ]
-        AB = triplet_posn[1] - triplet_posn[0]
-        AC = triplet_posn[2] - triplet_posn[0]
+        AB = triplet_pos[1] - triplet_pos[0]
+        AC = triplet_pos[2] - triplet_pos[0]
         normal = np.cross(AB, AC)
         normal /= np.linalg.norm(normal)
         # Calculate rotation matrix required to map this onto baseline (0, 0, 1)
@@ -678,11 +676,11 @@ def plot_hop_vectors(
         relative_image = np.array(
             chromo_list[chromo1].neighbors[nlist_index][1]
         )
-        chromo1_posn = chromo_list[chromo1].posn
-        chromo2_posn = chromo_list[chromo2].posn + (
+        chromo1_pos = chromo_list[chromo1].pos
+        chromo2_pos = chromo_list[chromo2].pos + (
             relative_image * box_lengths
         )
-        unrotated_hop_vector = chromo2_posn - chromo1_posn
+        unrotated_hop_vector = chromo2_pos - chromo1_pos
         # Apply rotation matrix to chromo1-chromo2 vector
         hop_vector = np.matmul(rotation_matrix, unrotated_hop_vector)
         # Store the hop vector and the intensity
@@ -788,14 +786,14 @@ def plot_anisotropy(
         displacements = copy.deepcopy(np.array(carrier_data["displacement"]))
         carrier_indices_to_use = displacements.argsort()[-1000:][::-1]
     for carrier_no in carrier_indices_to_use:
-        posn = carrier_data["final_position"][carrier_no]
+        pos = carrier_data["final_position"][carrier_no]
         # if bool(sum([x < -3 or x > 3 for x in image])):
         #     continue
         position = [0.0, 0.0, 0.0]
-        for axis in range(len(posn)):
+        for axis in range(len(pos)):
             position[axis] = (
                 carrier_data["image"][carrier_no][axis] * sim_extent[axis]
-            ) + posn[axis]
+            ) + pos[axis]
         xvals.append(position[0] / 10.0)
         yvals.append(position[1] / 10.0)
         zvals.append(position[2] / 10.0)
@@ -1077,13 +1075,13 @@ def plot_neighbor_hist(
                 continue
             separation = np.linalg.norm(
                 (
-                    np.array(chromo2.posn)
+                    np.array(chromo2.pos)
                     + (
                         np.array(chromo2_details[1])
                         * np.array(morphology_shape)
                     )
                 )
-                - chromo1.posn
+                - chromo1.pos
             )
             if chromo1.species == "donor":
                 separation_dist_donor.append(separation)
@@ -1286,7 +1284,7 @@ def get_clusters(
             chromo for chromo in chromo_list if chromo.species == material_type
         ]
         print("Examining the", material_type, "material...")
-        positions = np.array([chromo.posn for chromo in material_chromos])
+        positions = np.array([chromo.pos for chromo in material_chromos])
         if len(positions) == 0:
             print("No material found. Continuing...")
             continue
@@ -1353,7 +1351,7 @@ def get_clusters(
                 species_psi[type_index]
             )
         )
-        print("----------------------------==----------")
+        print("----------------------------------------")
         cluster_dicts[type_index] = cluster_dict
         cluster_freqs[type_index] = cluster_freq
     return (
@@ -1572,12 +1570,12 @@ def get_separations(chromo_list, AA_morphdict):
         for neighbor_details in chromo.neighbors:
             neighbor_ID = neighbor_details[0]
             relative_image = neighbor_details[1]
-            neighbor_posn = chromo_list[neighbor_ID].posn
-            neighbor_chromo_posn = neighbor_posn + (
+            neighbor_pos = chromo_list[neighbor_ID].pos
+            neighbor_chromo_pos = neighbor_pos + (
                 np.array(relative_image) * np.array(box_dims)
             )
             separation = hf.calculate_separation(
-                chromo.posn, neighbor_chromo_posn
+                chromo.pos, neighbor_chromo_pos
             )
             if chromo_ID < neighbor_ID:
                 separations[chromo_ID, neighbor_ID] = separation
@@ -1658,11 +1656,11 @@ def get_electronic_atom_positions(
     # here, the `self.image' is the periodic image that the
     # unwrapped_position of the chromophore is located in, relative to the
     # original simulation volume.
-    electronically_active_unwrapped_posns = [
+    electronically_active_unwrapped_poss = [
         AA_morphdict["unwrapped_position"][AAID]
         for AAID in electronically_active_AAIDs
     ]
-    return electronically_active_unwrapped_posns
+    return electronically_active_unwrapped_poss
 
 
 def obtain_electronic_species(
@@ -1795,9 +1793,9 @@ def generate_lists_for_3d_clusters(cluster_lookup, colours, large_cluster):
                 if chromo.species == "donor":
                     data.append(
                         [
-                            chromo.posn[0],
-                            chromo.posn[1],
-                            chromo.posn[2],
+                            chromo.pos[0],
+                            chromo.pos[1],
+                            chromo.pos[2],
                             "w",
                             colours[cluster_ID % 7],
                         ]
@@ -1805,9 +1803,9 @@ def generate_lists_for_3d_clusters(cluster_lookup, colours, large_cluster):
                 if chromo.species == "acceptor":
                     data.append(
                         [
-                            chromo.posn[0],
-                            chromo.posn[1],
-                            chromo.posn[2],
+                            chromo.pos[0],
+                            chromo.pos[1],
+                            chromo.pos[2],
                             colours[cluster_ID % 7],
                             "none",
                         ]
@@ -2129,19 +2127,19 @@ def plot_mixed_hopping_rates(
     cut_off_dict,
 ):
     # Create all the empty lists we need
-    hop_types = ["intra", "inter"]
-    hop_targets = ["cluster", "mol"]
-    hop_properties = ["rates", "TIs"]
-    chromo_species = ["donor", "acceptor"]
-    property_lists = {}
+    hop_types = ["intra_", "inter_"]
+    hop_targets = ["c", "m"]
+    hop_properties = ["r", "T"]
+    chromo_species = ["d", "a"]
+    prop_lists = {}
     for property_name in [
-        "_".join([hop_type, hop_target, hop_property, species])
+        "".join([hop_type, hop_target, hop_property, species])
         for hop_type in hop_types
         for hop_target in hop_targets
         for hop_property in hop_properties
         for species in chromo_species
     ]:
-        property_lists[property_name] = []
+        prop_lists[property_name] = []
     T = 290
     for chromo in chromo_list:
         mol1ID = chromo_to_mol_ID[chromo.ID]
@@ -2180,20 +2178,20 @@ def plot_mixed_hopping_rates(
                 VRH = False
             if VRH is True:
                 relative_image = chromo.neighbors[index][1]
-                neighbor_chromo_posn = chromo2.posn + (
+                neighbor_chromo_pos = chromo2.pos + (
                     np.array(relative_image)
                     * np.array(
                         [AA_morphdict[axis] for axis in ["lx", "ly", "lz"]]
                     )
                 )
                 chromo_separation = (
-                    hf.calculate_separation(chromo.posn, neighbor_chromo_posn)
+                    hf.calculate_separation(chromo.pos, neighbor_chromo_pos)
                     * 1e-10
                 )
                 rate = hf.calculate_carrier_hop_rate(
-                    lambda_ij * elementary_charge,
-                    T_ij * elementary_charge,
-                    delta_E * elementary_charge,
+                    lambda_ij * elem_chrg,
+                    T_ij * elem_chrg,
+                    delta_E * elem_chrg,
                     prefactor,
                     T,
                     use_VRH=VRH,
@@ -2203,9 +2201,9 @@ def plot_mixed_hopping_rates(
                 )
             else:
                 rate = hf.calculate_carrier_hop_rate(
-                    lambda_ij * elementary_charge,
-                    T_ij * elementary_charge,
-                    delta_E * elementary_charge,
+                    lambda_ij * elem_chrg,
+                    T_ij * elem_chrg,
+                    delta_E * elem_chrg,
                     prefactor,
                     T,
                     boltz_pen=boltz_pen,
@@ -2218,100 +2216,92 @@ def plot_mixed_hopping_rates(
                     cluster_dicts[1][chromo.ID]
                     == cluster_dicts[1][chromo.neighbors[index][0]]
                 ):
-                    property_lists["intra_cluster_rates_acceptor"].append(rate)
-                    property_lists["intra_cluster_TIs_acceptor"].append(T_ij)
+                    prop_lists["intra_cra"].append(rate)
+                    prop_lists["intra_cTa"].append(T_ij)
                 else:
-                    property_lists["inter_cluster_rates_acceptor"].append(rate)
-                    property_lists["inter_cluster_TIs_acceptor"].append(T_ij)
+                    prop_lists["inter_cra"].append(rate)
+                    prop_lists["inter_cTa"].append(T_ij)
             else:
                 if (
                     cluster_dicts[0][chromo.ID]
                     == cluster_dicts[0][chromo.neighbors[index][0]]
                 ):
-                    property_lists["intra_cluster_rates_donor"].append(rate)
-                    property_lists["intra_cluster_TIs_donor"].append(T_ij)
+                    prop_lists["intra_crd"].append(rate)
+                    prop_lists["intra_cTd"].append(T_ij)
                 else:
-                    property_lists["inter_cluster_rates_donor"].append(rate)
-                    property_lists["inter_cluster_TIs_donor"].append(T_ij)
+                    prop_lists["inter_crd"].append(rate)
+                    prop_lists["inter_cTd"].append(T_ij)
             # Now do intra- / inter- molecules
             if mol1ID == mol2ID:
                 if chromo.species == "acceptor":
-                    property_lists["intra_mol_rates_acceptor"].append(rate)
-                    property_lists["intra_mol_TIs_acceptor"].append(T_ij)
+                    prop_lists["intra_mra"].append(rate)
+                    prop_lists["intra_mTa"].append(T_ij)
                 else:
-                    property_lists["intra_mol_rates_donor"].append(rate)
-                    property_lists["intra_mol_TIs_donor"].append(T_ij)
+                    prop_lists["intra_mrd"].append(rate)
+                    prop_lists["intra_mTd"].append(T_ij)
             else:
                 if chromo.species == "acceptor":
-                    property_lists["inter_mol_rates_acceptor"].append(rate)
-                    property_lists["inter_mol_TIs_acceptor"].append(T_ij)
+                    prop_lists["inter_mra"].append(rate)
+                    prop_lists["inter_mTa"].append(T_ij)
                 else:
-                    property_lists["inter_mol_rates_donor"].append(rate)
-                    property_lists["inter_mol_TIs_donor"].append(T_ij)
+                    prop_lists["inter_mrd"].append(rate)
+                    prop_lists["inter_mTd"].append(T_ij)
     # 12 for the donor cluster TI, 13 for the acceptor cluster TI, 14 for
     # the donor mol kij, 15 for the acceptor mol kij, 16 for the donor
     # cluster kij, 17 for the acceptor cluster kij
     # Donor cluster Plots:
-    if (len(property_lists["intra_cluster_rates_donor"]) > 0) or (
-        len(property_lists["inter_cluster_rates_donor"]) > 0
-    ):
-        print(
-            "Mean intra-cluster donor rate =",
-            np.mean(property_lists["intra_cluster_rates_donor"]),
-            "+/-",
-            np.std(property_lists["intra_cluster_rates_donor"])
-            / float(len(property_lists["intra_cluster_rates_donor"])),
-        )
-        print(
-            "Mean inter-cluster donor rate =",
-            np.mean(property_lists["inter_cluster_rates_donor"]),
-            "+/-",
-            np.std(property_lists["inter_cluster_rates_donor"])
-            / float(len(property_lists["inter_cluster_rates_donor"])),
-        )
+    if prop_lists["intra_crd"]:
+        val = prop_lists["intra_crd"]
+        mean = np.mean(val)
+        avg_std = np.std(val) / len(val)
+        print(f"Mean intra-cluster donor rate: {mean:.3f}+/-{avg_std:.3f}")
+
+    if prop_lists["inter_crd"]:
+        val = prop_lists["inter_crd"]
+        mean = np.mean(val)
+        avg_std = np.std(val) / len(val)
+        print(f"Mean inter-cluster donor rate: {mean:.3f}+/-{avg_std:.3f}")
+
+    if prop_lists["intra_crd"] or prop_lists["inter_crd"]:
         plot_stacked_hist_rates(
-            property_lists["intra_cluster_rates_donor"],
-            property_lists["inter_cluster_rates_donor"],
+            prop_lists["intra_crd"],
+            prop_lists["inter_crd"],
             ["Intra-cluster", "Inter-cluster"],
             "donor",
             os.path.join(output_dir, "16_donor_hopping_rate_clusters.png"),
         )
         plot_stacked_hist_TIs(
-            property_lists["intra_cluster_TIs_donor"],
-            property_lists["inter_cluster_TIs_donor"],
+            prop_lists["intra_cTd"],
+            prop_lists["inter_cTd"],
             ["Intra-cluster", "Inter-cluster"],
             "donor",
             os.path.join(output_dir, "12_donor_transfer_integral_clusters.png"),
             cut_off_dict["TI"][0],
         )
     # Acceptor cluster Plots:
-    if (len(property_lists["intra_cluster_rates_acceptor"]) > 0) or (
-        len(property_lists["inter_cluster_rates_acceptor"]) > 0
-    ):
-        print(
-            "Mean intra-cluster acceptor rate =",
-            np.mean(property_lists["intra_cluster_rates_acceptor"]),
-            "+/-",
-            np.std(property_lists["intra_cluster_rates_acceptor"])
-            / float(len(property_lists["intra_cluster_rates_acceptor"])),
-        )
-        print(
-            "Mean inter-cluster acceptor rate =",
-            np.mean(property_lists["inter_cluster_rates_acceptor"]),
-            "+/-",
-            np.std(property_lists["inter_cluster_rates_acceptor"])
-            / float(len(property_lists["inter_cluster_rates_acceptor"])),
-        )
+    if prop_lists["intra_cra"]:
+        val = prop_lists["intra_cra"]
+        mean = np.mean(val)
+        avg_std = np.std(val) / len(val)
+        print(f"Mean intra-cluster acceptor rate: {mean:.3f}+/-{avg_std:.3f}")
+
+    if prop_lists["inter_cra"]:
+        val = prop_lists["inter_cra"]
+        mean = np.mean(val)
+        avg_std = np.std(val) / len(val)
+        print(f"Mean inter-cluster acceptor rate: {mean:.3f}+/-{avg_std:.3f}")
+
+    if prop_lists["intra_cra"] or prop_lists["inter_cra"]:
         plot_stacked_hist_rates(
-            property_lists["intra_cluster_rates_acceptor"],
-            property_lists["inter_cluster_rates_acceptor"],
+            prop_lists["intra_cra"],
+            prop_lists["inter_cra"],
             ["Intra-cluster", "Inter-cluster"],
             "acceptor",
             os.path.join(output_dir, "17_acceptor_hopping_rate_clusters.png"),
         )
         plot_stacked_hist_TIs(
-            property_lists["intra_cluster_TIs_acceptor"],
-            property_lists["inter_cluster_TIs_acceptor"],
+            prop_lists["intra_cTa"],
+            prop_lists["inter_cTa"],
             ["Intra-cluster", "Inter-cluster"],
             "acceptor",
             os.path.join(
@@ -2320,149 +2310,68 @@ def plot_mixed_hopping_rates(
             cut_off_dict["TI"][1],
         )
     # Donor Mol Plots:
-    if (len(property_lists["intra_mol_rates_donor"]) > 0) or (
-        len(property_lists["inter_mol_rates_donor"]) > 0
-    ):
-        print(
-            "Mean intra-molecular donor rate =",
-            np.mean(property_lists["intra_mol_rates_donor"]),
-            "+/-",
-            np.std(property_lists["intra_mol_rates_donor"])
-            / float(len(property_lists["intra_mol_rates_donor"])),
-        )
-        print(
-            "Mean inter-molecular donor rate =",
-            np.mean(property_lists["inter_mol_rates_donor"]),
-            "+/-",
-            np.std(property_lists["inter_mol_rates_donor"])
-            / float(len(property_lists["inter_mol_rates_donor"])),
-        )
+    if prop_lists["intra_mrd"]:
+        val = prop_lists["intra_mrd"]
+        mean = np.mean(val)
+        avg_std = np.std(val) / len(val)
+        print(f"Mean intra-molecular donor rate: {mean:.3f}+/-{avg_std:.3f}")
+
+    if prop_lists["inter_mrd"]:
+        val = prop_lists["inter_mrd"]
+        mean = np.mean(val)
+        avg_std = np.std(val) / len(val)
+        print(f"Mean inter-molecular donor rate: {mean:.3f}+/-{avg_std:.3f}")
+
+    if prop_lists["intra_mrd"] or prop_lists["inter_mrd"]:
         plot_stacked_hist_rates(
-            property_lists["intra_mol_rates_donor"],
-            property_lists["inter_mol_rates_donor"],
+            prop_lists["intra_mrd"],
+            prop_lists["inter_mrd"],
             ["Intra-mol", "Inter-mol"],
             "donor",
             os.path.join(output_dir, "14_donor_hopping_rate_mols.png"),
         )
     # Acceptor Mol Plots:
-    if (len(property_lists["intra_mol_rates_acceptor"]) > 0) or (
-        len(property_lists["inter_mol_rates_acceptor"]) > 0
-    ):
-        print(
-            "Mean intra-molecular acceptor rate =",
-            np.mean(property_lists["intra_mol_rates_acceptor"]),
-            "+/-",
-            np.std(property_lists["intra_mol_rates_acceptor"])
-            / float(len(property_lists["intra_mol_rates_acceptor"])),
-        )
-        print(
-            "Mean inter-molecular acceptor rate =",
-            np.mean(property_lists["inter_mol_rates_acceptor"]),
-            "+/-",
-            np.std(property_lists["inter_mol_rates_acceptor"])
-            / float(len(property_lists["inter_mol_rates_acceptor"])),
-        )
+    if prop_lists["intra_mra"]:
+        val = prop_lists["intra_mra"]
+        mean = np.mean(val)
+        avg_std = np.std(val) / len(val)
+        print(f"Mean intra-molecular acceptor rate: {mean:.3f}+/-{avg_std:.3f}")
+
+    if prop_lists["inter_mra"]:
+        val = prop_lists["inter_mra"]
+        mean = np.mean(val)
+        avg_std = np.std(val) / len(val)
+        print(f"Mean inter-molecular acceptor rate: {mean:.3f}+/-{avg_std:.3f}")
+
+    if prop_lists["intra_mra"] or prop_lists["inter_mra"]:
         plot_stacked_hist_rates(
-            property_lists["intra_mol_rates_acceptor"],
-            property_lists["inter_mol_rates_acceptor"],
+            prop_lists["intra_mra"],
+            prop_lists["inter_mra"],
             ["Intra-mol", "Inter-mol"],
             "acceptor",
             os.path.join(output_dir, "15_acceptor_hopping_rate_mols.png"),
         )
     # Update the dataDict
-    for material in chromo_species:
+    for sp in chromo_species:
         for hop_type in hop_types:
-            for hop_target in hop_targets:
-                number_of_hops = len(
-                    property_lists[
-                        "".join(
-                            [hop_type, "_", hop_target, "_rates_", material]
-                        )
-                    ]
-                )
+            for target in hop_targets:
+                hop_name = "".join([hop_type, "_", target, "r", sp])
+                n_hops = len(prop_lists[hop_name])
                 if number_of_hops == 0:
                     continue
-                other_hop_type = hop_types[
-                    int((hop_types.index(hop_type) * -1) + 1)
-                ]
-                proportion = number_of_hops / (
-                    number_of_hops
-                    + len(
-                        property_lists[
-                            "".join(
-                                [
-                                    other_hop_type,
-                                    "_",
-                                    hop_target,
-                                    "_rates_",
-                                    material,
-                                ]
-                            )
-                        ]
-                    )
-                )
-                mean_rate = np.mean(
-                    property_lists[
-                        "".join(
-                            [hop_type, "_", hop_target, "_rates_", material]
-                        )
-                    ]
-                )
-                deviation_rate = np.std(
-                    property_lists[
-                        "".join(
-                            [hop_type, "_", hop_target, "_rates_", material]
-                        )
-                    ]
-                )
-                data_dict[
-                    "".join(
-                        [
-                            material.lower(),
-                            "_",
-                            hop_type,
-                            "_",
-                            hop_target.lower(),
-                            "_hops",
-                        ]
-                    )
-                ] = number_of_hops
-                data_dict[
-                    "".join(
-                        [
-                            material.lower(),
-                            "_",
-                            hop_type,
-                            "_",
-                            hop_target.lower(),
-                            "_proportion",
-                        ]
-                    )
-                ] = proportion
-                data_dict[
-                    "".join(
-                        [
-                            material.lower(),
-                            "_",
-                            hop_type,
-                            "_",
-                            hop_target.lower(),
-                            "_rate_mean",
-                        ]
-                    )
-                ] = mean_rate
-                data_dict[
-                    "".join(
-                        [
-                            material.lower(),
-                            "_",
-                            hop_type,
-                            "_",
-                            hop_target.lower(),
-                            "_rate_std",
-                        ]
-                    )
-                ] = deviation_rate
+
+                other_hop = hop_types[hop_types.index(hop_type) * -1 + 1)]
+                other_hop_name = "".join([other_hop, "_", target, "r", sp])
+
+                total_hops = n_hops + len(prop_lists[other_hop_name])
+                proportion = n_hops / total_hops
+
+                mean_rate = np.mean(prop_lists[hop_name])
+                dev_rate = np.std(prop_lists[hop_name])
+                data_dict[f"{sp}_{hop_type}_{target}_hops"]= n_hops
+                data_dict[f"{sp}_{hop_type}_{target}_proportion"] = proportion
+                data_dict[f"{sp}_{hop_type}_{target}_rate_mean"] = mean_rate
+                data_dict[f"{sp}_{hop_type}_{target}_rate_std"] = dev_rate
     return data_dict
 
 
