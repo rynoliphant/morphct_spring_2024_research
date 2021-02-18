@@ -1,3 +1,4 @@
+from collections import defaultdict
 import copy
 import csv
 import glob
@@ -25,8 +26,8 @@ hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 temperature = 290  # K
 
 
-def load_KMC_results_pickle(directory):
-    KMC_pickle = os.path.join(directory, "KMC", "KMC_results.pickle")
+def load_KMC_results_pickle(path):
+    KMC_pickle = os.path.join(path, "KMC", "KMC_results.pickle")
     try:
         with open(KMC_pickle, "rb") as pickle_file:
             carrier_data = pickle.load(pickle_file)
@@ -35,7 +36,7 @@ def load_KMC_results_pickle(directory):
             "No final KMC_results.pickle found. ",
             "Creating it from incomplete parts..."
         )
-        create_results_pickle(directory)
+        create_results_pickle(path)
         with open(KMC_pickle, "rb") as pickle_file:
             carrier_data = pickle.load(pickle_file)
     except UnicodeDecodeError:
@@ -180,7 +181,7 @@ def get_carrier_data(carrier_data):
     )
 
 
-def plot_displacement_dist(carrier_data, directory, carrier_type):
+def plot_displacement_dist(carrier_data, path, carrier_type):
     carrier_types = ["hole", "electron"]
     plt.figure()
     plt.hist(np.array(carrier_data["displacement"]) * 0.1, bins=60, color="b")
@@ -191,13 +192,13 @@ def plot_displacement_dist(carrier_data, directory, carrier_type):
             30 + carrier_types.index(carrier_type),
             carrier_type
             )
-    filepath = os.path.join(directory, "figures", filename)
+    filepath = os.path.join(path, "figures", filename)
     plt.savefig(filepath, dpi=300)
     print(f"Figure saved as {filepath}")
     plt.close()
 
 
-def plot_cluster_size_dist(cluster_freqs, directory):
+def plot_cluster_size_dist(cluster_freqs, path):
     carrier_types = ["hole", "electron"]
     for carrier_type_i, carrier_type in enumerate(carrier_types):
         try:
@@ -215,7 +216,7 @@ def plot_cluster_size_dist(cluster_freqs, directory):
                 color="b",
             )
             plt.xscale("log")
-            plt.xlim([0, 10 ** (np.ceil(np.max(sizes)))])
+            plt.xlim([1, 10 ** (np.ceil(np.max(sizes)))])
         except ValueError:
             print(
                 "EXCEPTION: No clusters found. ",
@@ -228,7 +229,7 @@ def plot_cluster_size_dist(cluster_freqs, directory):
                 32 + carrier_types.index(carrier_type),
                 carrier_type
                 )
-        filepath = os.path.join(directory, "figures", filename)
+        filepath = os.path.join(path, "figures", filename)
         plt.savefig(filepath, dpi=300)
         print(f"Figure saved as {filepath}")
         plt.close()
@@ -291,7 +292,7 @@ def create_array_for_plot_connections(chromo_list, carrier_history, sim_dims):
 
 
 def plot_connections(
-    chromo_list, sim_dims, carrier_history, directory, carrier_type
+    chromo_list, sim_dims, carrier_history, path, carrier_type
 ):
     # A complicated function that shows connections between carriers in 3D
     # that carriers prefer to hop between.
@@ -450,7 +451,7 @@ def plot_connections(
             )
     # 01 for donor 3d network, 02 for acceptor 3d network
     filename = f"{1 + carrier_i:02}_3d_{carrier_type}.png"
-    filepath = os.path.join(directory, "figures", filename),
+    filepath = os.path.join(path, "figures", filename),
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
     print(f"Figure saved as {filepath}")
 
@@ -484,7 +485,7 @@ def plot_MSD(
     MSDs,
     time_stderr,
     MSD_stderr,
-    directory,
+    path,
     carrier_type,
 ):
     carrier_types = ["hole", "electron"]
@@ -513,7 +514,7 @@ def plot_MSD(
             18 + carrier_types.index(carrier_type),
             carrier_type
             )
-    filepath = os.path.join(directory, "figures", filename)
+    filepath = os.path.join(path, "figures", filename)
     plt.savefig(filepath, dpi=300)
     plt.clf()
     print(f"Figure saved as {filepath}")
@@ -528,10 +529,10 @@ def plot_MSD(
             )
     # 20 for hole semilog MSD, 21 for electron semilog MSD
     filename = "{:02}_semi_log_MSD_{}.png".format(
-            20 + carrier_types.index(carrier_type)
+            20 + carrier_types.index(carrier_type),
             carrier_type
             )
-    filepath = os.path.join(directory, "figures", filename)
+    filepath = os.path.join(path, "figures", filename)
     plt.savefig(filepath, dpi=300)
     plt.clf()
     print(f"Figure saved as {filepath}")
@@ -551,7 +552,7 @@ def plot_MSD(
             22 + carrier_types.index(carrier_type),
             carrier_type
             )
-    filepath = os.path.join(directory, "figures", filename)
+    filepath = os.path.join(path, "figures", filename)
     plt.savefig(filepath, dpi=300)
     plt.clf()
     print(f"Figure saved as {filepath}")
@@ -596,7 +597,7 @@ def plot_hop_vectors(
     carrier_data,
     AA_morphdict,
     chromo_list,
-    directory,
+    path,
     sim_dims,
     carrier_type,
     plot3D_graphs,
@@ -705,15 +706,15 @@ def plot_hop_vectors(
             species[carrier_i].capitalize(), carrier_type.capitalize()
             )
     # 36 for donor 3d network, 37 for acceptor 3d network
-    filename = "{:02}_hop_vec_{}.png".format(36 + carrier_i, carrier_type))
-    filepath = os.path.join(directory, "figures", filename),
+    filename = "{:02}_hop_vec_{}.png".format(36 + carrier_i, carrier_type)
+    filepath = os.path.join(path, "figures", filename),
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
     print(f"Figure saved as {filepath}")
     plt.clf()
 
 
 def plot_anisotropy(
-    carrier_data, directory, sim_dims, carrier_type, plot3D_graphs
+    carrier_data, path, sim_dims, carrier_type, plot3D_graphs
 ):
     sim_extent = [value[1] - value[0] for value in sim_dims]
     xvals = []
@@ -866,7 +867,7 @@ def plot_anisotropy(
         figure_i = "09"
     plt.title(f"Anisotropy ({carrier_type.capitalize()})", y=1.1)
     filename = f"{figure_i}_anisotropy_{carrier_type}.png"
-    filepath = os.path.join(directory, "figures", filename)
+    filepath = os.path.join(path, "figures", filename)
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
     plt.clf()
     print(f"Figure saved as {filepath}")
@@ -1061,7 +1062,7 @@ def plot_neighbor_hist(
             )
             plt.axvline(float(sep_cuts[material_type]), c="k")
         plt.xlabel(
-            rf"{{material[material_type].capitalize()}} r$_{i,j}$ (\AA)"
+            rf"{material[material_type].capitalize()} r$_{{i,j}}$ (\AA)"
         )
         plt.ylabel("Frequency (Arb. U.)")
         # 04 for donor neighbor hist, 05 for acceptor neighbor hist
@@ -1896,13 +1897,11 @@ def plot_energy_levels(output_dir, chromo_list, data_dict):
         data_dict["donor_frontier_MO_mean"] = HOMO_av
         data_dict["donor_frontier_MO_std"] = HOMO_std
         data_dict["donor_frontier_MO_err"] = HOMO_err
-        print("Donor HOMO Level =", HOMO_av, "+/-", HOMO_err)
-        print(
-            "Donor Delta E_ij stats: mean =",
+        print(f"Donor HOMO Level = {HOMO_av:.3f} +/- {HOMO_err:.3f}")
+        print("Donor Delta E_ij stats: mean = {:.3f} +/- {:.3f}".format(
             donor_mean,
-            "+/-",
-            donor_std / np.sqrt(len(donor_delta_E_ij)),
-        )
+            donor_std / np.sqrt(len(donor_delta_E_ij))
+            ))
         # 06 for donor delta Eij
         plot_delta_E_ij(
             donor_delta_E_ij,
@@ -1965,7 +1964,7 @@ def plot_delta_E_ij(
     if lambda_ij is not None:
         plt.axvline(-float(lambda_ij), c="k")
     plt.ylabel("Frequency (Arb. U.)")
-    plt.xlabel(rf"{data_type.capitalize()} $\Delta E_{i,j}$ (eV)")
+    plt.xlabel(rf"{data_type.capitalize()} $\Delta E_{{i,j}}$ (eV)")
     plt.savefig(filename, dpi=300)
     plt.close()
     print("Figure saved as", filename)
@@ -2102,13 +2101,13 @@ def plot_mixed_hopping_rates(
         val = prop_lists["intra_crd"]
         mean = np.mean(val)
         avg_std = np.std(val) / len(val)
-        print(f"Mean intra-cluster donor rate: {mean:.3f}+/-{avg_std:.3f}")
+        print(f"Mean intra-cluster donor rate: {mean:.3e}+/-{avg_std:.3e}")
 
     if prop_lists["inter_crd"]:
         val = prop_lists["inter_crd"]
         mean = np.mean(val)
         avg_std = np.std(val) / len(val)
-        print(f"Mean inter-cluster donor rate: {mean:.3f}+/-{avg_std:.3f}")
+        print(f"Mean inter-cluster donor rate: {mean:.3e}+/-{avg_std:.3e}")
 
     if prop_lists["intra_crd"] or prop_lists["inter_crd"]:
         plot_stacked_hist_rates(
@@ -2131,13 +2130,13 @@ def plot_mixed_hopping_rates(
         val = prop_lists["intra_cra"]
         mean = np.mean(val)
         avg_std = np.std(val) / len(val)
-        print(f"Mean intra-cluster acceptor rate: {mean:.3f}+/-{avg_std:.3f}")
+        print(f"Mean intra-cluster acceptor rate: {mean:.3e}+/-{avg_std:.3e}")
 
     if prop_lists["inter_cra"]:
         val = prop_lists["inter_cra"]
         mean = np.mean(val)
         avg_std = np.std(val) / len(val)
-        print(f"Mean inter-cluster acceptor rate: {mean:.3f}+/-{avg_std:.3f}")
+        print(f"Mean inter-cluster acceptor rate: {mean:.3e}+/-{avg_std:.3e}")
 
     if prop_lists["intra_cra"] or prop_lists["inter_cra"]:
         plot_stacked_hist_rates(
@@ -2162,13 +2161,13 @@ def plot_mixed_hopping_rates(
         val = prop_lists["intra_mrd"]
         mean = np.mean(val)
         avg_std = np.std(val) / len(val)
-        print(f"Mean intra-molecular donor rate: {mean:.3f}+/-{avg_std:.3f}")
+        print(f"Mean intra-molecular donor rate: {mean:.3e}+/-{avg_std:.3e}")
 
     if prop_lists["inter_mrd"]:
         val = prop_lists["inter_mrd"]
         mean = np.mean(val)
         avg_std = np.std(val) / len(val)
-        print(f"Mean inter-molecular donor rate: {mean:.3f}+/-{avg_std:.3f}")
+        print(f"Mean inter-molecular donor rate: {mean:.3e}+/-{avg_std:.3e}")
 
     if prop_lists["intra_mrd"] or prop_lists["inter_mrd"]:
         plot_stacked_hist_rates(
@@ -2183,13 +2182,13 @@ def plot_mixed_hopping_rates(
         val = prop_lists["intra_mra"]
         mean = np.mean(val)
         avg_std = np.std(val) / len(val)
-        print(f"Mean intra-molecular acceptor rate: {mean:.3f}+/-{avg_std:.3f}")
+        print(f"Mean intra-molecular acceptor rate: {mean:.3e}+/-{avg_std:.3e}")
 
     if prop_lists["inter_mra"]:
         val = prop_lists["inter_mra"]
         mean = np.mean(val)
         avg_std = np.std(val) / len(val)
-        print(f"Mean inter-molecular acceptor rate: {mean:.3f}+/-{avg_std:.3f}")
+        print(f"Mean inter-molecular acceptor rate: {mean:.3e}+/-{avg_std:.3e}")
 
     if prop_lists["intra_mra"] or prop_lists["inter_mra"]:
         plot_stacked_hist_rates(
@@ -2203,13 +2202,13 @@ def plot_mixed_hopping_rates(
     for sp in chromo_species:
         for hop_type in hop_types:
             for target in hop_targets:
-                hop_name = "".join([hop_type, "_", target, "r", sp])
+                hop_name = f"{hop_type}_{target}r{sp}"
                 n_hops = len(prop_lists[hop_name])
-                if number_of_hops == 0:
+                if n_hops == 0:
                     continue
 
                 other_hop = hop_types[hop_types.index(hop_type) * -1 + 1]
-                other_hop_name = "".join([other_hop, "_", target, "r", sp])
+                other_hop_name = f"{other_hop}_{target}r{sp}"
 
                 total_hops = n_hops + len(prop_lists[other_hop_name])
                 proportion = n_hops / total_hops
@@ -2233,7 +2232,7 @@ def plot_stacked_hist_rates(data1, data2, labels, data_type, filename):
         label=labels,
     )
     plt.ylabel("Frequency (Arb. U.)")
-    plt.xlabel("".join([data_type.capitalize(), r" k$_{i,j}$ (s$^{-1}$)"]))
+    plt.xlabel(rf"{data_type.capitalize()} k$_{{i,j}}$ (s$^{-1}$)")
     plt.xlim([1, 1e18])
     plt.xticks([1e0, 1e3, 1e6, 1e9, 1e12, 1e15, 1e18])
     plt.ylim([0, np.max(n) * 1.02])
@@ -2254,7 +2253,7 @@ def plot_stacked_hist_TIs(data1, data2, labels, data_type, filename, cut_off):
         label=labels,
     )
     plt.ylabel("Frequency (Arb. U.)")
-    plt.xlabel("".join([data_type.capitalize(), r" J$_{i,j}$ (eV)"]))
+    plt.xlabel(rf"{data_type.capitalize()} J$_{{i,j}}$ (eV)")
     # plt.xlim([0, 1.2])
     plt.ylim([0, np.max(n) * 1.02])
     if cut_off is not None:
@@ -2265,8 +2264,8 @@ def plot_stacked_hist_TIs(data1, data2, labels, data_type, filename, cut_off):
     print("Figure saved as", filename)
 
 
-def write_CSV(data_dict, directory):
-    CSV_filename = os.path.join(directory, "results.csv")
+def write_CSV(data_dict, path):
+    CSV_filename = os.path.join(path, "results.csv")
     with open(CSV_filename, "w+") as CSV_file:
         CSV_writer = csv.writer(CSV_file)
         for key in sorted(data_dict.keys()):
@@ -2274,9 +2273,9 @@ def write_CSV(data_dict, directory):
     print("CSV file written to {:s}".format(CSV_filename))
 
 
-def create_results_pickle(directory):
+def create_results_pickle(path):
     cores_list = []
-    for filename in glob.glob(os.path.join(directory, "KMC", "*")):
+    for filename in glob.glob(os.path.join(path, "KMC", "*")):
         if "log" not in filename:
             continue
         try:
@@ -2290,17 +2289,17 @@ def create_results_pickle(directory):
     keep_list = []
     for core in cores_list:
         # Check if there is already a finished KMC_results pickle
-        main = os.path.join(directory, "KMC", f"KMC_results_{core:02d}.pickle")
+        main = os.path.join(path, "KMC", f"KMC_results_{core:02d}.pickle")
         if os.path.exists(main):
             results_pickles_list.append(main)
             keep_list.append(None)
             continue
         # If not, find the slot1 and slot2 pickle that is most recent
         slot1 = os.path.join(
-            directory, "KMC", f"KMC_slot1_results_{core:02d}.pickle",
+            path, "KMC", f"KMC_slot1_results_{core:02d}.pickle",
         )
         slot2 = os.path.join(
-            directory, "KMC", f"KMC_slot2_results_{core:02d}.pickle"
+            path, "KMC", f"KMC_slot2_results_{core:02d}.pickle"
         )
         if os.path.exists(slot1) and not os.path.exists(slot2):
             keep_list.append(slot1)
@@ -2317,14 +2316,14 @@ def create_results_pickle(directory):
         if keeper[1] is None:
             continue
         new_name = os.path.join(
-                directory, "KMC", f"KMC_results_{keeper[0]}.pickle"
+                path, "KMC", f"KMC_results_{keeper[0]}.pickle"
         )
         shutil.copyfile(str(keeper[1]), new_name)
         results_pickles_list.append(new_name)
-    combine_results_pickles(directory, results_pickles_list)
+    combine_results_pickles(path, results_pickles_list)
 
 
-def combine_results_pickles(directory, pickle_files):
+def combine_results_pickles(path, pickle_files):
     combined_data = {}
     pickle_files = sorted(pickle_files)
     for filename in pickle_files:
@@ -2342,7 +2341,7 @@ def combine_results_pickles(directory, pickle_files):
                     combined_data[key] += val
     # Write out the combined data
     print("Writing out the combined pickle file...")
-    combined_file_loc = os.path.join(directory, "KMC", "KMC_results.pickle")
+    combined_file_loc = os.path.join(path, "KMC", "KMC_results.pickle")
     with open(combined_file_loc, "wb+") as pickle_file:
         pickle.dump(combined_data, pickle_file)
     print("Complete data written to", combined_file_loc)
@@ -2469,17 +2468,21 @@ def plot_TI_hist(
         )
         plt.ylim([0, np.max(n) * 1.02])
         plt.ylabel("Frequency (Arb. U.)")
-        plt.xlabel(rf"{material[material_i].capitalize()} J$_{i,j}$ (eV)")
+        plt.xlabel(rf"{material[material_i].capitalize()} J$_{{i,j}}$ (eV)")
         plt.legend(loc=1, prop={"size": 18})
         # 10 for donor TI mols dist, 11 for acceptor TI mols dist,
-        filename = f"{10 + material_i:02}_{material_type}_transfer_integral_mols.png"
-        plt.savefig(os.path.join(output_dir, filename), dpi=300)
+        filename = "{:02}_{}_transfer_integral_mols.png".format(
+                10 + material_i,
+                material_type
+                )
+        filepath = os.path.join(output_dir, filename)
+        plt.savefig(filepath, dpi=300)
         plt.close()
-        print("Figure saved as", os.path.join(output_dir, filename))
+        print(f"Figure saved as {filepath}")
     return TI_cuts[0], TI_cuts[1]
 
 
-def plot_frequency_dist(directory, carrier_type, carrier_history, cut_off):
+def plot_frequency_dist(path, carrier_type, carrier_history, cut_off):
     carrier_types = ["hole", "electron"]
     non_zero_indices = carrier_history.nonzero()
     coordinates = list(zip(non_zero_indices[0], non_zero_indices[1]))
@@ -2527,13 +2530,13 @@ def plot_frequency_dist(directory, carrier_type, carrier_history, cut_off):
             ".png",
         ]
     )
-    plt.savefig(os.path.join(directory, "figures", filename), dpi=300)
+    plt.savefig(os.path.join(path, "figures", filename), dpi=300)
     plt.close()
-    print("Figure saved as", os.path.join(directory, "figures", filename))
+    print("Figure saved as", os.path.join(path, "figures", filename))
     return cut_off
 
 
-def plot_net_frequency_dist(directory, carrier_type, carrier_history):
+def plot_net_frequency_dist(path, carrier_type, carrier_history):
     carrier_types = ["hole", "electron"]
     non_zero_indices = carrier_history.nonzero()
     coordinates = list(zip(non_zero_indices[0], non_zero_indices[1]))
@@ -2553,27 +2556,20 @@ def plot_net_frequency_dist(directory, carrier_type, carrier_history):
     ax = plt.gca()
     tick_labels = np.arange(0, np.ceil(np.max(frequencies)) + 1, 1)
     plt.xlim([0, np.ceil(np.max(frequencies))])
-    plt.xticks(
-        tick_labels, [r"10$^{{{}}}$".format(int(x)) for x in tick_labels]
-    )
-    # plt.ylim([0, 2500])
+    plt.xticks(tick_labels, [rf"10$^{{{x}}}$" for x in tick_labels])
     plt.ylabel("Frequency (Arb. U.)")
     # 26 for hole hop frequency dist, 27 for electron hop frequency dist
-    filename = "".join(
-        [
-            "{:02}_net_hop_freq_".format(
-                26 + carrier_types.index(carrier_type)
-            ),
-            carrier_type,
-            ".png",
-        ]
-    )
-    plt.savefig(os.path.join(directory, "figures", filename), dpi=300)
+    filename = "{:02}_net_hop_freq_{}.png".format(
+            26 + carrier_types.index(carrier_type),
+            carrier_type
+            )
+    filepath = os.path.join(path, "figures", filename)
+    plt.savefig(filepath, dpi=300)
     plt.close()
-    print("Figure saved as", os.path.join(directory, "figures", filename))
+    print(f"Figure saved as {filepath}")
 
 
-def plot_discrepancy_frequency_dist(directory, carrier_type, carrier_history):
+def plot_discrepancy_frequency_dist(path, carrier_type, carrier_history):
     carrier_types = ["hole", "electron"]
     non_zero_indices = carrier_history.nonzero()
     coordinates = list(zip(non_zero_indices[0], non_zero_indices[1]))
@@ -2598,7 +2594,7 @@ def plot_discrepancy_frequency_dist(directory, carrier_type, carrier_history):
             frequencies.append(np.log10(frequency))
     plt.figure()
     plt.hist(frequencies, bins=60, color="b")
-    plt.xlabel("".join(["Discrepancy (Arb. U.)"]))
+    plt.xlabel("Discrepancy (Arb. U.)")
     ax = plt.gca()
     tick_labels = np.arange(0, np.ceil(np.max(frequencies)) + 1, 1)
     plt.xlim([0, np.ceil(np.max(frequencies))])
@@ -2609,7 +2605,7 @@ def plot_discrepancy_frequency_dist(directory, carrier_type, carrier_history):
             28 + carrier_types.index(carrier_type),
             carrier_type
             )
-    filepath = os.path.join(directory, "figures", filename)
+    filepath = os.path.join(path, "figures", filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
     print(
@@ -2622,11 +2618,11 @@ def plot_discrepancy_frequency_dist(directory, carrier_type, carrier_history):
         net_near_total,
         "paths in this morphology with total - net < 10.",
     )
-    print("Figure saved as {filepath}"
+    print(f"Figure saved as {filepath}")
 
 
 def calculate_mobility(
-    directory,
+    path,
     current_carrier_type,
     times,
     MSDs,
@@ -2641,14 +2637,14 @@ def calculate_mobility(
         MSDs,
         time_stderr,
         MSD_stderr,
-        directory,
+        path,
         current_carrier_type,
     )
     print("----------------------------------------")
     print(
         current_carrier_type.capitalize(),
         "mobility for",
-        directory,
+        path,
         "= {0:.2E} +- {1:.2E}".format(mobility, mob_error),
         "cm^{2} V^{-1} s^{-1}",
     )
@@ -2664,7 +2660,7 @@ def main(
         param_dict,
         chromo_list,
         carrier_data_list,
-        directory,
+        path,
         three_D=False,
         freq_cut_donor=None,
         freq_cut_acceptor=None,
@@ -2700,13 +2696,13 @@ def main(
     hole_anisotropy_data = []
     electron_mobility_data = []
     electron_anisotropy_data = []
-    # Create the figures directory if it doesn't already exist
-    os.makedirs(os.path.join(directory, "figures"), exist_ok=True)
+    # Create the figures path if it doesn't already exist
+    os.makedirs(os.path.join(path, "figures"), exist_ok=True)
     # Load in all the required data
     data_dict = {}
     print("\n")
     print("---------- KMC_ANALYSE ----------")
-    print(directory)
+    print(path)
     print("---------------------------------")
     for carrier_data in carrier_data_list:
         # Now need to split up the carrierData into both electrons and holes
@@ -2736,15 +2732,9 @@ def main(
             complete_carrier_types.append("electron")
             complete_carrier_data.append(carrier_data_electrons)
         carrier_history_dict = {}
-        for carrier_type_i, carrier_data in enumerate(
-            complete_carrier_data
-        ):
+        for carrier_type_i, carrier_data in enumerate(complete_carrier_data):
             current_carrier_type = complete_carrier_types[carrier_type_i]
-            print(
-                "Considering the transport of {:s}...".format(
-                    current_carrier_type
-                )
-            )
+            print(f"Considering the transport of {current_carrier_type}...")
             print("Obtaining mean squared displacements...")
             (carrier_history,
              times,
@@ -2753,12 +2743,10 @@ def main(
              MSD_stderr) = get_carrier_data(carrier_data)
             carrier_history_dict[current_carrier_type] = carrier_history
             print("Plotting distribution of carrier displacements")
-            plot_displacement_dist(
-                carrier_data, directory, current_carrier_type
-            )
+            plot_displacement_dist(carrier_data, path, current_carrier_type)
             print("Calculating mobility...")
             mobility, mob_error, r_squared = calculate_mobility(
-                directory,
+                path,
                 current_carrier_type,
                 times,
                 MSDs,
@@ -2770,7 +2758,7 @@ def main(
                 carrier_data,
                 AA_morphdict,
                 chromo_list,
-                directory,
+                path,
                 sim_dims,
                 current_carrier_type,
                 three_D,
@@ -2778,7 +2766,7 @@ def main(
             print("Calculating carrier trajectory anisotropy...")
             anisotropy = plot_anisotropy(
                 carrier_data,
-                directory,
+                path,
                 sim_dims,
                 current_carrier_type,
                 three_D
@@ -2786,27 +2774,23 @@ def main(
             print("Plotting carrier hop frequency distribution...")
             if current_carrier_type == "hole":
                 freq_cut_donor = plot_frequency_dist(
-                    directory,
+                    path,
                     current_carrier_type,
                     carrier_history,
                     freq_cut_donor,
                 )
             else:
                 freq_cut_acceptor = plot_frequency_dist(
-                    directory,
+                    path,
                     current_carrier_type,
                     carrier_history,
                     freq_cut_acceptor,
                 )
             print("Plotting carrier net hop frequency distribution...")
-            plot_net_frequency_dist(
-                directory, current_carrier_type, carrier_history
-            )
-            print(
-                "Plotting ((total hops) - (net hops)) discrepancy distribution..."
-            )
+            plot_net_frequency_dist(path, current_carrier_type, carrier_history)
+            print("Plotting (total - net hops) discrepancy distribution...")
             plot_discrepancy_frequency_dist(
-                directory, current_carrier_type, carrier_history
+                path, current_carrier_type, carrier_history
             )
             if (carrier_history is not None) and three_D:
                 print(
@@ -2816,7 +2800,7 @@ def main(
                     chromo_list,
                     sim_dims,
                     carrier_history,
-                    directory,
+                    path,
                     current_carrier_type,
                 )
             if current_carrier_type == "hole":
@@ -2826,12 +2810,12 @@ def main(
                 electron_anisotropy_data.append(anisotropy)
                 electron_mobility_data.append([mobility, mob_error])
             lower_carrier_type = current_carrier_type.lower()
-            data_dict["name"] = os.path.split(directory)[1]
+            data_dict["name"] = os.path.split(path)[1]
             data_dict[f"{lower_carrier_type}_anisotropy"] = anisotropy
             data_dict[f"{lower_carrier_type}_mobility"] = mobility
             data_dict[f"{lower_carrier_type}_mobility_r_squared"] = r_squared
         # Now plot the distributions!
-        temp_dir = os.path.join(directory, "figures")
+        temp_dir = os.path.join(path, "figures")
         chromo_to_mol_ID = determine_molecule_IDs(
             CGtoAAID_list,
             AA_morphdict,
@@ -2879,10 +2863,8 @@ def main(
             freq_cut_donor,
             freq_cut_acceptor,
         )
-        print(
-                "Cut-offs specified (value format: [donor, acceptor]) =",
-                cut_off_dict
-                )
+        print("Cut-offs specified (value format: [donor, acceptor])")
+        print(*[f"\t{i}" for i in cut_off_dict.items()], sep="\n")
         (cluster_dicts,
          cluster_freqs,
          clusters_total,
@@ -2947,9 +2929,9 @@ def main(
             cut_off_dict,
         )
         print("Plotting cluster size distribution...")
-        plot_cluster_size_dist(cluster_freqs, directory)
+        plot_cluster_size_dist(cluster_freqs, path)
         print("Writing CSV Output File...")
-        write_CSV(data_dict, directory)
+        write_CSV(data_dict, path)
     print("Plotting Mobility and Anisotropy progressions...")
     if sequence_donor is not None:
         if len(hole_anisotropy_data) > 0:
