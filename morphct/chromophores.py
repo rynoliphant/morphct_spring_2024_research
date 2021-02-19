@@ -4,6 +4,8 @@ from collections import defaultdict
 import os
 import sys
 
+from openbabel import openbabel
+from openbabel import pybel
 import numpy as np
 from scipy.spatial import Delaunay
 
@@ -82,6 +84,32 @@ class Chromophore:
             return self.lumo
         elif self.species == "donor":
             return self.homo
+
+
+def get_chromo_ids_smiles(snap, smarts_str, conversion_dict):
+    mol = openbabel.OBMol()
+    for i in range(snap.particles.N):
+        a = mol.NewAtom()
+        element = conversion_dict[
+                snap.particles.types[snap.particles.typeid[i]]
+                ]
+        a.SetAtomicNum(element.atomic_number)
+        a.SetVector(*[float(x) for x in snap.particles.position[i]])
+
+    for i,j in snap.bonds.group:
+        # openbabel indexes atoms from 1
+        # AddBond(i_index, j_index, bond_order)
+        mol.AddBond(int(i+1), int(j+1), 1)
+
+    pybelmol = pybel.Molecule(mol)
+    # This will correctly set the bond order
+    # (necessary for smarts matching)
+    pybelmol.OBMol.PerceiveBondOrders()
+
+    smarts = pybel.Smarts(smarts_str)
+    # shift indices by 1
+    atomic_ids = [np.array(i)-1 for i in smarts.findall(pybelmol)]
+    return atomic_ids
 
 
 def create_super_cell(chromophore_list, box_size):
