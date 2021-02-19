@@ -29,9 +29,9 @@ class Chromophore:
         # get the chromo positions
         # qcc_input
 
-        self.unwrapped_center, self.center, self.image = self._get_center(
-                snap, atomic_ids
-        )
+        # Sets unwrapped_center, center, and image attributes
+        self._set_center(snap, atomic_ids)
+
         self.qcc_input = None
         # Now to create a load of placeholder parameters to update later when we
         # have the full list/energy levels.
@@ -63,7 +63,7 @@ class Chromophore:
                 *self.center
                 )
 
-    def _get_center(self, snap, atomic_ids):
+    def _set_center(self, snap, atomic_ids):
         box = snap.configuration.box[:3]
         unwrapped_pos = snap.particles.position + snap.particles.image * box
         center = np.mean(unwrapped_pos[atomic_ids], axis=0)
@@ -71,8 +71,9 @@ class Chromophore:
         while (center+img*box < -box/2).any() or (center+img*box > box/2).any():
             img[np.where(center < -box/2)] += 1
             img[np.where(center > box/2)] -= 1
-        wrapped_center = center + img * box
-        return center, wrapped_center, img
+        self.unwrapped_center = center
+        self.center = center + img * box
+        self.image = img
 
     def get_MO_energy(self):
         if self.species == "acceptor":
