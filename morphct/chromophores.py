@@ -1,10 +1,13 @@
 import copy
 import itertools
+from collections import defaultdict
 import os
 import sys
+
 import numpy as np
-from collections import defaultdict
 from scipy.spatial import Delaunay
+
+from morphct import execute_qcc as eqcc
 from morphct import helper_functions as hf
 
 
@@ -15,6 +18,7 @@ class Chromophore:
         snap,
         atomic_ids,
         species,
+        conversion_dict,
         reorganization_energy = 0.3064,
         vrh_delocalization = 2e-10
     ):
@@ -26,13 +30,11 @@ class Chromophore:
         self.vrh_delocalization = vrh_delocalization
         self.atomic_ids = atomic_ids
 
-        # get the chromo positions
-        # qcc_input
-
         # Sets unwrapped_center, center, and image attributes
         self._set_center(snap, atomic_ids)
 
-        self.qcc_input = None
+        self.qcc_input = eqcc.write_qcc_inp(snap, atomic_ids, conversion_dict)
+
         # Now to create a load of placeholder parameters to update later when we
         # have the full list/energy levels.
         # The self.neighbors list contains one element for each chromophore
@@ -48,12 +50,12 @@ class Chromophore:
         self.lumo = None
         self.lumo_1 = None
 
-        # The neighbor_delta_E and neighbor_TI are lists where each element
+        # The neighbor_delta_e and neighbor_ti are lists where each element
         # describes the different in important molecular orbital or transfer
         # integral between this chromophore and each neighbor. The list indices
         # here are the same as in self.neighbors for coherence.
-        self.neighbors_delta_E = []
-        self.neighbors_TI = []
+        self.neighbors_delta_e = []
+        self.neighbors_ti = []
 
     def __repr__(self):
         return "Chromophore {} ({}): {} atoms at {:.3f} {:.3f} {:.3f}".format(
@@ -80,290 +82,6 @@ class Chromophore:
             return self.lumo
         elif self.species == "donor":
             return self.homo
-
-
-def calculate_chromophores(
-    CG_morphology_dict,
-    AA_morphology_dict,
-    CG_to_AAID_master,
-    parameter_dict,
-    sim_dims,
-):
-    # We make the assumption that a chromophore consists of one of each of the
-    # CG site types described by the same template file. For instance, if we
-    # have 3 sites 'A', 'B' and 'C' described in one file and one site 'D'
-    # described in another file then there are two chromophores species
-    # described by A-B-C and D. This will be treated automatically because the
-    # D's shouldn't be bonded to anything in the CGMorphologyDict if they are
-    # small molecules.
-    # Therefore, we need to assign each CG site in the morphology to a
-    # particular chromophore, so first, it's important to generate a
-    # `neighbor_list' of all bonded atoms
-    print("Determining chromophores in the system...")
-    bonded_atoms = hf.obtain_bonded_list(CG_morphology_dict["bond"])
-    chromophore_list = [i for i in range(len(CG_morphology_dict["type"]))]
-    for CG_site_ID, chromophore_ID in enumerate(chromophore_list):
-        CG_site_type = CG_morphology_dict["type"][CG_site_ID]
-        types_in_this_chromophore = [CG_site_type]
-        chromophore_list, types_in_this_chromophore = update_chromophores(
-            CG_site_ID,
-            chromophore_list,
-            bonded_atoms,
-            CG_morphology_dict["type"],
-            types_in_this_chromophore,
-            parameter_dict,
-        )
-    chromophore_data = {}
-    for atom_ID, chromo_ID in enumerate(chromophore_list):
-        if chromo_ID not in list(chromophore_data.keys()):
-            chromophore_data[chromo_ID] = [atom_ID]
-        else:
-            chromophore_data[chromo_ID].append(atom_ID)
-    # Now rename the chromophore IDs so that they increment sensibly (they will
-    # be used later for the orca files)
-    old_keys = sorted(chromophore_data.keys())
-    for new_key, old_key in enumerate(old_keys):
-        chromophore_data[new_key] = chromophore_data.pop(old_key)
-    print(
-        "{:d} chromophores successfully identified!".format(
-            len(list(chromophore_data.keys()))
-        )
-    )
-    # Now let's create a list of all the chromophore instances which contain all
-    # of the information we could ever want about them.
-    chromophore_instances = []
-    for chromo_ID, chromophore_CG_sites in chromophore_data.items():
-        print(
-            "\rCalculating properties of chromophore {:05d} of {:05d}...".format(
-                chromo_ID, len(list(chromophore_data.keys())) - 1
-            ),
-            end=" ",
-        )
-        if sys.stdout is not None:
-            sys.stdout.flush()
-        chromophore_instances.append(
-            chromophore(
-                chromo_ID,
-                chromophore_CG_sites,
-                CG_morphology_dict,
-                AA_morphology_dict,
-                CG_to_AAID_master,
-                parameter_dict,
-                sim_dims,
-            )
-        )
-    print("")
-    return chromophore_instances
-
-
-def calculate_chromophores_AA(
-    CG_morphology_dict,
-    AA_morphology_dict,
-    CG_to_AAID_master,
-    parameter_dict,
-    sim_dims,
-    rigid_bodies=None,
-):
-    # If rigid_bodies == None:
-    # This function works in the same way as the coarse-grained version above,
-    # except this one iterates through the AA bonds instead. This is FAR SLOWER
-    # and so shouldn't be done, except in the case where the coarse-grained
-    # morphology does not exist (because we started with an atomistic morphology
-    # and are only interested in running KMC on it)
-    # If rigid_bodies == AA_morphology_dict['body']:
-    # This function uses the rigid bodies specified in
-    # parameter_dict['AA_rigid_body_species'], and those which have not been
-    # specified by iterating through the AA bond list, to determine the
-    # chromophores in the system. This is the slowest way to calculate
-    # chromophores, but is useful for systems such as BDT-TPD, where there are
-    # multiple chromophores of differing species present in the same molecule.
-    # As above, this code will only run if an atomistic morphology has been
-    # input to MorphCT. If it is coarse-grained, the CG-based
-    # "calculate_chromophore" function will be used, and will also be a lot
-    # faster.
-    # The parameter_dict['AA_rigid_body_species'] is a dictionary with two keys,
-    # 'donor' or 'acceptor'. Each element in the value list corresponds to a new
-    # chromophore. These aren't the only atoms that belong to this chromophore,
-    # however - there might be a bunch of aliphatic/flexible atoms that are
-    # connected, so we need to make sure that we add those too.
-    print("Determining chromophores in the system...")
-    bonded_atoms = hf.obtain_bonded_list(AA_morphology_dict["bond"])
-    chromophore_list = [i for i in range(len(AA_morphology_dict["type"]))]
-    for AA_site_ID, chromophore_ID in enumerate(chromophore_list):
-        AA_site_type = AA_morphology_dict["type"][AA_site_ID]
-        chromophore_list = update_chromophores_AA(
-            AA_site_ID,
-            chromophore_list,
-            bonded_atoms,
-            parameter_dict,
-            rigid_bodies,
-        )
-    chromophore_data = {}
-    for atom_ID, chromo_ID in enumerate(chromophore_list):
-        if chromo_ID not in list(chromophore_data.keys()):
-            chromophore_data[chromo_ID] = [atom_ID]
-        else:
-            chromophore_data[chromo_ID].append(atom_ID)
-    # Now rename the chromophore IDs so that they increment sensibly (they will
-    # be used later for the orca files)
-    old_keys = sorted(chromophore_data.keys())
-    for new_key, old_key in enumerate(old_keys):
-        chromophore_data[new_key] = chromophore_data.pop(old_key)
-    print(
-        "{:d} chromophores successfully identified!".format(
-            len(list(chromophore_data.keys()))
-        )
-    )
-    # Now let's create a list of all the chromophore instances which contain all
-    # of the information we could ever want about them.
-    chromophore_instances = []
-    for chromo_ID, chromophore_CG_sites in chromophore_data.items():
-        print(
-            "\rCalculating properties of chromophore {:05d} of {:05d}...".format(
-                chromo_ID, len(list(chromophore_data.keys())) - 1
-            ),
-            end=" ",
-        )
-        if sys.stdout is not None:
-            sys.stdout.flush()
-        chromophore_instances.append(
-            chromophore(
-                chromo_ID,
-                chromophore_CG_sites,
-                CG_morphology_dict,
-                AA_morphology_dict,
-                CG_to_AAID_master,
-                parameter_dict,
-                sim_dims,
-            )
-        )
-    print("")
-    return chromophore_instances
-
-
-def update_chromophores(
-    atom_ID,
-    chromophore_list,
-    bonded_atoms,
-    CG_type_list,
-    types_in_this_chromophore,
-    parameter_dict,
-):
-    # Recursively add all neighbors of atom number atom_ID to this chromophore,
-    # providing the same type does not already exist in it
-    try:
-        for bonded_atom in bonded_atoms[atom_ID]:
-            bonded_type = CG_type_list[bonded_atom]
-            # First check that the bonded_atom's type is not already in this
-            # chromophore.
-            # Also, check that the type to be added is of the same electronic
-            # species as the ones added previously, or == 'None'
-            if (bonded_type not in types_in_this_chromophore) and (
-                (
-                    parameter_dict["CG_site_species"][bonded_type].lower()
-                    == "none"
-                )
-                or (
-                    parameter_dict["CG_site_species"][bonded_type].lower()
-                    == list(
-                        set(
-                            [
-                                parameter_dict["CG_site_species"][x].lower()
-                                for x in types_in_this_chromophore
-                            ]
-                        )
-                    )[0]
-                )
-            ):
-                # If the atomID of the bonded atom is larger than that of the
-                # current one, update the bonded atom's ID to the current one's
-                # to put it in this chromophore, then iterate through all of the
-                # bonded atom's neighbors
-                if chromophore_list[bonded_atom] > chromophore_list[atom_ID]:
-                    chromophore_list[bonded_atom] = chromophore_list[atom_ID]
-                    types_in_this_chromophore.append(bonded_type)
-                    chromophore_list, types_in_this_chromophore = update_chromophores(
-                        bonded_atom,
-                        chromophore_list,
-                        bonded_atoms,
-                        CG_type_list,
-                        types_in_this_chromophore,
-                        parameter_dict,
-                    )
-                # If the atomID of the current atom is larger than that of the
-                # bonded one, update the current atom's ID to the bonded one's
-                # to put it in this chromophore, then iterate through all of the
-                # current atom's neighbors
-                elif chromophore_list[bonded_atom] < chromophore_list[atom_ID]:
-                    chromophore_list[atom_ID] = chromophore_list[bonded_atom]
-                    types_in_this_chromophore.append(CG_type_list[atom_ID])
-                    chromophore_list, types_in_this_chromophore = update_chromophores(
-                        atom_ID,
-                        chromophore_list,
-                        bonded_atoms,
-                        CG_type_list,
-                        types_in_this_chromophore,
-                        parameter_dict,
-                    )
-                # Else: both the current and the bonded atom are already known
-                # to be in this chromophore, so we don't have to do anything
-                # else.
-    except KeyError:
-        # This means that there are no bonded CG sites (i.e. it's a single
-        # chromophore)
-        pass
-    return chromophore_list, types_in_this_chromophore
-
-
-def update_chromophores_AA(
-    atom_ID, chromophore_list, bonded_atoms, parameter_dict, rigid_bodies=None
-):
-    # This version of the update chromophores function does not check for CG
-    # site types, instead just adding all bonded atoms. Therefore it should only
-    # be used in the case of already-atomistic morphologies (no CG morph
-    # specified) containing ONLY small molecules
-    try:
-        for bonded_atom in bonded_atoms[atom_ID]:
-            if rigid_bodies is not None:
-                # Skip if the bonded atom belongs to a different rigid body
-                if (
-                    (rigid_bodies[bonded_atom] != -1)
-                    and (rigid_bodies[atom_ID] != -1)
-                ) and (rigid_bodies[bonded_atom] != rigid_bodies[atom_ID]):
-                    continue
-            # If the atomID of the bonded atom is larger than that of the
-            # current one, update the bonded atom's ID to the current one's to
-            # put it in this chromophore, then iterate through all of the bonded
-            # atom's neighbors
-            if chromophore_list[bonded_atom] > chromophore_list[atom_ID]:
-                chromophore_list[bonded_atom] = chromophore_list[atom_ID]
-                chromophore_list = update_chromophores_AA(
-                    bonded_atom,
-                    chromophore_list,
-                    bonded_atoms,
-                    parameter_dict,
-                    rigid_bodies,
-                )
-            # If the atomID of the current atom is larger than that of the
-            # bonded one, update the current atom's ID to the bonded one's to
-            # put it in this chromophore, then iterate through all of the
-            # current atom's neighbors
-            elif chromophore_list[bonded_atom] < chromophore_list[atom_ID]:
-                chromophore_list[atom_ID] = chromophore_list[bonded_atom]
-                chromophore_list = update_chromophores_AA(
-                    atom_ID,
-                    chromophore_list,
-                    bonded_atoms,
-                    parameter_dict,
-                    rigid_bodies,
-                )
-            # Else: both the current and the bonded atom are already known to be
-            # in this chromophore, so we don't have to do anything else.
-    except KeyError:
-        # This means that there are no bonded CG sites (i.e. it's a single
-        # chromophore)
-        pass
-    return chromophore_list
 
 
 def create_super_cell(chromophore_list, box_size):
@@ -679,121 +397,3 @@ def determine_neighbors_cut_off(chromophore_list, parameter_dict, sim_dims):
                         )
     print("")
     return chromophore_list
-
-
-def chromo_sort(chromophore_list):
-    for index, chromo in enumerate(chromophore_list):
-        if index != chromo.ID:
-            print(
-                "Inconsistency found in the ordering of the chromophore_list, rewriting"
-                " the chromophore_list in the correct order..."
-            )
-            new_chromophore_list = []
-            for chromo in chromophore_list:
-                new_chromophore_list.append(0)
-            for chromo in chromophore_list:
-                new_chromophore_list[chromo.ID] = chromo
-            chromophore_list = new_chromophore_list
-            return chromophore_list
-    return chromophore_list
-
-
-def main(
-    AA_morphology_dict,
-    CG_morphology_dict,
-    CG_to_AAID_master,
-    parameter_dict,
-    chromophore_list,
-):
-    sim_dims = [
-        [-AA_morphology_dict["lx"] / 2.0, AA_morphology_dict["lx"] / 2.0],
-        [-AA_morphology_dict["ly"] / 2.0, AA_morphology_dict["ly"] / 2.0],
-        [-AA_morphology_dict["lz"] / 2.0, AA_morphology_dict["lz"] / 2.0],
-    ]
-    if len(parameter_dict["CG_to_template_dirs"]) > 0:
-        # Normal operation using the coarse-grained morphology
-        chromophore_list = calculate_chromophores(
-            CG_morphology_dict,
-            AA_morphology_dict,
-            CG_to_AAID_master,
-            parameter_dict,
-            sim_dims,
-        )
-    elif (len(parameter_dict["CG_site_species"]) == 1) and (
-        len(parameter_dict["AA_rigid_body_species"]) == 0
-    ):
-        # Small molecule system with only one electronic species
-        chromophore_list = calculate_chromophores_AA(
-            CG_morphology_dict,
-            AA_morphology_dict,
-            CG_to_AAID_master,
-            parameter_dict,
-            sim_dims,
-        )
-    else:
-        # Other system, with electronically active species specified as rigid
-        # bodies using AA_rigid_body_species in parameter file
-        chromophore_list = calculate_chromophores_AA(
-            CG_morphology_dict,
-            AA_morphology_dict,
-            CG_to_AAID_master,
-            parameter_dict,
-            sim_dims,
-            rigid_bodies=AA_morphology_dict["body"],
-        )
-    chromophore_list = chromo_sort(chromophore_list)
-    if parameter_dict["use_voronoi_neighbors"] is True:
-        chromophore_list = determine_neighbors_voronoi(
-            chromophore_list, parameter_dict, sim_dims
-        )
-    else:
-        chromophore_list = determine_neighbors_cut_off(
-            chromophore_list, parameter_dict, sim_dims
-        )
-    # Now we have updated the chromophore_list, rewrite the pickle with this new
-    # information.
-    pickle_name = os.path.join(
-        parameter_dict["output_morphology_directory"],
-        "code",
-        "".join([os.path.splitext(parameter_dict["morphology"])[0], ".pickle"]),
-    )
-    hf.write_pickle(
-        (
-            AA_morphology_dict,
-            CG_morphology_dict,
-            CG_to_AAID_master,
-            parameter_dict,
-            chromophore_list,
-        ),
-        pickle_name,
-    )
-    return (
-        AA_morphology_dict,
-        CG_morphology_dict,
-        CG_to_AAID_master,
-        parameter_dict,
-        chromophore_list,
-    )
-
-
-if __name__ == "__main__":
-    try:
-        pickle_file = sys.argv[1]
-    except:
-        print(
-            "Please specify the pickle file to load to continue the pipeline from this"
-            " point."
-        )
-    pickle_data = hf.load_pickle(pickle_file)
-    AA_morphology_dict = pickle_data[0]
-    CG_morphology_dict = pickle_data[1]
-    CG_to_AAID_master = pickle_data[2]
-    parameter_dict = pickle_data[3]
-    chromophore_list = pickle_data[4]
-    main(
-        AA_morphology_dict,
-        CG_morphology_dict,
-        CG_to_AAID_master,
-        parameter_dict,
-        chromophore_list,
-    )
