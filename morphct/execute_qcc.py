@@ -326,7 +326,7 @@ def write_qcc_inp(snap, atomic_ids, conversion_dict):
     # To determine where to add hydrogens, check the bounds that go to
     # particles outside of the ids provided
     for i,j in snap.bonds.group:
-        if i in aaid and j not in aaid:
+        if i in atomic_ids and j not in atomic_ids:
             element = conversion_dict[
                     snap.particles.types[snap.particles.typeid[j]]
                     ]
@@ -346,7 +346,7 @@ def write_qcc_inp(snap, atomic_ids, conversion_dict):
                 positions.append(new_pos)
 
         # Same as above but j->i instead of i->j
-        elif j in aaid and i not in aaid:
+        elif j in atomic_ids and i not in atomic_ids:
             element = conversion_dict[
                     snap.particles.types[snap.particles.typeid[i]]
                     ]
