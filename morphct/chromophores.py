@@ -23,13 +23,14 @@ class Chromophore:
             raise TypeError("Species must be either donor or acceptor")
         self.species = species.lower()
         self.reorganization_energy = reorganization_energy
-        self.vrh_delocalization = VRH_delocalization
+        self.vrh_delocalization = vrh_delocalization
+        self.atomic_ids = atomic_ids
 
         # get the chromo positions
         # qcc_input
 
         self.unwrapped_center, self.center, self.image = self._get_center(
-                snap, atomic_inds
+                snap, atomic_ids
         )
         self.qcc_input = None
         # Now to create a load of placeholder parameters to update later when we
@@ -53,6 +54,14 @@ class Chromophore:
         # here are the same as in self.neighbors for coherence.
         self.neighbors_delta_E = []
         self.neighbors_TI = []
+
+    def __repr__(self):
+        return "Chromophore {} ({}): {} atoms at {:.3f} {:.3f} {:.3f}".format(
+                self.id,
+                self.species,
+                len(self.atomic_ids),
+                *self.center
+                )
 
     def _get_center(self, snap, atomic_ids):
         box = snap.configuration.box[:3]
