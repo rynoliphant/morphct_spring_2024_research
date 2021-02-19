@@ -162,7 +162,7 @@ def set_energyvalues(chromo_list, s_filename, d_filename):
     Set the energy attributes of the Chromophore objects.
     Run singles_homolumo and dimer_homolumo first to get the energy files.
     Energy values set by this function:
-        HOMO_1, HOMO, LUMO, LUMO_1, neighbors_delta_E, neighbors_TI
+        homo_1, homo, lumo, lumo_1, neighbors_delta_E, neighbors_TI
 
     Parameters
     ----------
@@ -177,9 +177,9 @@ def set_energyvalues(chromo_list, s_filename, d_filename):
     d_data = get_dimerdata(d_filename)
 
     for i,chromo in enumerate(chromo_list):
-        chromo.HOMO_1, chromo.HOMO, chromo.LUMO, chromo.LUMO_1 = s_data[i]
+        chromo.homo_1, chromo.homo, chromo.lumo, chromo.lumo_1 = s_data[i]
 
-    for (i,j), (HOMO_1, HOMO, LUMO, LUMO_1) in d_data:
+    for (i,j), (homo_1, homo, lumo, lumo_1) in d_data:
         chromo1 = chromo_list[i]
         chromo2 = chromo_list[j]
         neighborind1 = [i[0] for i in chromo1.neighbors].index(j)
@@ -190,9 +190,9 @@ def set_energyvalues(chromo_list, s_filename, d_filename):
 
         assert chromo1.species == chromo2.species
         if chromo1.species.lower() == "donor":
-            TI = ti.calculate_TI(HOMO - HOMO_1, deltaE)
+            TI = ti.calculate_TI(homo - homo_1, deltaE)
         else:
-            TI = ti.calculate_TI(LUMO - LUMO_1, deltaE)
+            TI = ti.calculate_TI(lumo - lumo_1, deltaE)
         chromo1.neighbors_TI[neighborind1] = TI
         chromo2.neighbors_TI[neighborind2] = TI
 
@@ -300,7 +300,7 @@ def create_inputs(chromo_list, AA_morphdict, param_dict):
     return qcc_pairs
 
 
-def remove_adjacent_terminators(group1, group2):
+def write_qcc_inp(snap, atomic_ids, conversion_dict):
     """
 
     Parameters
@@ -310,136 +310,61 @@ def remove_adjacent_terminators(group1, group2):
     -------
 
     """
-    pop_list = [[], []]
-    for index1, terminal_hydrogen1 in enumerate(group1):
-        for index2, terminal_hydrogen2 in enumerate(group2):
-            sep = np.linalg.norm(terminal_hydrogen2 - terminal_hydrogen1)
-            if sep < 1.2:
-                pop_list[0].append(index1)
-                pop_list[1].append(index2)
-    for group_no, group in enumerate(pop_list):
-        for index in sorted(group, reverse=True):
-            try:
-                [group1, group2][group_no].pop(index)
-            except IndexError:
-                raise SystemError(
-                    """
-                    Tried to pop a termination group that does not exist...
-                    are you sure this is an atomistic morphology?
-                    """
-                )
-    return group1, group2
+    atoms = []
+    positions = []
 
+    box = snap.configuration.box[:3]
+    unwrapped_pos = snap.particles.position + snap.particles.image * box
 
-def write_qcc_inp(
-    AA_morphdict,
-    AAIDs,
-    images,
-    terminal_pos,
-    terminal_images,
-):
-    """
+    for i in atomic_ids:
+        element = conversion_dict[
+                snap.particles.types[snap.particles.typeid[i]]
+                ]
+        atoms.append(element.symbol)
+        positions.append(unwrapped_pos[i])
 
-    Parameters
-    ----------
+    # To determine where to add hydrogens, check the bounds that go to
+    # particles outside of the ids provided
+    for i,j in snap.bonds.group:
+        if i in aaid and j not in aaid:
+            element = conversion_dict[
+                    snap.particles.types[snap.particles.typeid[j]]
+                    ]
+            # If it's already a Hydrogen, just add it
+            if element.atomic_number == 1:
+                atoms.append(element.symbol)
+                positions.append(unwrapped_pos[j])
+            # If it's not a hydrogen, use the existing bond vector to
+            # determine the direction and scale it to a more reasonable
+            # length for C-H bond
+            else:
+                # Average sp3 C-H bond is 1.094 Angstrom
+                v = unwrapped_pos[j]-unwrapped_pos[i]
+                unit_vec = v/np.linalg.norm(v)
+                new_pos = unit_vec * 1.094 + unwrapped_pos[i]
+                atoms.append("H")
+                positions.append(new_pos)
 
-    Returns
-    -------
+        # Same as above but j->i instead of i->j
+        elif j in aaid and i not in aaid:
+            element = conversion_dict[
+                    snap.particles.types[snap.particles.typeid[i]]
+                    ]
+            if element.atomic_number == 1:
+                atoms.append(element.symbol)
+                positions.append(unwrapped_pos[i])
 
-    """
-    qcc_lines = []
-    all_atom_types = []
-    all_positions = []
-    numstr = "0123456789"
-    lxyz = [AA_morphdict["lx"], AA_morphdict["ly"], AA_morphdict["lz"]]
-    # Format the atom positions ready for qcc
-    for index, atom_ID in enumerate(AAIDs):
-        # Cut the integer bit and capitalize to allow two letter atom types
-        atom_type = AA_morphdict["type"][atom_ID].strip(numstr).capitalize()
-        all_atom_types.append(atom_type)
-        # Add in the correct periodic images to the position
-        all_positions.append(
-            AA_morphdict["unwrapped_position"][atom_ID]
-            + np.array([(images[index][i] * lxyz[i]) for i in range(3)])
-        )
-    # Now add in the terminating hydrogens if necessary
-    if terminal_pos is not None:
-        for ind, pos in enumerate(terminal_pos):
-            all_atom_types.append("H")
-            # Add in the correct periodic images to the position
-            all_positions.append(
-                    pos + np.array(
-                        [terminal_images[ind][i] * lxyz[i] for i in range(3)]
-                        )
-                    )
-    # Now geometrically centralize all of the atoms that are to be included in
-    # this input file to make it easier on qcc
-    central_position = np.array(
-        [
-            np.average(np.array(all_positions)[:, 0]),
-            np.average(np.array(all_positions)[:, 1]),
-            np.average(np.array(all_positions)[:, 2]),
-        ]
-    )
-    # Create the lines to be written in the input file
-    for index, position in enumerate(all_positions):
-        qcc_lines.append(
-            "{0:s}  {1:.5f}  {2:.5f}  {3:.5f};".format(
-                all_atom_types[index],
-                position[0] - central_position[0],
-                position[1] - central_position[1],
-                position[2] - central_position[2],
+            else:
+                v = unwrapped_pos[i]-unwrapped_pos[j]
+                unit_vec = v/np.linalg.norm(v)
+                new_pos = unit_vec * 1.094 + unwrapped_pos[j]
+                atoms.append("H")
+                positions.append(new_pos)
+
+    # Shift center to origin
+    positions = np.stack(positions)
+    positions -= np.mean(positions,axis=0)
+    qcc_input = " ".join(
+            [f"{atom} {x} {y} {z};" for atom,(x,y,z) in zip(atoms,positions)]
             )
-        )
-    qcc_input = " ".join(qcc_lines)
     return qcc_input
-
-def terminate_monomers(chromophore, param_dict, AA_morphdict):
-    """
-
-    Parameters
-    ----------
-
-    Returns
-    -------
-
-    """
-    # No CG morphology, so we will use the UA -> AA code definition of which
-    # atoms need to have hydrogens added to them.
-    new_hydrogen_positions = []
-    for atom_index_chromo, atom_index_morph in enumerate(chromophore.AAIDs):
-        atom_type = AA_morphdict["type"][atom_index_morph]
-        if atom_type not in param_dict[
-                "molecule_terminating_connections"
-                ].keys():
-            continue
-        bonded_AAIDs = []
-        # Iterate over all termination connections defined for this atomType (in
-        # case we are trying to do something mega complicated)
-        for connection_info in param_dict["molecule_terminating_connections"][
-            atom_type
-        ]:
-            for [bond_name, AAID1, AAID2] in chromophore.bonds:
-                if AAID1 == atom_index_morph:
-                    if AAID2 not in bonded_AAIDs:
-                        bonded_AAIDs.append(AAID2)
-                elif AAID2 == atom_index_morph:
-                    if AAID1 not in bonded_AAIDs:
-                        bonded_AAIDs.append(AAID1)
-            if len(bonded_AAIDs) != connection_info[0]:
-                continue
-            new_hydrogen_positions += hf.get_terminating_positions(
-                AA_morphdict["unwrapped_position"][atom_index_morph],
-                [
-                    AA_morphdict["unwrapped_position"][bonded_AAID]
-                    for bonded_AAID in bonded_AAIDs
-                ],
-                1,
-            )
-    # Return terminatingGroups (positions of those hydrogens to be added to the
-    # qcc input)
-    return new_hydrogen_positions
-
-
-if __name__ == "__main__":
-    pass
