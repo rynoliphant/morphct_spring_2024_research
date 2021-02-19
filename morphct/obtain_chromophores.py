@@ -8,219 +8,30 @@ from scipy.spatial import Delaunay
 from morphct import helper_functions as hf
 
 
-class chromophore:
+class Chromophore:
     def __init__(
         self,
-        chromo_ID,
-        chromophore_CG_sites,
-        CG_morphology_dict,
-        AA_morphology_dict,
-        CG_to_AAID_master,
-        parameter_dict,
-        sim_dims,
+        chromo_id,
+        snap,
+        atomic_ids,
+        species,
+        reorganization_energy = 0.3064,
+        vrh_delocalization = 2e-10
     ):
-        self.ID = chromo_ID
-        self.CGIDs = chromophore_CG_sites
-        # Determine whether this chromophore is a donor or an acceptor, as well
-        # as the site types that have been defined as the electronically active
-        # in the chromophore
-        if CG_morphology_dict is not None:
-            # Normal operation
-            self.CG_types = sorted(
-                list(
-                    set(
-                        [
-                            CG_morphology_dict["type"][CGID]
-                            for CGID in self.CGIDs
-                        ]
-                    )
-                )
-            )
-            active_CG_sites, self.sub_species = self.obtain_electronic_species(
-                chromophore_CG_sites,
-                CG_morphology_dict["type"],
-                parameter_dict["CG_site_species"],
-            )
-            self.species = parameter_dict["chromophore_species"][
-                self.sub_species
-            ]["species"]
-            self.reorganisation_energy = parameter_dict["chromophore_species"][
-                self.sub_species
-            ]["reorganisation_energy"]
-            self.VRH_delocalisation = parameter_dict["chromophore_species"][
-                self.sub_species
-            ]["VRH_delocalisation"]
-            # CG_to_AAID_master is a list of dictionaries where each list
-            # element corresponds to a new molecule. Firstly, flatten this out
-            # so that it becomes a single CG:AAID dictionary
-            flattened_CG_to_AAID_master = {
-                dict_key: dict_val[1]
-                for dictionary in CG_to_AAID_master
-                for dict_key, dict_val in dictionary.items()
-            }
-            # Now, using chromophore_CG_sites as the keys, build up a list of
-            # all of the AAIDs in the chromophore, where each element
-            # corresponds to each CG site, and then flatten it.
-            self.AAIDs = [
-                AAID
-                for AAIDs in [
-                    flattened_CG_to_AAID_master[CGID]
-                    for CGID in chromophore_CG_sites
-                ]
-                for AAID in AAIDs
-            ]
-            # By using active_CG_sites, determine the AAIDs for
-            # the electrically active proportion of the chromophore, so that we
-            # can calculate its proper position. Again each element corresponds
-            # to each CG site so the list needs to be flattened afterwards.
-            electronically_active_AAIDs = [
-                AAID
-                for AAIDs in [
-                    flattened_CG_to_AAID_master[CGID]
-                    for CGID in active_CG_sites
-                ]
-                for AAID in AAIDs
-            ]
-        else:
-            # No fine-graining has been performed by MorphCT, so we know that
-            # the input morphology is already atomistic.
-            if len(parameter_dict["CG_site_species"]) == 1:
-                # If the morphology contains only a single type of electronic
-                # species, then the parameter_dict['CG_site_species'] should
-                # only have one entry, and we can set all chromophores to be
-                # this species.
-                active_CG_sites = chromophore_CG_sites
-                electronically_active_AAIDs = chromophore_CG_sites
-                self.sub_species = list(
-                    parameter_dict["CG_site_species"].values()
-                )[0]
-                self.species = parameter_dict["chromophore_species"][
-                    self.sub_species
-                ]["species"]
-                self.reorganisation_energy = parameter_dict[
-                    "chromophore_species"
-                ][self.sub_species]["reorganisation_energy"]
-                self.VRH_delocalisation = parameter_dict["chromophore_species"][
-                    self.sub_species
-                ]["VRH_delocalisation"]
-            elif (len(parameter_dict["CG_site_species"]) == 0) and (
-                len(parameter_dict["AA_rigid_body_species"]) > 0
-            ):
-                # If the CG_site_species have not been specified, then look to
-                # the AA_rigid_body_species dictionary to determine which rigid
-                # bodies are donors and which are acceptors
-                electronically_active_AAIDs = []
-                for AAID in chromophore_CG_sites:
-                    if AA_morphology_dict["body"][AAID] != -1:
-                        electronically_active_AAIDs.append(AAID)
-                active_CG_sites = copy.deepcopy(electronically_active_AAIDs)
-                # Now work out what the species is:
-                for sub_species, rigid_bodies in parameter_dict[
-                    "AA_rigid_body_species"
-                ].items():
-                    if (
-                        AA_morphology_dict["body"][active_CG_sites[0]]
-                        in rigid_bodies
-                    ):
-                        self.sub_species = sub_species
-                        self.species = parameter_dict["chromophore_species"][
-                            self.sub_species
-                        ]["species"]
-                        self.reorganisation_energy = parameter_dict[
-                            "chromophore_species"
-                        ][self.sub_species]["reorganisation_energy"]
-                        self.VRH_delocalisation = parameter_dict[
-                            "chromophore_species"
-                        ][self.sub_species]["VRH_delocalisation"]
-                        break
-                try:
-                    self.species
-                except AttributeError:
-                    for key, val in self.__dict__:
-                        print(key, val)
-                    raise SystemError(
-                        "Chromophore {:d} has no species! Exiting...".format(
-                            self.ID
-                        )
-                    )
-            else:
-                raise SystemError(
-                    "Multiple electronic species defined, but no way to map them"
-                    " without a coarse-grained morphology (no CG morph has been given)"
-                )
-            self.AAIDs = chromophore_CG_sites
-        # The position of the chromophore can be calculated easily. Note that
-        # here, the `self.image' is the periodic image that the
-        # unwrapped_position of the chromophore is located in, relative to the
-        # original simulation volume.
-        electronically_active_unwrapped_posns = [
-            AA_morphology_dict["unwrapped_position"][AAID]
-            for AAID in electronically_active_AAIDs
-        ]
-        electronically_active_types = [
-            AA_morphology_dict["type"][AAID]
-            for AAID in electronically_active_AAIDs
-        ]
-        self.unwrapped_posn, self.posn, self.image = self.obtain_chromophore_COM(
-            electronically_active_unwrapped_posns,
-            electronically_active_types,
-            sim_dims,
+        self.id = chromo_id
+        if species.lower() not in ["donor", "acceptor"]:
+            raise TypeError("Species must be either donor or acceptor")
+        self.species = species.lower()
+        self.reorganization_energy = reorganization_energy
+        self.vrh_delocalization = VRH_delocalization
+
+        # get the chromo positions
+        # qcc_input
+
+        self.unwrapped_center, self.center, self.image = self._get_center(
+                snap, atomic_inds
         )
-        # A list of the important bonds for this chromophore from the morphology
-        # would be useful when determining if a terminating group is already
-        # present on this monomer
-        self.bonds = self.get_important_bonds(AA_morphology_dict["bond"])
-        if CG_morphology_dict is not None:
-            # Determine if this chromophore is a repeat unit and therefore will
-            # need terminating before orca
-            CG_types = set(
-                [
-                    CG_morphology_dict["type"][CGID]
-                    for CGID in chromophore_CG_sites
-                ]
-            )
-            # self.terminate = True if any of the CGTypes in this chromophore
-            # are defined as having termination conditions in the parameter file
-            self.terminate = any(
-                CG_type in CG_types
-                for CG_type in [
-                    connection[0]
-                    for connection in parameter_dict[
-                        "molecule_terminating_connections"
-                    ]
-                ]
-            )
-        else:
-            try:
-                if (
-                    len(
-                        parameter_dict[
-                            "molecule_terminating_connections"
-                        ].keys()
-                    )
-                    == 0
-                ):
-                    # Small molecules in atomistic morphology therefore no
-                    # terminations needed
-                    self.terminate = False
-            except AttributeError:
-                if len(parameter_dict["molecule_terminating_connections"]) == 0:
-                    self.terminate = False
-            else:
-                # No CG morphology, but terminations have been specified, so
-                # we're dealing with a polymer
-                AA_types = set(
-                    [AA_morphology_dict["type"][AAID] for AAID in self.AAIDs]
-                )
-                self.terminate = any(
-                    AA_type in AA_types
-                    for AA_type in [
-                        connection
-                        for connection in parameter_dict[
-                            "molecule_terminating_connections"
-                        ]
-                    ]
-                )
+        self.qcc_input = None
         # Now to create a load of placeholder parameters to update later when we
         # have the full list/energy levels.
         # The self.neighbors list contains one element for each chromophore
@@ -231,12 +42,11 @@ class chromophore:
         self.dissociation_neighbors = []
         # The molecular orbitals of this chromophore have not yet been
         # calculated, but they will simply be floats.
-        self.HOMO = None
-        self.HOMO_1 = None
-        self.LUMO = None
-        self.LUMO_1 = None
+        self.homo = None
+        self.homo_1 = None
+        self.lumo = None
+        self.lumo_1 = None
 
-        self.qcc_input = None
         # The neighbor_delta_E and neighbor_TI are lists where each element
         # describes the different in important molecular orbital or transfer
         # integral between this chromophore and each neighbor. The list indices
@@ -244,67 +54,22 @@ class chromophore:
         self.neighbors_delta_E = []
         self.neighbors_TI = []
 
-    def get_important_bonds(self, bond_list):
-        important_bonds = []
-        for bond in bond_list:
-            if (bond[1] in self.AAIDs) and (bond[2] in self.AAIDs):
-                important_bonds.append(bond)
-        return important_bonds
-
-    def obtain_chromophore_COM(
-        self,
-        electronically_active_unwrapped_posns,
-        electronically_active_types,
-        sim_dims,
-    ):
-        # Calculate the chromophore's position in the morphology (CoM of all
-        # atoms in self.AAIDs from AA_morphology_dict)
-        chromo_unwrapped_posn = hf.calc_COM(
-            electronically_active_unwrapped_posns,
-            list_of_atom_types=electronically_active_types,
-        )
-        chromo_wrapped_posn = copy.deepcopy(chromo_unwrapped_posn)
-        chromo_wrapped_image = [0, 0, 0]
-        # Now calculate the wrapped position of the chromophore and its image
-        for axis in range(3):
-            sim_extent = sim_dims[axis][1] - sim_dims[axis][0]
-            while chromo_wrapped_posn[axis] < sim_dims[axis][0]:
-                chromo_wrapped_posn[axis] += sim_extent
-                chromo_wrapped_image[axis] -= 1
-            while chromo_wrapped_posn[axis] > sim_dims[axis][1]:
-                chromo_wrapped_posn[axis] -= sim_extent
-                chromo_wrapped_image[axis] += 1
-        return chromo_unwrapped_posn, chromo_wrapped_posn, chromo_wrapped_image
-
-    def obtain_electronic_species(
-        self, chromophore_CG_sites, CG_site_types, CG_to_species
-    ):
-        electronically_active_sites = []
-        current_chromophore_species = None
-        for CG_site_ID in chromophore_CG_sites:
-            site_type = CG_site_types[CG_site_ID]
-            site_species = CG_to_species[site_type]
-            if site_species.lower() != "none":
-                if (current_chromophore_species is not None) and (
-                    current_chromophore_species != site_species
-                ):
-                    raise SystemError(
-                        "Problem - multiple electronic species defined in the same "
-                        " chromophore. Please modify the chromophore generation code "
-                        " to fix this issue for your molecule!"
-                    )
-                else:
-                    current_chromophore_species = site_species
-                    electronically_active_sites.append(CG_site_ID)
-        return electronically_active_sites, current_chromophore_species
+    def _get_center(self, snap, atomic_ids):
+        box = snap.configuration.box[:3]
+        unwrapped_pos = snap.particles.position + snap.particles.image * box
+        center = np.mean(unwrapped_pos[atomic_ids], axis=0)
+        img = np.zeros(3)
+        while (center+img*box < -box/2).any() or (center+img*box > box/2).any():
+            img[np.where(center < -box/2)] += 1
+            img[np.where(center > box/2)] -= 1
+        wrapped_center = center + img * box
+        return center, wrapped_center, img
 
     def get_MO_energy(self):
-        if self.species.lower() == "acceptor":
-            return self.LUMO
-        elif self.species.lower() == "donor":
-            return self.HOMO
-        else:
-            raise Exception("Chromo MUST be donor OR acceptor")
+        if self.species == "acceptor":
+            return self.lumo
+        elif self.species == "donor":
+            return self.homo
 
 
 def calculate_chromophores(
