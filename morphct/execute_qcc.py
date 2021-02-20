@@ -207,27 +207,6 @@ def create_inputs(chromo_list, AA_morphdict, param_dict):
     -------
 
     """
-    # Singles first
-    for chromophore in chromo_list:
-        # Include the molecule terminating units on the required atoms of the
-        # chromophore
-        if chromophore.terminate is True:
-            terminating_group_positions = terminate_monomers(
-                chromophore, param_dict, AA_morphdict
-            )
-            terminating_group_images = [chromophore.image] * len(
-                terminating_group_positions
-            )
-        else:
-            terminating_group_positions = None
-            terminating_group_images = None
-        chromophore.qcc_input = write_qcc_inp(
-            AA_morphdict,
-            chromophore.AAIDs,
-            [chromophore.image] * len(chromophore.AAIDs),
-            terminating_group_positions,
-            terminating_group_images,
-        )
     # Determine how many pairs there are first:
     n_pairs = np.sum([len(chromo.neighbors) for chromo in chromo_list])
     print(f"There are {n_pairs // 2} total neighbor pairs to consider.")
@@ -235,28 +214,26 @@ def create_inputs(chromo_list, AA_morphdict, param_dict):
     # Then consider each chromophore against every other chromophore
     qcc_pairs = []
     for chromo1 in chromo_list:
-        neighbors_ID = [neighbor[0] for neighbor in chromo1.neighbors]
-        neighbors_image = [neighbor[1] for neighbor in chromo1.neighbors]
+        neighbors_id = [i for i,img in chromo1.neighbors]
+        neighbors_image = [img for i,img in chromo1.neighbors]
         for chromo2 in chromo_list:
             # Skip if chromo2 is not one of chromo1's neighbors
             # Also skip if chromo2's ID is < chromo1's ID to prevent
             # duplicates
-            if (chromo2.ID not in neighbors_ID) or (chromo2.ID < chromo1.ID):
+            if (chromo2.id not in neighbors_id) or (chromo2.id < chromo1.id):
                 continue
-            # Update the qcc input name
+            # Update the qcc_pairs name
             pair = (chromo1.ID, chromo2.ID)
             # Find the correct relative image for the neighbor chromophore
             chromo2_rel_image = neighbors_image[neighbors_ID.index(chromo2.ID)]
-            chromo2_transformation = list(
-                np.array(chromo1.image)
-                - np.array(chromo2.image)
-                + np.array(chromo2_rel_image)
-            )
+            chromo2_transformation = (
+                chromo1.image - chromo2.image + chromo2_rel_image
+                )
             # Find the dimer AAIDs and relative images for each atom
-            AAIDs = chromo1.AAIDs + chromo2.AAIDs
-            images = [[0, 0, 0] for i in range(len(chromo1.AAIDs))] + [
-                chromo2_transformation for i in range(len(chromo2.AAIDs))
-            ]
+            atomic_ids = chromo1.atomic_ids + chromo2.atomic_ids
+            images = [np.zeros(3) for i in chromo1.atomic_ids.n_atoms]
+            images += [chromo2_transform for i in chromo2.n_atoms]
+
             # Now add the terminating groups to both chromophores
             # Note that we would only ever expect both chromophores to require
             # termination or neither
@@ -300,7 +277,7 @@ def create_inputs(chromo_list, AA_morphdict, param_dict):
     return qcc_pairs
 
 
-def write_qcc_inp(snap, atomic_ids, conversion_dict):
+def write_qcc_inp(snap, atomic_ids, conversion_dict, images=None):
     """
 
     Parameters
