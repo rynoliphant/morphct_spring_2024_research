@@ -112,24 +112,15 @@ def get_chromo_ids_smiles(snap, smarts_str, conversion_dict):
     return atomic_ids
 
 
-def create_super_cell(chromophore_list, box_size):
-    for chromophore in chromophore_list:
-        chromophore.super_cell_posns = []
-        chromophore.super_cell_images = []
-        for x_image in range(-1, 2):
-            for y_image in range(-1, 2):
-                for z_image in range(-1, 2):
-                    chromophore.super_cell_posns.append(
-                        np.array(chromophore.posn)
-                        + (
-                            np.array([x_image, y_image, z_image])
-                            * (np.array(box_size))
-                        )
-                    )
-                    chromophore.super_cell_images.append(
-                        np.array([x_image, y_image, z_image])
-                    )
-    return chromophore_list
+def create_super_cell(chromo_list, box):
+    for chromo in chromo_list:
+        chromo.supercell_centers = []
+        chromo.supercell_images = []
+        for xyz_image in itertools.product(range(-1,2), repeat=3):
+            xyz_image = np.array(xyz_image)
+            chromo.supercell_centers.append(chromo.center + xyz_image * box)
+            chromo.supercell_images.append(xyz_image)
+    return chromo_list
 
 
 def get_voronoi_neighbors(tri, chromo_list):
