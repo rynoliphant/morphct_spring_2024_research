@@ -31,6 +31,7 @@ class Chromophore:
         self.reorganization_energy = reorganization_energy
         self.vrh_delocalization = vrh_delocalization
         self.atomic_ids = atomic_ids
+        self.n_atoms = len(atomic_ids)
 
         # Sets unwrapped_center, center, and image attributes
         self._set_center(snap, atomic_ids)
@@ -63,7 +64,7 @@ class Chromophore:
         return "Chromophore {} ({}): {} atoms at {:.3f} {:.3f} {:.3f}".format(
                 self.id,
                 self.species,
-                len(self.atomic_ids),
+                self.n_atoms,
                 *self.center
                 )
 
