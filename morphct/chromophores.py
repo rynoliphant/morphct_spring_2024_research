@@ -140,7 +140,7 @@ def get_voronoi_neighbors(tri, chromo_list):
     return n_list
 
 
-class super_cell_chromo:
+class SupercellChromo:
     def __init__(self):
         self.species = None
         self.original_ID = None
