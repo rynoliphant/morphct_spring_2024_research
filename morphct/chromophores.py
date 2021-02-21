@@ -18,7 +18,7 @@ class Chromophore:
         self,
         chromo_id,
         snap,
-        atomic_ids,
+        atom_ids,
         species,
         conversion_dict,
         reorganization_energy = 0.3064,
@@ -30,13 +30,13 @@ class Chromophore:
         self.species = species.lower()
         self.reorganization_energy = reorganization_energy
         self.vrh_delocalization = vrh_delocalization
-        self.atomic_ids = atomic_ids
-        self.n_atoms = len(atomic_ids)
+        self.atom_ids = atom_ids
+        self.n_atoms = len(atom_ids)
 
         # Sets unwrapped_center, center, and image attributes
-        self._set_center(snap, atomic_ids)
+        self._set_center(snap, atom_ids)
 
-        self.qcc_input = eqcc.write_qcc_inp(snap, atomic_ids, conversion_dict)
+        self.qcc_input = eqcc.write_qcc_inp(snap, atom_ids, conversion_dict)
 
         # Now to create a load of placeholder parameters to update later when we
         # have the full list/energy levels.
@@ -68,10 +68,10 @@ class Chromophore:
                 *self.center
                 )
 
-    def _set_center(self, snap, atomic_ids):
+    def _set_center(self, snap, atom_ids):
         box = snap.configuration.box[:3]
         unwrapped_pos = snap.particles.position + snap.particles.image * box
-        center = np.mean(unwrapped_pos[atomic_ids], axis=0)
+        center = np.mean(unwrapped_pos[atom_ids], axis=0)
         img = np.zeros(3)
         while (center+img*box < -box/2).any() or (center+img*box > box/2).any():
             img[np.where(center < -box/2)] += 1
@@ -109,8 +109,8 @@ def get_chromo_ids_smiles(snap, smarts_str, conversion_dict):
 
     smarts = pybel.Smarts(smarts_str)
     # shift indices by 1
-    atomic_ids = [np.array(i)-1 for i in smarts.findall(pybelmol)]
-    return atomic_ids
+    atom_ids = [np.array(i)-1 for i in smarts.findall(pybelmol)]
+    return atom_ids
 
 
 def create_supercell(chromo_list, box):

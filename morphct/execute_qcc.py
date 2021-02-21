@@ -230,8 +230,8 @@ def create_inputs(chromo_list, AA_morphdict, param_dict):
                 chromo1.image - chromo2.image + chromo2_rel_image
                 )
             # Find the dimer AAIDs and relative images for each atom
-            atomic_ids = chromo1.atomic_ids + chromo2.atomic_ids
-            images = [np.zeros(3) for i in chromo1.atomic_ids.n_atoms]
+            atom_ids = chromo1.atom_ids + chromo2.atom_ids
+            images = [np.zeros(3) for i in chromo1.atom_ids.n_atoms]
             images += [chromo2_transform for i in chromo2.n_atoms]
 
             # Now add the terminating groups to both chromophores
@@ -277,7 +277,7 @@ def create_inputs(chromo_list, AA_morphdict, param_dict):
     return qcc_pairs
 
 
-def write_qcc_inp(snap, atomic_ids, conversion_dict, images=None):
+def write_qcc_inp(snap, atom_ids, conversion_dict):
     """
 
     Parameters
@@ -293,7 +293,7 @@ def write_qcc_inp(snap, atomic_ids, conversion_dict, images=None):
     box = snap.configuration.box[:3]
     unwrapped_pos = snap.particles.position + snap.particles.image * box
 
-    for i in atomic_ids:
+    for i in atom_ids:
         element = conversion_dict[
                 snap.particles.types[snap.particles.typeid[i]]
                 ]
@@ -303,7 +303,7 @@ def write_qcc_inp(snap, atomic_ids, conversion_dict, images=None):
     # To determine where to add hydrogens, check the bounds that go to
     # particles outside of the ids provided
     for i,j in snap.bonds.group:
-        if i in atomic_ids and j not in atomic_ids:
+        if i in atom_ids and j not in atom_ids:
             element = conversion_dict[
                     snap.particles.types[snap.particles.typeid[j]]
                     ]
@@ -323,7 +323,77 @@ def write_qcc_inp(snap, atomic_ids, conversion_dict, images=None):
                 positions.append(new_pos)
 
         # Same as above but j->i instead of i->j
-        elif j in atomic_ids and i not in atomic_ids:
+        elif j in atom_ids and i not in atom_ids:
+            element = conversion_dict[
+                    snap.particles.types[snap.particles.typeid[i]]
+                    ]
+            if element.atomic_number == 1:
+                atoms.append(element.symbol)
+                positions.append(unwrapped_pos[i])
+
+            else:
+                v = unwrapped_pos[i]-unwrapped_pos[j]
+                unit_vec = v/np.linalg.norm(v)
+                new_pos = unit_vec * 1.094 + unwrapped_pos[j]
+                atoms.append("H")
+                positions.append(new_pos)
+
+    # Shift center to origin
+    positions = np.stack(positions)
+    positions -= np.mean(positions,axis=0)
+    qcc_input = " ".join(
+            [f"{atom} {x} {y} {z};" for atom,(x,y,z) in zip(atoms,positions)]
+            )
+    return qcc_input
+
+
+def write_qcc_pair_inp(snap, atom_ids, conversion_dict):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
+    atoms = []
+    positions = []
+
+    box = snap.configuration.box[:3]
+    unwrapped_pos = snap.particles.position + snap.particles.image * box
+
+    for i in atom_ids:
+        element = conversion_dict[
+                snap.particles.types[snap.particles.typeid[i]]
+                ]
+        atoms.append(element.symbol)
+        positions.append(unwrapped_pos[i])
+
+    # To determine where to add hydrogens, check the bounds that go to
+    # particles outside of the ids provided
+    for i,j in snap.bonds.group:
+        if i in atom_ids and j not in atom_ids:
+            element = conversion_dict[
+                    snap.particles.types[snap.particles.typeid[j]]
+                    ]
+            # If it's already a Hydrogen, just add it
+            if element.atomic_number == 1:
+                atoms.append(element.symbol)
+                positions.append(unwrapped_pos[j])
+            # If it's not a hydrogen, use the existing bond vector to
+            # determine the direction and scale it to a more reasonable
+            # length for C-H bond
+            else:
+                # Average sp3 C-H bond is 1.094 Angstrom
+                v = unwrapped_pos[j]-unwrapped_pos[i]
+                unit_vec = v/np.linalg.norm(v)
+                new_pos = unit_vec * 1.094 + unwrapped_pos[i]
+                atoms.append("H")
+                positions.append(new_pos)
+
+        # Same as above but j->i instead of i->j
+        elif j in atom_ids and i not in atom_ids:
             element = conversion_dict[
                     snap.particles.types[snap.particles.typeid[i]]
                     ]
