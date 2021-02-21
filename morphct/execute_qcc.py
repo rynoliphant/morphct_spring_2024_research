@@ -300,7 +300,7 @@ def write_qcc_inp(snap, atom_ids, conversion_dict):
         atoms.append(element.symbol)
         positions.append(unwrapped_pos[i])
 
-    # To determine where to add hydrogens, check the bounds that go to
+    # To determine where to add hydrogens, check the bonds that go to
     # particles outside of the ids provided
     for i,j in snap.bonds.group:
         if i in atom_ids and j not in atom_ids:
@@ -347,70 +347,82 @@ def write_qcc_inp(snap, atom_ids, conversion_dict):
     return qcc_input
 
 
-def write_qcc_pair_inp(snap, atom_ids, conversion_dict):
+def write_qcc_pair_input(snap, chromo_i, chromo_j, j_shift, conversion_dict):
     """
 
     Parameters
     ----------
+    j_shift : numpy.array(3)
+        vector to shift chromophore j
+        (chromophore j minimum image center - unwrapped center)
 
     Returns
     -------
 
     """
-    atoms = []
-    positions = []
-
     box = snap.configuration.box[:3]
     unwrapped_pos = snap.particles.position + snap.particles.image * box
 
-    for i in atom_ids:
-        element = conversion_dict[
-                snap.particles.types[snap.particles.typeid[i]]
-                ]
-        atoms.append(element.symbol)
-        positions.append(unwrapped_pos[i])
+    # chromophore i does not move
+    positions = [i for i in unwrapped_pos[chromo_i.atom_ids]]
+    # shift chromophore j's unwrapped positions
+    positions += [i for i in unwrapped_pos[chromo_j.atom_ids] + j_shift]
 
-    # To determine where to add hydrogens, check the bounds that go to
+    atom_ids = np.concatenate((chromo_i.atom_ids, chromo_j.atom_ids))
+    typeids = snap.particles.typeid[atom_ids]
+    atoms = [conversion_dict[snap.particles.types[i]].symbol for i in typeids]
+
+    # To determine where to add hydrogens, check the bonds that go to
     # particles outside of the ids provided
     for i,j in snap.bonds.group:
         if i in atom_ids and j not in atom_ids:
+            # If bond is to chromophore j, additional shifting might be needed
+            if i in chromo_j.atom_ids:
+                shift = j_shift
+            else:
+                shift = np.zeros(3)
             element = conversion_dict[
                     snap.particles.types[snap.particles.typeid[j]]
                     ]
             # If it's already a Hydrogen, just add it
             if element.atomic_number == 1:
                 atoms.append(element.symbol)
-                positions.append(unwrapped_pos[j])
+                positions.append(unwrapped_pos[j] + shift)
             # If it's not a hydrogen, use the existing bond vector to
             # determine the direction and scale it to a more reasonable
             # length for C-H bond
             else:
                 # Average sp3 C-H bond is 1.094 Angstrom
-                v = unwrapped_pos[j]-unwrapped_pos[i]
+                v = unwrapped_pos[j] - unwrapped_pos[i]
                 unit_vec = v/np.linalg.norm(v)
-                new_pos = unit_vec * 1.094 + unwrapped_pos[i]
+                new_pos = unit_vec * 1.094 + unwrapped_pos[i] + shift
                 atoms.append("H")
                 positions.append(new_pos)
 
         # Same as above but j->i instead of i->j
         elif j in atom_ids and i not in atom_ids:
+            if j in chromo_j.atom_ids:
+                shift = j_shift
+            else:
+                shift = np.zeros(3)
             element = conversion_dict[
                     snap.particles.types[snap.particles.typeid[i]]
                     ]
+
             if element.atomic_number == 1:
                 atoms.append(element.symbol)
-                positions.append(unwrapped_pos[i])
-
+                positions.append(unwrapped_pos[i] + shift)
             else:
-                v = unwrapped_pos[i]-unwrapped_pos[j]
+                v = unwrapped_pos[i] - unwrapped_pos[j]
                 unit_vec = v/np.linalg.norm(v)
-                new_pos = unit_vec * 1.094 + unwrapped_pos[j]
+                new_pos = unit_vec * 1.094 + unwrapped_pos[j] + shift
                 atoms.append("H")
                 positions.append(new_pos)
 
     # Shift center to origin
     positions = np.stack(positions)
     positions -= np.mean(positions,axis=0)
+
     qcc_input = " ".join(
             [f"{atom} {x} {y} {z};" for atom,(x,y,z) in zip(atoms,positions)]
             )
