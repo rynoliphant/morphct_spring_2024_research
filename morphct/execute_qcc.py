@@ -363,8 +363,10 @@ def write_qcc_pair_input(snap, chromo_i, chromo_j, j_shift, conversion_dict):
     box = snap.configuration.box[:3]
     unwrapped_pos = snap.particles.position + snap.particles.image * box
 
-    # chromophore i does not move
-    positions = [i for i in unwrapped_pos[chromo_i.atom_ids]]
+    # chromophore i is shifted into 0,0,0 image
+    positions = [
+            i+chromo_i.image*box for i in unwrapped_pos[chromo_i.atom_ids]
+            ]
     # shift chromophore j's unwrapped positions
     positions += [i for i in unwrapped_pos[chromo_j.atom_ids] + j_shift]
 
@@ -380,7 +382,7 @@ def write_qcc_pair_input(snap, chromo_i, chromo_j, j_shift, conversion_dict):
             if i in chromo_j.atom_ids:
                 shift = j_shift
             else:
-                shift = np.zeros(3)
+                shift = chromo_i.image*box
             element = conversion_dict[
                     snap.particles.types[snap.particles.typeid[j]]
                     ]
@@ -404,7 +406,7 @@ def write_qcc_pair_input(snap, chromo_i, chromo_j, j_shift, conversion_dict):
             if j in chromo_j.atom_ids:
                 shift = j_shift
             else:
-                shift = np.zeros(3)
+                shift = chromo_i.image*box
             element = conversion_dict[
                     snap.particles.types[snap.particles.typeid[i]]
                     ]
