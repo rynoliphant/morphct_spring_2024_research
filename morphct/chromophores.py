@@ -4,6 +4,7 @@ from collections import defaultdict
 import os
 import sys
 
+import freud
 from openbabel import openbabel
 from openbabel import pybel
 import numpy as np
@@ -14,6 +15,13 @@ from morphct import helper_functions as hf
 
 
 class Chromophore:
+    """
+    Attributes
+    ----------
+
+    Methods
+    -------
+    """
     def __init__(
         self,
         chromo_id,
@@ -24,6 +32,11 @@ class Chromophore:
         reorganization_energy = 0.3064,
         vrh_delocalization = 2e-10
     ):
+        """
+        Parameters
+        ----------
+
+        """
         self.id = chromo_id
         if species.lower() not in ["donor", "acceptor"]:
             raise TypeError("Species must be either donor or acceptor")
@@ -81,6 +94,14 @@ class Chromophore:
         self.image = img
 
     def get_MO_energy(self):
+        """
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        """
         if self.species == "acceptor":
             return self.lumo
         elif self.species == "donor":
@@ -88,6 +109,14 @@ class Chromophore:
 
 
 def get_chromo_ids_smiles(snap, smarts_str, conversion_dict):
+    """
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     mol = openbabel.OBMol()
     for i in range(snap.particles.N):
         a = mol.NewAtom()
@@ -111,34 +140,6 @@ def get_chromo_ids_smiles(snap, smarts_str, conversion_dict):
     # shift indices by 1
     atom_ids = [np.array(i)-1 for i in smarts.findall(pybelmol)]
     return atom_ids
-
-
-def create_supercell(chromo_list, box):
-    for chromo in chromo_list:
-        chromo._supercell_centers = []
-        chromo._supercell_images = []
-        for xyz_image in itertools.product(range(-1,2), repeat=3):
-            xyz_image = np.array(xyz_image)
-            chromo._supercell_centers.append(chromo.center + xyz_image * box)
-            chromo._supercell_images.append(xyz_image)
-    return chromo_list
-
-
-def get_voronoi_neighbors(tri, all_chromos):
-    n_list = defaultdict(set)
-    for p in tri.vertices:
-        for i, j in itertools.permutations(p, 2):
-            n_list[all_chromos[i].periodic_id].add(all_chromos[j].periodic_id)
-    return n_list
-
-
-class SupercellChromo:
-    def __init__(self):
-        self.species = None
-        self.original_id = None
-        self.periodic_id = None
-        self.center = None
-        self.image = None
 
 
 def update_chromo_list_voronoi(
@@ -184,51 +185,55 @@ def update_chromo_list_voronoi(
     return chromo_list
 
 
-def determine_neighbors_voronoi(chromo_list, snap):
+def set_neighbors_voronoi(chromo_list, snap, conversion_dict, d_cut=10):
+    """
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
+    voronoi = freud.locality.Voronoi()
+    freudbox = freud.box.Box(*snap.configuration.box)
+    centers = [chromo.center for chromo in chromo_list]
+    voronoi.compute((freudbox, centers))
+
     box = snap.configuration.box[:3]
+    qcc_pairs = []
+    neighbors = []
+    for (i,j) in voronoi.nlist:
+        if (i,j) not in neighbors and (j,i) not in neighbors:
+            chromo_i = chromo_list[i]
+            chromo_j = chromo_list[j]
+            centers = []
+            distances = []
+            images = []
+            # calculate which of the periodic image is closest
+            # shift chromophore j, hold chromophore i in place
+            for xyz_image in itertools.product(range(-1,2), repeat=3):
+                xyz_image = np.array(xyz_image)
+                sc_center = chromo_j.center + xyz_image * box
+                images.append(xyz_image)
+                centers.append(sc_center)
+                distances.append(np.linalg.norm(sc_center - chromo_i.center))
+            imin = distances.index(min(distances))
+            if distances[imin] > d_cut:
+                continue
 
-    # First create the supercell
-    supercell = create_supercell(chromo_list, box)
-    donor_chromos = []
-    acceptor_chromos = []
-    all_chromos = []
-    chromo_index = 0
-    for chromo in supercell:
-        for index, center in enumerate(chromo._supercell_centers):
-            sc_chromo = SupercellChromo()
-            sc_chromo.species = chromo.species
-            sc_chromo.original_id = chromo.id
-            sc_chromo.periodic_id = chromo_index
-            sc_chromo.center = center
-            sc_chromo.image = chromo._supercell_images[index]
-            chromo_index += 1
-            all_chromos.append(sc_chromo)
-
-    # Now obtain the positions and send them to the Delaunay Triangulation
-    # Then get the voronoi neighbors
-    all_centers = [chromo.center for chromo in all_chromos]
-
-    # Update the relevant neighbor dictionaries if we have the right
-    # chromophore types in the system. Also log the chromophoreIDs from the
-    # original simulation volume (non-periodic). Chromophores in the original
-    # simulation volume will be every 27th (there are 27 periodic images in the
-    # triple range(-1,2)), beginning from #13 ((0, 0, 0) is the thirteenth
-    # element of the triple range(-1,2)) up to the length of the list in
-    # question.
-    original_all_chromo_ids = []
-
-    # Default behaviour - carriers are blocked by the opposing species
-    for chromo in all_chromos:
-        if np.array_equal(chromo.image, [0, 0, 0]):
-            original_all_chromo_ids.append(chromo.periodic_id)
-
-    print("Calculating neighbours of all moieties")
-    all_neighbors = get_voronoi_neighbors(Delaunay(all_centers), all_chromos)
-    print("Updating the chromophore list for dissociation neighbors")
-    chromo_list = update_chromo_list_voronoi(
-        original_all_chromo_ids,
-        all_chromos,
-        all_neighbors,
-        chromo_list
-    )
-    return chromo_list
+            # TODO I think I need to consider which chromophore has image 000
+            # also dissociation neighbors are ignored...
+            rel_image = images[imin]
+            j_shift = centers[imin] - chromo_j.unwrapped_center
+            chromo_i.neighbors.append([j, rel_image])
+            chromo_i.neighbors_delta_e.append(None)
+            chromo_i.neighbors_ti.append(None)
+            chromo_j.neighbors.append([i, -rel_image])
+            chromo_j.neighbors_delta_e.append(None)
+            chromo_j.neighbors_ti.append(None)
+            neighbors.append((i,j))
+            qcc_input = eqcc.write_qcc_pair_input(
+                snap, chromo_i, chromo_j, j_shift, conversion_dict
+                )
+            qcc_pairs.append(((i,j), qcc_input))
+    return qcc_pairs
