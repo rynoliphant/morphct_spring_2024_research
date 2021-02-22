@@ -9,30 +9,20 @@ from morphct import helper_functions as hf
 
 
 def calculate_delta_E(chromo1, chromo2):
-    if chromo1.species.lower() == "donor":
-        # Hole transporter
-        chromo1_E = chromo1.HOMO
-    else:
-        # Electron transporter
-        chromo1_E = chromo1.LUMO
-    if chromo2.species.lower() == "donor":
-        # Hole transporter
-        chromo2_E = chromo2.HOMO
-    else:
-        # Electron transporter
-        chromo2_E = chromo2.LUMO
-    return chromo2_E - chromo1_E
+    chromo1_e = chromo1.get_MO_energy()
+    chromo2_e = chromo2.get_MO_energy()
+    return chromo2_e - chromo1_e
 
 
-def calculate_TI(orbital_splitting, delta_E):
+def calculate_TI(orbital_splitting, delta_e):
     # Use the energy splitting in dimer method to calculate the electronic
     # transfer integral in eV
-    if delta_E ** 2 > orbital_splitting ** 2:
+    if delta_e ** 2 > orbital_splitting ** 2:
         # Avoid an imaginary TI by returning zero.
         # (Could use KOOPMAN'S APPROXIMATION here if desired)
         TI = 0
     else:
-        TI = 0.5 * np.sqrt((orbital_splitting ** 2) - (delta_E ** 2))
+        TI = 0.5 * np.sqrt((orbital_splitting ** 2) - (delta_e ** 2))
     return TI
 
 

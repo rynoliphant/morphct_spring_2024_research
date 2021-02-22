@@ -185,16 +185,16 @@ def set_energyvalues(chromo_list, s_filename, d_filename):
         neighborind1 = [i[0] for i in chromo1.neighbors].index(j)
         neighborind2 = [i[0] for i in chromo2.neighbors].index(i)
         deltaE = ti.calculate_delta_E(chromo1,chromo2)
-        chromo1.neighbors_delta_E[neighborind1] = deltaE
-        chromo2.neighbors_delta_E[neighborind2] = -deltaE
+        chromo1.neighbors_delta_e[neighborind1] = deltaE
+        chromo2.neighbors_delta_e[neighborind2] = -deltaE
 
         assert chromo1.species == chromo2.species
-        if chromo1.species.lower() == "donor":
+        if chromo1.species == "donor":
             TI = ti.calculate_TI(homo - homo_1, deltaE)
         else:
             TI = ti.calculate_TI(lumo - lumo_1, deltaE)
-        chromo1.neighbors_TI[neighborind1] = TI
-        chromo2.neighbors_TI[neighborind2] = TI
+        chromo1.neighbors_ti[neighborind1] = TI
+        chromo2.neighbors_ti[neighborind2] = TI
 
 
 def create_inputs(chromo_list, AA_morphdict, param_dict):
