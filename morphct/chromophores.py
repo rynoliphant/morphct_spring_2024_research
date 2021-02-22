@@ -221,8 +221,6 @@ def set_neighbors_voronoi(chromo_list, snap, conversion_dict, d_cut=10):
             if distances[imin] > d_cut:
                 continue
 
-            # TODO I think I need to consider which chromophore has image 000
-            # also dissociation neighbors are ignored...
             rel_image = images[imin]
             j_shift = centers[imin] - chromo_j.unwrapped_center
             chromo_i.neighbors.append([j, rel_image])
