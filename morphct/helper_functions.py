@@ -17,7 +17,7 @@ except ImportError:
 
 
 # UNIVERSAL CONSTANTS, DO NOT CHANGE!
-elementary_charge = 1.60217657e-19  # C
+elem_chrg = 1.60217657e-19  # C
 k_B = 1.3806488e-23  # m^{2} kg s^{-2} K^{-1}
 hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 
@@ -1219,6 +1219,10 @@ def calculate_carrier_hop_rate(
     if T_ij == 0.0:
         return 0
     # Regardless of hopping type, sort out the prefactor first:
+    lambda_ij *= elem_chrg
+    T_ij *= elem_chrg
+    delta_E_ij *= elem_chrg
+
     k_ij = (
         prefactor
         * ((2 * np.pi) / hbar)
@@ -1253,7 +1257,7 @@ def calculate_FRET_hop_rate(
     if delta_E_ij <= 0:
         boltzmann_factor = 1
     else:
-        boltzmann_factor = np.exp(-(elementary_charge * delta_E_ij) / (k_B * T))
+        boltzmann_factor = np.exp(-(elem_chrg * delta_E_ij) / (k_B * T))
     k_FRET = (
         prefactor
         * (1 / lifetime_parameter)
