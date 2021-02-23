@@ -26,9 +26,9 @@ class Carrier:
         carrier_no,
         box,
         temp,
-        mol_ID_dict,
         hop_limit = None,
         record_history=True,
+        mol_id_dict = None,
         use_average_hop_rates = False,
         average_intra_hop_rate = None,
         average_inter_hop_rate = None,
@@ -51,18 +51,18 @@ class Carrier:
         self.electron_history = None
         n = len(chromo_list)
         if self.current_chromo.species == "donor":
-            self.carrier_type = "hole"
+            self.c_type = "hole"
             if record_history:
                 self.hole_history = lil_matrix((n, n), dtype=int)
         elif self.current_chromo.species == "acceptor":
-            self.carrier_type = "electron"
+            self.c_type = "electron"
             if record_history:
                 self.electron_history = lil_matrix((n, n), dtype=int)
 
         self.n_hops = 0
         self.box = box
         self.displacement = None
-        self.mol_ID_dict = mol_ID_dict
+        self.mol_id_dict = mol_id_dict
 
         self.use_average_hop_rates = use_average_hop_rates
         self.average_intra_hop_rate = average_intra_hop_rate
@@ -80,10 +80,16 @@ class Carrier:
 
         self.hopping_prefactor = hopping_prefactor
 
+    def calculate_displacement(self):
+        init_pos = self.initial_chromo.pos
+        final_pos = self.current_chromo.pos
+        displacement = final_pos - init_pos + self.image * self.box
+        return np.linalg.norm(displacement)
+
     def calculate_hop(self, chromo_list):
         # Terminate if the next hop would be more than the termination limit
         if self.hop_limit is not None:
-            if self.no_hops + 1 > self.hop_limit:
+            if self.n_hops + 1 > self.hop_limit:
                 return 1
         # Determine the hop times to all possible neighbors
         hop_times = []
@@ -93,24 +99,23 @@ class Carrier:
             for i,img in self.current_chromo.neighbors:
                 neighbor = chromo_list[i]
                 assert neighbor.id == i
-                if (
-                    self.mol_ID_dict[self.current_chromo.id]
-                    == self.mol_ID_dict[neighbor.id]
-                    ):
+
+                current_mol = self.mol_id_dict[self.current_chromo.id]
+                neighbor_mol = self.mol_id_dict[neighbor.id]
+                if current_mol == neighbor_mol:
                     hop_rate = self.average_intra_hop_rate
                 else:
                     hop_rate = self.average_inter_hop_rate
                 hop_time = hf.determine_event_tau(hop_rate)
-                # Keep track of the chromophoreID and the corresponding tau
-                hop_times.append([neighbor.ID, hop_time])
+                # Keep track of the chromophoreid and the corresponding tau
+                hop_times.append([neighbor.id, hop_time, img])
         else:
-            # Obtain the reorganisation energy in J (from eV in the parameter
-            # file)
+            # Obtain the reorganisation energy in J (from eV)
             for i_neighbor, ti in enumerate(self.current_chromo.neighbors_ti):
-                # Ignore any hops with a NoneType transfer integral (usually
-                # due to an orca error)
+                # Ignore any hops with a NoneType transfer integral
                 if transfer_integral is None:
                     continue
+                # index of the neighbor in the main list
                 n_ind = self.current_chromo.neighbors[i_neighbor][0]
                 delta_E_ij = self.current_chromo.neighbors_delta_e[i_neighbor]
                 # Load the specified hopping prefactor
@@ -124,9 +129,8 @@ class Carrier:
                     neighbor_pos = neighbor_chromo.pos + rel_image * self.box
 
                     # Chromophore separation needs converting to m
-                    chromo_separation = (
-                        hf.calculate_separation(
-                            self.current_chromo.pos, neighbor_pos
+                    separation = (hf.calculate_separation(
+                        self.current_chromo.pos, neighbor_pos
                         )
                         * 1e-10
                     )
@@ -137,7 +141,7 @@ class Carrier:
                         prefactor,
                         self.temp,
                         use_VRH=True,
-                        rij=chromo_separation,
+                        rij=separation,
                         VRH_delocalisation=self.VRH_delocalisation,
                         boltz_pen=self.boltz_penalty,
                     )
@@ -151,47 +155,42 @@ class Carrier:
                         boltz_pen=self.boltz_penalty,
                     )
                 hop_time = hf.determine_event_tau(hop_rate)
-                # Keep track of the chromophoreID and the corresponding tau
+                # Keep track of the chromophoreid and the corresponding tau
                 hop_times.append([n_ind, hop_time, rel_image])
         # Sort by ascending hop time
         hop_times.sort(key=lambda x: x[1])
         if len(hop_times) == 0:
             # We are trapped here, so create a dummy hop with time 1E99
-            hop_times = [[self.current_chromo.ID, 1e99, [0, 0, 0]]]
+            hop_times = [[self.current_chromo.id, 1e99, [0, 0, 0]]]
         # As long as we're not limiting by the number of hops:
         if self.hop_limit is None:
             # Ensure that the next hop does not put the carrier over its
             # lifetime
             if (self.current_time + hop_times[0][1]) > self.lifetime:
                 # Send the termination signal to singleCoreRunKMC.py
-                return 1
+                return False
         # Move the carrier and send the contiuation signal to
         # singleCoreRunKMC.py
         # Take the quickest hop
-        self.perform_hop(
-            chromo_list[hop_times[0][0]], hop_times[0][1], hop_times[0][2]
-        )
-        return 0
+        n_ind, hop_time, rel_image = hop_times[0]
+        self.perform_hop(chromo_list[n_ind], hop_time, rel_image)
+        return True
 
     def perform_hop(self, destination_chromo, hop_time, rel_image):
-        initial_ID = self.current_chromo.ID
-        destination_ID = destination_chromo.ID
+        init_id = self.current_chromo.id
+        dest_id = destination_chromo.id
         self.image += rel_image
         # Carrier image now sorted, so update its current position
         self.current_chromo = destination_chromo
         # Increment the simulation time
         self.current_time += hop_time
         # Increment the hop counter
-        self.no_hops += 1
+        self.n_hops += 1
         # Now update the sparse history matrix
-        if (self.carrier_type.lower() == "hole") and (
-            self.hole_history_matrix is not None
-        ):
-            self.hole_history_matrix[initial_ID, destination_ID] += 1
-        elif (self.carrier_type.lower() == "electron") and (
-            self.electron_history_matrix is not None
-        ):
-            self.electron_history_matrix[initial_ID, destination_ID] += 1
+        if self.c_type == "hole" and self.hole_history is not None:
+            self.hole_history[init_id, dest_id] += 1
+        elif self.c_type == "electron" and self.electron_history is not None:
+            self.electron_history[init_id, dest_id] += 1
 
 
 class termination_signal:
@@ -223,30 +222,22 @@ def save_pickle(save_data, save_pickle_name):
     )
 
 
-def calculate_displacement(init_pos, final_pos, final_image, sim_dims):
-    displacement = (
-            final_pos - init_pos + final_image *
-            (sim_dims[:,1] - sim_dims[:,0])
-            )
-    return np.linalg.norm(displacement)
 
 
 def initialise_save_data(n_chromos, seed):
     return {
         "seed": seed,
-        "ID": [],
+        "id": [],
         "image": [],
         "lifetime": [],
         "current_time": [],
-        "no_hops": [],
+        "n_hops": [],
         "displacement": [],
-        "hole_history_matrix": lil_matrix((n_chromos, n_chromos), dtype=int),
-        "electron_history_matrix": lil_matrix(
-            (n_chromos, n_chromos), dtype=int
-        ),
+        "hole_history": lil_matrix((n_chromos, n_chromos), dtype=int),
+        "electron_history": lil_matrix((n_chromos, n_chromos), dtype=int),
         "initial_position": [],
         "final_position": [],
-        "carrier_type": [],
+        "c_type": [],
     }
 
 
@@ -257,42 +248,43 @@ def split_molecules(input_dictionary, chromo_list):
     bonded_atoms = hf.obtain_bonded_list(input_dictionary["bond"])
     molecule_list = [i for i in range(len(input_dictionary["type"]))]
     # Recursively add all atoms in the neighbor list to this molecule
-    for mol_ID in range(len(molecule_list)):
-        molecule_list = update_molecule(mol_ID, molecule_list, bonded_atoms)
-    # Here we have a list of len(atoms) where each index gives the molID
-    mol_ID_dict = {}
+    for mol_id in range(len(molecule_list)):
+        molecule_list = update_molecule(mol_id, molecule_list, bonded_atoms)
+    # Here we have a list of len(atoms) where each index gives the molid
+    mol_id_dict = {}
     for chromo in chromo_list:
         AAID_to_check = chromo.AAIDs[0]
-        mol_ID_dict[chromo.ID] = molecule_list[AAID_to_check]
-    return mol_ID_dict
+        mol_id_dict[chromo.id] = molecule_list[AAID_to_check]
+    return mol_id_dict
 
 
-def update_molecule(atom_ID, molecule_list, bonded_atoms):
-    # Recursively add all neighbors of atom number atomID to this molecule
+def update_molecule(atom_id, molecule_list, bonded_atoms):
+    # Recursively add all neighbors of atom number atomid to this molecule
     try:
-        for bonded_atom in bonded_atoms[atom_ID]:
-            # If the moleculeID of the bonded atom is larger than that of the
-            # current one, update the bonded atom's ID to the current one's to
+        for bonded_atom in bonded_atoms[atom_id]:
+            # If the moleculeid of the bonded atom is larger than that of the
+            # current one, update the bonded atom's id to the current one's to
             # put it in this molecule, then iterate through all of the bonded
             # atom's neighbors
-            if molecule_list[bonded_atom] > molecule_list[atom_ID]:
-                molecule_list[bonded_atom] = molecule_list[atom_ID]
+            if molecule_list[bonded_atom] > molecule_list[atom_id]:
+                molecule_list[bonded_atom] = molecule_list[atom_id]
                 molecule_list = update_molecule(
                     bonded_atom, molecule_list, bonded_atoms
                 )
-            # If the moleculeID of the current atom is larger than that of the
-            # bonded one, update the current atom's ID to the bonded one's to
+            # If the moleculeid of the current atom is larger than that of the
+            # bonded one, update the current atom's id to the bonded one's to
             # put it in this molecule, then iterate through all of the current
             # atom's neighbors
-            elif molecule_list[bonded_atom] < molecule_list[atom_ID]:
-                molecule_list[atom_ID] = molecule_list[bonded_atom]
+            elif molecule_list[bonded_atom] < molecule_list[atom_id]:
+                molecule_list[atom_id] = molecule_list[bonded_atom]
                 molecule_list = update_molecule(
-                    atom_ID, molecule_list, bonded_atoms
+                    atom_id, molecule_list, bonded_atoms
                 )
             # Else: both the current and the bonded atom are already known to
             # be in this molecule, so we don't have to do anything else.
     except KeyError:
-        # This means that there are no bonded CG sites (i.e. it's a single molecule)
+        # This means that there are no bonded CG sites
+        # (i.e. it's a single molecule)
         pass
     return molecule_list
 
@@ -300,12 +292,13 @@ def update_molecule(atom_ID, molecule_list, bonded_atoms):
 def run_single_kmc(
         jobs_to_run,
         KMC_directory,
-        AA_morphdict,
         param_dict,
         chromo_list,
+        box,
         cpu_rank,
         seed,
         send_end,
+        AA_morphdict=None,
         use_avg_hop_rates=False,
         record_history=True
         ):
@@ -323,11 +316,11 @@ def run_single_kmc(
     if use_avg_hop_rates is True:
         # Chosen to split hopping by inter-intra molecular hops, so get
         # molecule data
-        mol_ID_dict = split_molecules(AA_morphdict, chromo_list)
-        # molIDDict is a dictionary where the keys are the chromoIDs, and
-        # the vals are the molIDs
+        mol_id_dict = split_molecules(AA_morphdict, chromo_list)
+        # molidDict is a dictionary where the keys are the chromoids, and
+        # the vals are the molids
     else:
-        mol_ID_dict = None
+        mol_id_dict = None
     # Attempt to catch a kill signal to ensure that we save the pickle before
     # termination
     killer = termination_signal()
@@ -335,8 +328,8 @@ def run_single_kmc(
     # bare minimum
     save_data = initialise_save_data(len(chromo_list), seed)
     if record_history is False:
-        save_data["hole_history_matrix"] = None
-        save_data["electron_history_matrix"] = None
+        save_data["hole_history"] = None
+        save_data["electron_history"] = None
     t0 = time.perf_counter()
     save_time = time.perf_counter()
     save_slot = "slot1"
@@ -354,57 +347,46 @@ def run_single_kmc(
                 break
             # Create the carrier instance
             i_carrier = Carrier(
-                chromo_list,
-                param_dict,
                 i_chromo,
                 lifetime,
                 carrier_no,
-                AA_morphdict,
-                mol_ID_dict,
+                box,
+                temp,
+                mol_id_dict=mol_id_dict,
             )
             terminate_simulation = False
-            while terminate_simulation is False:
-                terminate_simulation = bool(
-                        i_carrier.calculate_hop(chromo_list)
-                )
+            while not terminate_simulation:
+                terminate_simulation = i_carrier.calculate_hop(chromo_list)
                 if killer.kill_sent is True:
                     raise terminate(
                         "Kill command sent, terminating KMC simulation..."
                     )
             # Now the carrier has finished hopping, let's calculate its vitals
-            init_position = this_carrier.initial_chromo.pos
-            final_position = this_carrier.current_chromo.pos
-            final_image = this_carrier.image
-            sim_dims = this_carrier.sim_dims
-            this_carrier.displacement = calculate_displacement(
-                initial_position, final_position, final_image, sim_dims
-            )
+            i_carrier.displacement = i_carrier.calculate_displacement()
             # Now the calculations are completed, create a barebones class
             # containing the save data
             importantData = [
-                "ID",
+                "id",
                 "image",
                 "lifetime",
                 "current_time",
-                "no_hops",
+                "n_hops",
                 "displacement",
-                "carrier_type",
+                "c_type",
             ]
             for name in importantData:
                 save_data[name].append(i_carrier.__dict__[name])
             # Update the carrierHistoryMatrix
             if record_history is True:
-                if i_carrier.carrier_type == "hole":
-                    save_data["hole_history_matrix"] += (
-                            i_carrier.hole_history_matrix
-                            )
-                elif i_carrier.carrier_type == "electron":
-                    save_data["electron_history_matrix"] += (
-                            i_carrier.electron_history_matrix
-                            )
+                if i_carrier.c_type == "hole":
+                    save_data["hole_history"] += i_carrier.hole_history
+                elif i_carrier.c_type == "electron":
+                    save_data["electron_history"] += i_carrier.electron_history
+
             # Then add in the initial and final positions
             save_data["initial_position"].append(init_position)
             save_data["final_position"].append(final_position)
+
             t2 = time.perf_counter()
             elapsed_time = float(t2) - float(t1)
             if elapsed_time < 60:
@@ -421,11 +403,11 @@ def run_single_kmc(
 
             write_lines = [
                     "{0:s} hopped {1:d} times, over {2:.2e} seconds, ".format(
-                        i_carrier.carrier_type.capitalize(),
-                        i_carrier.no_hops,
+                        i_carrier.c_type.capitalize(),
+                        i_carrier.n_hops,
                         i_carrier.current_time,
                         ),
-                    f"into image {repr(this_carrier.image)}",
+                    f"into image {repr(i_carrier.image)}",
                     ", for a displacement of {0:.2f}, in {1:.2f} ".format(
                         i_carrier.displacement,
                         elapsed_time
@@ -524,7 +506,7 @@ def run_kmc(
     running_jobs = []
     pipes = []
 
-    for proc_ID, jobs in enumerate(jobs_list):
+    for proc_id, jobs in enumerate(jobs_list):
         child_seed = np.random.randint(0, 2 ** 32)
 
         recv_end, send_end = mp.Pipe(False)
@@ -534,7 +516,7 @@ def run_kmc(
             AA_morphdict,
             param_dict,
             chromo_list,
-            proc_ID,
+            proc_id,
             child_seed,
             send_end
         ))
