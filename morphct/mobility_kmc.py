@@ -18,82 +18,67 @@ hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 log_file = None
 
 
-class carrier:
+class Carrier:
     def __init__(
         self,
-        chromo_list,
-        param_dict,
-        chromo_ID,
+        chromo,
         lifetime,
         carrier_no,
-        AA_morphdict,
+        box,
+        temp,
         mol_ID_dict,
+        hop_limit = None,
+        record_history=True,
+        use_average_hop_rates = False,
+        average_intra_hop_rate = None,
+        average_inter_hop_rate = None,
+        use_koopmans = False,
+        boltz_penalty = False,
+        use_VRH = False,
+        hopping_prefactor = 1.0
     ):
-        self.ID = carrier_no
+        self.id = carrier_no
         self.image = np.array([0, 0, 0])
-        self.initial_chromo = chromo_list[chromo_ID]
-        self.current_chromo = chromo_list[chromo_ID]
-        if param_dict["hop_limit"] == 0:
-            self.hop_limit = None
-        else:
-            self.hop_limit = param_dict["hop_limit"]
-        self.T = param_dict["system_temperature"]
+        self.initial_chromo = chromo
+        self.current_chromo = chromo
+        self.lambda_ij = self.current_chromo.reorganisation_energy
+        self.hop_limit = hop_limit
+        self.temp = temp
         self.lifetime = lifetime
         self.current_time = 0.0
-        self.hole_history_matrix = None
-        self.electron_history_matrix = None
-        self.lambda_ij = self.current_chromo.reorganisation_energy
+
+        self.hole_history = None
+        self.electron_history = None
         n = len(chromo_list)
-        if self.current_chromo.species.lower() == "donor":
+        if self.current_chromo.species == "donor":
             self.carrier_type = "hole"
-            if param_dict["record_carrier_history"] is True:
-                self.hole_history_matrix = lil_matrix((n, n), dtype=int)
-        elif self.current_chromo.species.lower() == "acceptor":
+            if record_history:
+                self.hole_history = lil_matrix((n, n), dtype=int)
+        elif self.current_chromo.species == "acceptor":
             self.carrier_type = "electron"
-            if param_dict["record_carrier_history"] is True:
-                self.electron_history_matrix = lil_matrix((n, n), dtype=int)
-        self.no_hops = 0
-        self.sim_dims = np.array([
-            [-AA_morphdict["lx"] / 2.0, AA_morphdict["lx"] / 2.0],
-            [-AA_morphdict["ly"] / 2.0, AA_morphdict["ly"] / 2.0],
-            [-AA_morphdict["lz"] / 2.0, AA_morphdict["lz"] / 2.0],
-        ])
+            if record_history:
+                self.electron_history = lil_matrix((n, n), dtype=int)
+
+        self.n_hops = 0
+        self.box = box
         self.displacement = None
         self.mol_ID_dict = mol_ID_dict
-        # Set the use of average hop rates to false if the key does not exist in
-        # the parameter dict
-        try:
-            self.use_average_hop_rates = param_dict["use_average_hop_rates"]
-            self.average_intra_hop_rate = param_dict["average_intra_hop_rate"]
-            self.average_inter_hop_rate = param_dict["average_inter_hop_rate"]
-        except KeyError:
-            self.use_average_hop_rates = False
+
+        self.use_average_hop_rates = use_average_hop_rates
+        self.average_intra_hop_rate = average_intra_hop_rate
+        self.average_inter_hop_rate = average_inter_hop_rate
+
         # Set the use of Koopmans' approximation to false if the key does not
         # exist in the parameter dict
-        try:
-            self.use_koopmans_approximation = param_dict[
-                "use_koopmans_approximation"
-            ]
-        except KeyError:
-            self.use_koopmans_approximation = False
+        self.use_koopmans = use_koopmans
         # Are we using a simple Boltzmann penalty?
-        try:
-            self.use_simple_energetic_penalty = param_dict[
-                "use_simple_energetic_penalty"
-            ]
-        except KeyError:
-            self.use_simple_energetic_penalty = False
+        self.boltz_penalty = boltz_penalty
         # Are we applying a distance penalty beyond the transfer integral?
-        try:
-            self.use_VRH = param_dict["use_VRH"]
-        except KeyError:
-            self.use_VRH = False
-        if self.use_VRH is True:
+        self.use_VRH = use_VRH
+        if self.use_VRH:
             self.VRH_delocalisation = (self.current_chromo.VRH_delocalisation)
-        try:
-            self.hopping_prefactor = param_dict["hopping_prefactor"]
-        except KeyError:
-            self.hopping_prefactor = 1.0
+
+        self.hopping_prefactor = hopping_prefactor
 
     def calculate_hop(self, chromo_list):
         # Terminate if the next hop would be more than the termination limit
@@ -105,13 +90,13 @@ class carrier:
         if self.use_average_hop_rates is True:
             # Use the average hop values given in the parameter dict to pick a
             # hop
-            for neighbor_details in self.current_chromo.neighbors:
-                neighbor = chromo_list[neighbor_details[0]]
-                assert neighbor.ID == neighbor_details[0]
+            for i,img in self.current_chromo.neighbors:
+                neighbor = chromo_list[i]
+                assert neighbor.id == i
                 if (
-                    self.mol_ID_dict[self.current_chromo.ID]
-                    == self.mol_ID_dict[neighbor.ID]
-                ):
+                    self.mol_ID_dict[self.current_chromo.id]
+                    == self.mol_ID_dict[neighbor.id]
+                    ):
                     hop_rate = self.average_intra_hop_rate
                 else:
                     hop_rate = self.average_inter_hop_rate
@@ -121,68 +106,53 @@ class carrier:
         else:
             # Obtain the reorganisation energy in J (from eV in the parameter
             # file)
-            for neighbor_index, transfer_integral in enumerate(
-                self.current_chromo.neighbors_TI
-            ):
+            for i_neighbor, ti in enumerate(self.current_chromo.neighbors_ti):
                 # Ignore any hops with a NoneType transfer integral (usually
                 # due to an orca error)
                 if transfer_integral is None:
                     continue
-                delta_E_ij = self.current_chromo.neighbors_delta_E[
-                    neighbor_index
-                ]
+                n_ind = self.current_chromo.neighbors[i_neighbor][0]
+                delta_E_ij = self.current_chromo.neighbors_delta_e[i_neighbor]
                 # Load the specified hopping prefactor
                 prefactor = self.hopping_prefactor
                 # Get the relative image so we can update the carrier image
                 # after the hop
-                rel_image = np.array(
-                        self.current_chromo.neighbors[neighbor_index][1]
-                        )
+                rel_image = self.current_chromo.neighbors[i_neighbor][1]
                 # All of the energies are in eV currently, so convert them to J
                 if self.use_VRH is True:
-                    neighbor_chromo = chromo_list[
-                        self.current_chromo.neighbors[neighbor_index][0]
-                    ]
-                    neighbor_chromo_pos = (
-                            neighbor_chromo.pos + rel_image
-                            * (sim_dims[:,1] - sim_dims[:,0])
-                    )
+                    neighbor_chromo = chromo_list[n_ind]
+                    neighbor_pos = neighbor_chromo.pos + rel_image * self.box
+
                     # Chromophore separation needs converting to m
                     chromo_separation = (
                         hf.calculate_separation(
-                            self.current_chromo.pos, neighbor_chromo_pos
+                            self.current_chromo.pos, neighbor_pos
                         )
                         * 1e-10
                     )
                     hop_rate = hf.calculate_carrier_hop_rate(
                         self.lambda_ij * elem_chrg,
-                        transfer_integral * elem_chrg,
+                        ti * elem_chrg,
                         delta_E_ij * elem_chrg,
                         prefactor,
-                        self.T,
+                        self.temp,
                         use_VRH=True,
                         rij=chromo_separation,
                         VRH_delocalisation=self.VRH_delocalisation,
-                        boltz_pen=self.use_simple_energetic_penalty,
+                        boltz_pen=self.boltz_penalty,
                     )
                 else:
                     hop_rate = hf.calculate_carrier_hop_rate(
                         self.lambda_ij * elem_chrg,
-                        transfer_integral * elem_chrg,
+                        ti * elem_chrg,
                         delta_E_ij * elem_chrg,
                         prefactor,
-                        self.T,
-                        boltz_pen=self.use_simple_energetic_penalty,
+                        self.temp,
+                        boltz_pen=self.boltz_penalty,
                     )
                 hop_time = hf.determine_event_tau(hop_rate)
                 # Keep track of the chromophoreID and the corresponding tau
-                hop_times.append(
-                    [
-                        self.current_chromo.neighbors[neighbor_index][0],
-                        hop_time,
-                        rel_image,
-                    ]
-                )
+                hop_times.append([n_ind, hop_time, rel_image])
         # Sort by ascending hop time
         hop_times.sort(key=lambda x: x[1])
         if len(hop_times) == 0:
@@ -333,17 +303,16 @@ def run_single_kmc(
         AA_morphdict,
         param_dict,
         chromo_list,
-        CPU_rank,
+        cpu_rank,
         seed,
         send_end,
-        overwrite=False
+        use_avg_hop_rates=False,
+        record_history=True
         ):
     global log_file
 
-    log_file = os.path.join(
-            KMC_directory, "KMC_log_{:02d}.log".format(CPU_rank)
-            )
-    pickle_filename = os.path.join(KMC_directory, f"kmc_{CPU_rank:02d}.pickle")
+    log_file = os.path.join(KMC_directory, f"KMC_log_{cpu_rank:02d}.log")
+    pickle_file = os.path.join(KMC_directory, f"kmc_{cpu_rank:02d}.pickle")
     # Reset the log file
     with open(log_file, "wb+") as log_file_handle:
         pass
@@ -351,16 +320,13 @@ def run_single_kmc(
     # Set the affinities for this current process to make sure it's maximising
     # available CPU usage
     current_PID = os.getpid()
-    try:
-        if param_dict["use_average_hop_rates"] is True:
-            # Chosen to split hopping by inter-intra molecular hops, so get
-            # molecule data
-            mol_ID_dict = split_molecules(AA_morphdict, chromo_list)
-            # molIDDict is a dictionary where the keys are the chromoIDs, and
-            # the vals are the molIDs
-        else:
-            raise KeyError
-    except KeyError:
+    if use_avg_hop_rates is True:
+        # Chosen to split hopping by inter-intra molecular hops, so get
+        # molecule data
+        mol_ID_dict = split_molecules(AA_morphdict, chromo_list)
+        # molIDDict is a dictionary where the keys are the chromoIDs, and
+        # the vals are the molIDs
+    else:
         mol_ID_dict = None
     # Attempt to catch a kill signal to ensure that we save the pickle before
     # termination
@@ -368,7 +334,7 @@ def run_single_kmc(
     # Save the pickle as a list of `saveCarrier' instances that contain the
     # bare minimum
     save_data = initialise_save_data(len(chromo_list), seed)
-    if param_dict["record_carrier_history"] is False:
+    if record_history is False:
         save_data["hole_history_matrix"] = None
         save_data["electron_history_matrix"] = None
     t0 = time.perf_counter()
@@ -379,21 +345,18 @@ def run_single_kmc(
             t1 = time.perf_counter()
             # Find a random position to start the carrier in
             while True:
-                start_chromo_ID = np.random.randint(0, len(chromo_list) - 1)
-                if (ctype.lower() == "electron") and (
-                    chromo_list[start_chromo_ID].species.lower() != "acceptor"
-                ):
+                i = np.random.randint(0, len(chromo_list) - 1)
+                i_chromo = chromo_list[i]
+                if (ctype == "electron") and (i_chromo.species != "acceptor"):
                     continue
-                elif (ctype.lower() == "hole") and (
-                    chromo_list[start_chromo_ID].species.lower() != "donor"
-                ):
+                elif (ctype == "hole") and (i_chromo.species != "donor"):
                     continue
                 break
             # Create the carrier instance
-            this_carrier = carrier(
+            i_carrier = Carrier(
                 chromo_list,
                 param_dict,
-                start_chromo_ID,
+                i_chromo,
                 lifetime,
                 carrier_no,
                 AA_morphdict,
@@ -402,14 +365,14 @@ def run_single_kmc(
             terminate_simulation = False
             while terminate_simulation is False:
                 terminate_simulation = bool(
-                        this_carrier.calculate_hop(chromo_list)
+                        i_carrier.calculate_hop(chromo_list)
                 )
                 if killer.kill_sent is True:
                     raise terminate(
                         "Kill command sent, terminating KMC simulation..."
                     )
             # Now the carrier has finished hopping, let's calculate its vitals
-            initial_position = this_carrier.initial_chromo.pos
+            init_position = this_carrier.initial_chromo.pos
             final_position = this_carrier.current_chromo.pos
             final_image = this_carrier.image
             sim_dims = this_carrier.sim_dims
@@ -428,19 +391,19 @@ def run_single_kmc(
                 "carrier_type",
             ]
             for name in importantData:
-                save_data[name].append(this_carrier.__dict__[name])
+                save_data[name].append(i_carrier.__dict__[name])
             # Update the carrierHistoryMatrix
-            if param_dict["record_carrier_history"] is True:
-                if this_carrier.carrier_type.lower() == "hole":
-                    save_data[
-                        "hole_history_matrix"
-                    ] += this_carrier.hole_history_matrix
-                elif this_carrier.carrier_type.lower() == "electron":
+            if record_history is True:
+                if i_carrier.carrier_type == "hole":
+                    save_data["hole_history_matrix"] += (
+                            i_carrier.hole_history_matrix
+                            )
+                elif i_carrier.carrier_type == "electron":
                     save_data["electron_history_matrix"] += (
-                            this_carrier.electron_history_matrix
+                            i_carrier.electron_history_matrix
                             )
             # Then add in the initial and final positions
-            save_data["initial_position"].append(initial_position)
+            save_data["initial_position"].append(init_position)
             save_data["final_position"].append(final_position)
             t2 = time.perf_counter()
             elapsed_time = float(t2) - float(t1)
@@ -458,13 +421,13 @@ def run_single_kmc(
 
             write_lines = [
                     "{0:s} hopped {1:d} times, over {2:.2e} seconds, ".format(
-                        this_carrier.carrier_type.capitalize(),
-                        this_carrier.no_hops,
-                        this_carrier.current_time,
+                        i_carrier.carrier_type.capitalize(),
+                        i_carrier.no_hops,
+                        i_carrier.current_time,
                         ),
                     f"into image {repr(this_carrier.image)}",
                     ", for a displacement of {0:.2f}, in {1:.2f} ".format(
-                        this_carrier.displacement,
+                        i_carrier.displacement,
                         elapsed_time
                         ),
                     f"wall-clock {time_units:s}"
@@ -485,7 +448,7 @@ def run_single_kmc(
                         round((job_number + 1) / len(jobs_to_run) * 100)
                         )
                 hf.write_to_file(log_file, [write_str])
-                save_pickle(save_data, pickle_filename)
+                save_pickle(save_data, pickle_file)
                 if save_slot.lower() == "slot1":
                     save_slot = "slot2"
                 elif save_slot.lower() == "slot2":
@@ -498,7 +461,7 @@ def run_single_kmc(
         hf.write_to_file(
             log_file, ["Saving the pickle file cleanly before termination..."]
         )
-        save_pickle(save_data, pickle_filename)
+        save_pickle(save_data, pickle_file)
         print("Pickle saved! Exiting Python...")
         exit()
     t3 = time.perf_counter()
@@ -522,7 +485,7 @@ def run_single_kmc(
             log_file,
             ["Saving the pickle file cleanly before termination..."]
             )
-    save_pickle(save_data, pickle_filename)
+    save_pickle(save_data, pickle_file)
     hf.write_to_file(log_file, ["Exiting normally..."])
     send_end.send(save_data)
 
