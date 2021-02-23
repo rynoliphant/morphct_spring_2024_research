@@ -12,9 +12,6 @@ from scipy.sparse import lil_matrix
 from morphct import helper_functions as hf
 
 
-elem_chrg = 1.60217657e-19  # C
-k_B = 1.3806488e-23  # m^{2} kg s^{-2} K^{-1}
-hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 log_file = None
 
 
@@ -129,15 +126,13 @@ class Carrier:
                     neighbor_pos = neighbor_chromo.pos + rel_image * self.box
 
                     # Chromophore separation needs converting to m
-                    separation = (hf.calculate_separation(
-                        self.current_chromo.pos, neighbor_pos
-                        )
-                        * 1e-10
-                    )
+                    sep = np.linalg.norm(self.current_chromo.pos - neighbor_pos)
+                    sep *= 1e-10
+
                     hop_rate = hf.calculate_carrier_hop_rate(
-                        self.lambda_ij * elem_chrg,
-                        ti * elem_chrg,
-                        delta_E_ij * elem_chrg,
+                        self.lambda_ij,
+                        ti,
+                        delta_E_ij,
                         prefactor,
                         self.temp,
                         use_VRH=True,
@@ -147,9 +142,9 @@ class Carrier:
                     )
                 else:
                     hop_rate = hf.calculate_carrier_hop_rate(
-                        self.lambda_ij * elem_chrg,
-                        ti * elem_chrg,
-                        delta_E_ij * elem_chrg,
+                        self.lambda_ij,
+                        ti,
+                        delta_E_ij,
                         prefactor,
                         self.temp,
                         boltz_pen=self.boltz_penalty,
