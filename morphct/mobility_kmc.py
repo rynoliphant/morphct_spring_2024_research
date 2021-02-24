@@ -336,15 +336,12 @@ def run_single_kmc(
             box,
             temp,
             len(chromo_list),
+            **carrier_kwargs,
             mol_id_dict=mol_id_dict,
         )
         continue_simulation = True
-        i=0
         while continue_simulation:
             continue_simulation = i_carrier.calculate_hop(chromo_list)
-            i += 1
-            if i > 100:
-                continue_simulation = False
         # Now the carrier has finished hopping, let's calculate its vitals
         i_carrier.update_displacement()
 
