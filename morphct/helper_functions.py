@@ -25,6 +25,20 @@ hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 sys.setrecursionlimit(10000)
 
 
+def time_units(elapsed_time, precision=2):
+    if elapsed_time < 60:
+        time_units = "seconds"
+    elif elapsed_time < 3600:
+        elapsed_time /= 60.0
+        time_units = "minutes"
+    elif elapsed_time < 86400:
+        elapsed_time /= 3600.0
+        time_units = "hours"
+    else:
+        elapsed_time /= 86400.0
+        time_units = "days"
+    return f"{elapsed_time:.{precision}f} {time_units}"
+
 def create_blank_morphology_dict():
     atom_dictionary = {
         "position": [],
