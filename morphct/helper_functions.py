@@ -7,15 +7,6 @@ import multiprocessing as mp
 import numpy as np
 
 
-try:
-    from hoomd_script import init
-
-    has_hoomd = True
-    del init
-except ImportError:
-    has_hoomd = False
-
-
 # UNIVERSAL CONSTANTS, DO NOT CHANGE!
 elem_chrg = 1.60217657e-19  # C
 k_B = 1.3806488e-23  # m^{2} kg s^{-2} K^{-1}
@@ -25,10 +16,13 @@ hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 sys.setrecursionlimit(10000)
 
 
-def v_print(string, verbosity, v_level):
+def v_print(string, verbosity, v_level, filename=None):
     if verbosity > v_level:
-        print(string)
-    sys.stdout.flush()
+        if filename is None:
+            print(string)
+        else:
+            with open(filename, 'a') as f:
+                f.write(string)
 
 
 def time_units(elapsed_time, precision=2):
@@ -44,54 +38,6 @@ def time_units(elapsed_time, precision=2):
         elapsed_time /= 86400.0
         time_units = "days"
     return f"{elapsed_time:.{precision}f} {time_units}"
-
-def create_blank_morphology_dict():
-    atom_dictionary = {
-        "position": [],
-        "image": [],
-        "mass": [],
-        "diameter": [],
-        "type": [],
-        "body": [],
-        "bond": [],
-        "angle": [],
-        "dihedral": [],
-        "improper": [],
-        "charge": [],
-        "xy": 0.0,
-        "xz": 0.0,
-        "yz": 0.0,
-        "lx": 0.0,
-        "ly": 0.0,
-        "lz": 0.0,
-        "natoms": 0,
-    }
-    return atom_dictionary
-
-
-def find_index(string, character):
-    """
-    This function returns the locations of an inputted character in an inputted string
-    """
-    index = 0
-    locations = []
-    while index < len(string):
-        if string[index] == character:
-            locations.append(index)
-        index += 1
-    if len(locations) == 0:
-        return None
-    return locations
-
-
-def calculate_separation(atom1, atom2):
-    """
-    This function calculates the distance between two input points (either as lists or
-    np.arrays)
-    """
-    atom1 = np.array(atom1)
-    atom2 = np.array(atom2)
-    return np.sqrt(np.sum((atom1 - atom2) ** 2))
 
 
 def calc_COM(
