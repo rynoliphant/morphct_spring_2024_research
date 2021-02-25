@@ -20,9 +20,6 @@ from morphct import helper_functions as hf
 
 plt = None
 p3 = None
-elem_chrg = 1.60217657e-19  # C
-kB = 1.3806488e-23  # m^{2} kg s^{-2} K^{-1}
-hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 temperature = 290  # K
 
 
@@ -473,7 +470,7 @@ def calc_mobility(lin_fit_X, lin_fit_Y, av_time_error, av_MSD_error):
     )
     # Use Einstein-Smoluchowski relation
     # This is in m^{2} / Vs
-    mobility = (elem_chrg * diffusion_coeff / (kB * temperature))
+    mobility = (hf.elem_chrg * diffusion_coeff / (hf.k_B * temperature))
     # Convert to cm^{2}/ Vs
     mobility *= 100 ** 2
     mob_error = (diff_error / diffusion_coeff) * mobility
@@ -2036,9 +2033,9 @@ def plot_mixed_hopping_rates(
                     * 1e-10
                 )
                 rate = hf.calculate_carrier_hop_rate(
-                    lambda_ij * elem_chrg,
-                    T_ij * elem_chrg,
-                    delta_E * elem_chrg,
+                    lambda_ij,
+                    T_ij,
+                    delta_E,
                     prefactor,
                     T,
                     use_VRH=VRH,
@@ -2048,9 +2045,9 @@ def plot_mixed_hopping_rates(
                 )
             else:
                 rate = hf.calculate_carrier_hop_rate(
-                    lambda_ij * elem_chrg,
-                    T_ij * elem_chrg,
-                    delta_E * elem_chrg,
+                    lambda_ij,
+                    T_ij,
+                    delta_E,
                     prefactor,
                     T,
                     boltz_pen=boltz_pen,
