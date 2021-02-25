@@ -10,9 +10,10 @@ import numpy as np
 from scipy.sparse import lil_matrix
 
 from morphct import helper_functions as hf
+from morphct.helper_functions import v_print
 
 
-log_file = None
+mp.set_start_method("fork")
 
 
 class Carrier:
@@ -83,7 +84,7 @@ class Carrier:
         displacement = final_pos - init_pos + self.image * self.box
         self.displacement = np.linalg.norm(displacement)
 
-    def calculate_hop(self, chromo_list, verbose=False):
+    def calculate_hop(self, chromo_list, verbose=0):
         # Terminate if the next hop would be more than the termination limit
         if self.hop_limit is not None:
             if self.n_hops + 1 > self.hop_limit:
@@ -169,10 +170,12 @@ class Carrier:
         # singleCoreRunKMC.py
         # Take the quickest hop
         n_ind, hop_time, rel_img = hop_times[0]
-        if verbose:
-            print("\thop_times:")
-            print(*[f"\t{i} {j:.2e} {k}" for (i,j,k) in hop_times], sep="\n")
-            print(f"\tHopping to {n_ind}")
+
+        v_print("\thop_times:", verbose, 1)
+        hop_str = "\n".join([f"\t\t{i} {j:.2e} {k}" for (i,j,k) in hop_times])
+        v_print(hop_str, verbose, 1)
+        v_print(f"\tHopping to {n_ind}", verbose, 1)
+
         self.perform_hop(chromo_list[n_ind], hop_time, rel_img)
         return True
 
@@ -193,54 +196,7 @@ class Carrier:
             self.electron_history[init_id, dest_id] += 1
 
 
-class termination_signal:
-    kill_sent = False
-
-    def __init__(self):
-        signal.signal(signal.SIGINT, self.catch_kill)
-        signal.signal(signal.SIGTERM, self.catch_kill)
-
-    def catch_kill(self, signum, frame):
-        self.kill_sent = True
-
-
-class terminate(Exception):
-    """This class is raised to terminate a KMC simulation"""
-
-    def __init__(self, string):
-        self.string = string
-
-    def __str__(self):
-        return self.string
-
-
-def save_pickle(save_data, save_pickle_name):
-    with open(save_pickle_name, "wb+") as pickle_file:
-        pickle.dump(save_data, pickle_file)
-    hf.write_to_file(
-        log_file, [f"Pickle file saved successfully as {save_pickle_name}"]
-    )
-
-
-
-
-def initialise_save_data(n_chromos, seed):
-    return {
-        "seed": seed,
-        "id": [],
-        "image": [],
-        "lifetime": [],
-        "current_time": [],
-        "n_hops": [],
-        "displacement": [],
-        "hole_history": lil_matrix((n_chromos, n_chromos), dtype=int),
-        "electron_history": lil_matrix((n_chromos, n_chromos), dtype=int),
-        "initial_position": [],
-        "final_position": [],
-        "c_type": [],
-    }
-
-
+# TODO this function is outdated
 def split_molecules(input_dictionary, chromo_list):
     # Split the full morphology into individual molecules
     # Create a lookup table `neighbor list' for all connected atoms called
@@ -258,6 +214,7 @@ def split_molecules(input_dictionary, chromo_list):
     return mol_id_dict
 
 
+# TODO this function is outdated
 def update_molecule(atom_id, molecule_list, bonded_atoms):
     # Recursively add all neighbors of atom number atomid to this molecule
     try:
@@ -296,11 +253,15 @@ def run_single_kmc(
         box,
         temp,
         carrier_kwargs={},
-        cpu_rank=None,
         seed=None,
         send_end=None,
+        verbose=0
         ):
-    print(f"Found {len(jobs):d} jobs to run")
+    if seed is not None:
+        np.random.seed(seed)
+
+    v_print(f"Found {len(jobs):d} jobs to run", verbose, 0)
+
     try:
         use_avg_hop_rates = carrier_kwargs["use_avg_hop_rates"]
     except KeyError:
@@ -317,7 +278,7 @@ def run_single_kmc(
     t0 = time.perf_counter()
     carrier_list = []
     for i_job, [carrier_no, lifetime, ctype] in enumerate(jobs):
-        print(f"starting job {i_job}")
+        v_print(f"starting job {i_job}", verbose, 0)
         t1 = time.perf_counter()
         # Find a random position to start the carrier in
         while True:
@@ -339,9 +300,9 @@ def run_single_kmc(
             **carrier_kwargs,
             mol_id_dict=mol_id_dict,
         )
-        continue_simulation = True
-        while continue_simulation:
-            continue_simulation = i_carrier.calculate_hop(chromo_list)
+        continue_sim = True
+        while continue_sim:
+            continue_sim = i_carrier.calculate_hop(chromo_list, verbose=verbose)
         # Now the carrier has finished hopping, let's calculate its vitals
         i_carrier.update_displacement()
 
@@ -349,25 +310,22 @@ def run_single_kmc(
         elapsed_time = float(t2) - float(t1)
         time_str = hf.time_units(elapsed_time)
 
-        print("\t{} hopped {} times, over {:.2e} seconds, ".format(
-            i_carrier.c_type,
-            i_carrier.n_hops,
-            i_carrier.current_time
+        v_print(
+            f"\t{i_carrier.c_type} hopped {i_carrier.n_hops} times over " +
+            f"{i_carrier.current_time:.2e} seconds " +
+            f"into image {i_carrier.image} for a displacement of" +
+            f"\n\t{i_carrier.displacement:.2f} (took walltime {time_str})",
+            verbose,
+            0
             )
-        )
-        print(f"\tinto image {i_carrier.image}")
-        print("\tfor a displacement of {:.2f} (took walltime {})".format(
-            i_carrier.displacement,
-            time_str
-            )
-        )
         carrier_list.append(i_carrier)
     t3 = time.perf_counter()
     elapsed_time = float(t3) - float(t0)
     time_str = hf.time_units(elapsed_time)
     if send_end is not None:
-        send_end.send(save_data)
-    return carrier_list
+        send_end.send(carrier_list)
+    else:
+        return carrier_list
 
 
 def get_jobslist(sim_times, n_holes=0, n_elec=0, nprocs=None, seed=None):
@@ -397,27 +355,38 @@ def get_jobslist(sim_times, n_holes=0, n_elec=0, nprocs=None, seed=None):
 def run_kmc(
         jobs_list,
         KMC_directory,
-        AA_morphdict,
-        param_dict,
-        chromo_list
+        chromo_list,
+        snap,
+        temp,
+        combine_KMC_results=True,
+        carrier_kwargs={},
+        verbose=0
         ):
     running_jobs = []
     pipes = []
+    box = snap.configuration.box[:3]
 
-    for proc_id, jobs in enumerate(jobs_list):
+    v_print("test!", verbose, 0)
+    for jobs in jobs_list:
         child_seed = np.random.randint(0, 2 ** 32)
 
         recv_end, send_end = mp.Pipe(False)
-        p = mp.Process(target=run_single_kmc, args=(
-            jobs,
-            KMC_directory,
-            AA_morphdict,
-            param_dict,
-            chromo_list,
-            proc_id,
-            child_seed,
-            send_end
-        ))
+        p = mp.Process(
+                target=run_single_kmc,
+                args=(
+                    jobs,
+                    KMC_directory,
+                    chromo_list,
+                    box,
+                    temp
+                    ),
+                kwargs={
+                    "carrier_kwargs": carrier_kwargs,
+                    "seed": child_seed,
+                    "send_end": send_end,
+                    "verbose": verbose
+                    }
+                )
         running_jobs.append(p)
         pipes.append(recv_end)
         p.start()
@@ -426,18 +395,21 @@ def run_kmc(
     for p in running_jobs:
         p.join()
 
-    carrier_data_list = [x.recv() for x in pipes]
+    carriers_lists = [x.recv() for x in pipes]
 
+    carriers = [item for sublist in carriers_lists for item in sublist]
     # Now combine the carrier data
-    print("All KMC jobs completed!")
-    if param_dict["combine_KMC_results"] is True:
-        print("Combining outputs...")
+    v_print("All KMC jobs completed!", verbose, 0)
+    if combine_KMC_results:
+        v_print("Combining outputs...", verbose, 0)
+
         combined_data = {}
-        for carrier_data in carrier_data_list:
-            for key, val in carrier_data.items():
-                    if key not in combined_data:
-                        combined_data[key] = val
-                    else:
-                        combined_data[key] += val
+        for carrier in carriers:
+            d = carrier.__dict__
+            for key, val in d.items():
+                if key not in combined_data:
+                    combined_data[key] = [val]
+                else:
+                    combined_data[key] += [val]
         return combined_data
-    return carrier_data_list
+    return carriers
