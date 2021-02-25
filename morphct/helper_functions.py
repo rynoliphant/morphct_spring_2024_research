@@ -25,6 +25,12 @@ hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 sys.setrecursionlimit(10000)
 
 
+def v_print(string, verbosity, v_level):
+    if verbosity > v_level:
+        print(string)
+    sys.stdout.flush()
+
+
 def time_units(elapsed_time, precision=2):
     if elapsed_time < 60:
         time_units = "seconds"
