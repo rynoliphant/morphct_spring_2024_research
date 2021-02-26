@@ -253,6 +253,7 @@ def run_single_kmc(
         box,
         temp,
         carrier_kwargs={},
+        cpu_rank=None,
         seed=None,
         send_end=None,
         verbose=0
@@ -260,7 +261,16 @@ def run_single_kmc(
     if seed is not None:
         np.random.seed(seed)
 
-    v_print(f"Found {len(jobs):d} jobs to run", verbose, 0)
+    if cpu_rank is not None:
+        # If we're running on multiple cpus, don't print to std out
+        # print to a log file instead and start fresh: remove it if it exists
+        filename = os.path.join(KMC_directory, f"kmc_{cpu_rank:02d}.log")
+        if os.path.exists(filename):
+            os.remove(filename)
+    else:
+        filename = None
+
+    v_print(f"Found {len(jobs):d} jobs to run", verbose, 0, filename)
 
     try:
         use_avg_hop_rates = carrier_kwargs["use_avg_hop_rates"]
@@ -278,7 +288,7 @@ def run_single_kmc(
     t0 = time.perf_counter()
     carrier_list = []
     for i_job, [carrier_no, lifetime, ctype] in enumerate(jobs):
-        v_print(f"starting job {i_job}", verbose, 0)
+        v_print(f"starting job {i_job}", verbose, 0, filename)
         t1 = time.perf_counter()
         # Find a random position to start the carrier in
         while True:
@@ -316,7 +326,8 @@ def run_single_kmc(
             f"into image {i_carrier.image} for a displacement of" +
             f"\n\t{i_carrier.displacement:.2f} (took walltime {time_str})",
             verbose,
-            0
+            0,
+            filename
             )
         carrier_list.append(i_carrier)
     t3 = time.perf_counter()
@@ -366,8 +377,7 @@ def run_kmc(
     pipes = []
     box = snap.configuration.box[:3]
 
-    v_print("test!", verbose, 0)
-    for jobs in jobs_list:
+    for cpu_rank, jobs in enumerate(jobs_list):
         child_seed = np.random.randint(0, 2 ** 32)
 
         recv_end, send_end = mp.Pipe(False)
@@ -384,7 +394,8 @@ def run_kmc(
                     "carrier_kwargs": carrier_kwargs,
                     "seed": child_seed,
                     "send_end": send_end,
-                    "verbose": verbose
+                    "verbose": verbose,
+                    "cpu_rank": cpu_rank
                     }
                 )
         running_jobs.append(p)
@@ -407,6 +418,9 @@ def run_kmc(
         for carrier in carriers:
             d = carrier.__dict__
             for key, val in d.items():
+                if key in ["initial_chromo", "current_chromo"]:
+                    val = val.center
+                    key = key.split("_")[0] + "_position"
                 if key not in combined_data:
                     combined_data[key] = [val]
                 else:
