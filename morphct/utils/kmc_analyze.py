@@ -100,17 +100,17 @@ def plot_displacement_dist(carrier_data, c_type, path):
     plt.xlabel(f"{c_type.capitalize()} Displacement (nm)")
     plt.ylabel("Frequency (Arb. U.)")
     filename = f"{c_type}_displacement_dist.png"
-    filepath = os.path.join(path, "figures", filename)
+    filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
     print(f"Figure saved as {filepath}")
     plt.close()
 
 
 def plot_cluster_size_dist(cluster_freqs, path):
-    carrier_types = ["hole", "electron"]
-    for carrier_type_i, carrier_type in enumerate(carrier_types):
+    c_types = ["hole", "electron"]
+    for c_type_i, c_type in enumerate(c_types):
         try:
-            sizes = list(cluster_freqs[carrier_type_i].values())
+            sizes = list(cluster_freqs[c_type_i].values())
             sizes = [np.log10(size) for size in sizes if size > 5]
             if len(sizes) == 0:
                 raise IndexError
@@ -134,8 +134,8 @@ def plot_cluster_size_dist(cluster_freqs, path):
         plt.ylabel("Frequency (Arb. U.)")
         # 32 for hole cluster size dist, 33 for electron cluster size dist
         filename = "{:02}_{}_cluster_dist.png".format(
-                32 + carrier_types.index(carrier_type),
-                carrier_type
+                32 + c_types.index(c_type),
+                c_type
                 )
         filepath = os.path.join(path, "figures", filename)
         plt.savefig(filepath, dpi=300)
@@ -200,7 +200,7 @@ def create_array_for_plot_connections(chromo_list, carrier_history, sim_dims):
 
 
 def plot_connections(
-    chromo_list, sim_dims, carrier_history, carrier_type, path
+    chromo_list, sim_dims, carrier_history, c_type, path
 ):
     # A complicated function that shows connections between carriers in 3D
     # that carriers prefer to hop between.
@@ -348,15 +348,15 @@ def plot_connections(
     cbar.ax.set_yticklabels([rf"10$^{{{x}}}$" for x in tick_location])
 
     # Name and save the figure.
-    carrier_types = ["hole", "electron"]
+    c_types = ["hole", "electron"]
     species = ["donor", "acceptor"]
-    carrier_i = carrier_types.index(carrier_type)
+    carrier_i = c_types.index(c_type)
     figure_title = "{} ({}) Network".format(
             species[carrier_i].capitalize(),
-            carrier_type.capitalize()
+            c_type.capitalize()
             )
     # 01 for donor 3d network, 02 for acceptor 3d network
-    filename = f"{1 + carrier_i:02}_3d_{carrier_type}.png"
+    filename = f"{1 + carrier_i:02}_3d_{c_type}.png"
     filepath = os.path.join(path, "figures", filename),
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
     print(f"Figure saved as {filepath}")
@@ -405,7 +405,7 @@ def plot_MSD(times, MSDs, time_stderr, MSD_stderr, c_type, path):
     plt.ylabel(r"MSD (m$^{2}$)")
     plt.title(rf"$\mu_{{0, {c_type[0]}}}$ = {mobility:.3e} cm$^{2}$/Vs", y=1.1)
     filename = f"lin_MSD_{c_type}.png"
-    filepath = os.path.join(path, "figures", filename)
+    filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
     plt.clf()
     print(f"Figure saved as {filepath}")
@@ -472,55 +472,39 @@ def calculate_anisotropy(xvals, yvals, zvals):
     return anisotropy
 
 
-def plot_hop_vectors(
-    carrier_data,
-    AA_morphdict,
-    chromo_list,
-    sim_dims,
-    carrier_type,
-    plot3D_graphs,
-    path,
-):
+def plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path,):
     from matplotlib import colors
     import matplotlib.cm as cmx
 
-    if not plot3D_graphs:
-        return
+    box = snap.configuration.box[:3]
+    if c_type == "hole":
+        carrier_history = carrier_data["hole_history"]
+    else:
+        carrier_history = carrier_data["electron_history"]
 
-    box_lengths = np.array([axis[1] - axis[0] for axis in sim_dims])
-    carrier_history = carrier_data["carrier_history_matrix"]
-    non_zero_coords = list(zip(*carrier_history.nonzero()))
+    nonzero = list(zip(*carrier_history.nonzero()))
     hop_vectors = []
     intensities = []
-    for (chromo1, chromo2) in non_zero_coords:
+    for i,j in nonzero:
         # Find the normal of chromo1 plane (first three atoms)
-        triplet_pos = [
-            np.array(AA_morphdict["position"][AAID])
-            for AAID in chromo_list[chromo1].AAIDs[:3]
-        ]
-        AB = triplet_pos[1] - triplet_pos[0]
-        AC = triplet_pos[2] - triplet_pos[0]
-        normal = np.cross(AB, AC)
-        normal /= np.linalg.norm(normal)
-        # Calculate rotation matrix required to map this onto baseline (0, 0, 1)
+        ichromo_i = chromo_list[i]
+        jchromo_j = chromo_list[j]
+        normal = hf.get_chromo_normvec(ichromo, snap)
+
+        # Calculate rotation matrix required to map this onto (0, 0, 1)
         rotation_matrix = hf.get_rotation_matrix(normal, np.array([0, 0, 1]))
-        # Find the vector from chromo1 to chromo2 (using the correct rleative image)
-        neighbor_IDs = [
-            neighbor[0] for neighbor in chromo_list[chromo1].neighbors
-        ]
-        nlist_i = neighbor_IDs.index(chromo2)
-        relative_image = np.array(
-            chromo_list[chromo1].neighbors[nlist_i][1]
-        )
-        chromo1_pos = chromo_list[chromo1].pos
-        chromo2_pos = chromo_list[chromo2].pos + (
-            relative_image * box_lengths
-        )
-        unrotated_hop_vector = chromo2_pos - chromo1_pos
+
+        # Find the vector from chromoi to chromoj (using correct relative image)
+        relative_image = [img for ind,img in ichromo.neighbors if ind == j][0]
+        jchromo_center = jchromo.center + relative_image * box
+
+        unrotated_hop_vector = jchromo_center - ichromo_center
+
         # Apply rotation matrix to chromo1-chromo2 vector
         hop_vector = np.matmul(rotation_matrix, unrotated_hop_vector)
+
         # Store the hop vector and the intensity
-        intensity = np.log10(carrier_history[chromo1, chromo2])
+        intensity = np.log10(carrier_history[i, j])
         hop_vectors.append(hop_vector)
         intensities.append(intensity)
 
@@ -530,7 +514,7 @@ def plot_hop_vectors(
     fig = plt.figure(figsize=(7, 6))
     # Make a 3D subplot
     ax = fig.add_subplot(111, projection="3d")
-    # Determine the smallest, non-zero number of times two chromophores are connected.
+    # Determine the smallest, non-zero n_times two chromophores are connected.
     I_min = np.min(intensities)
     # Determine the max number of times two chormophores are connected.
     I_max = np.max(intensities)
@@ -541,27 +525,18 @@ def plot_hop_vectors(
     scalar_map = cmx.ScalarMappable(norm=c_norm, cmap=color_map)
     hop_colors = scalar_map.to_rgba(intensities)
 
-    # # Set up the intensity for the hops so more travelled paths are more intense
-    # alphas = intensities / I_max
-    # hop_colors[:, 3] = alphas
-
+    n = len(hop_colors)
     # Plot the vectors between two chromophores
+    # X-vals for start of each arrow
+    # Y-vals for start of each arrow
+    # Z-vals for start of each arrow
+    # X-vecs for direction of each arrow
+    # Y-vecs for direction of each arrow
+    # Z-vecs for direction of each arrow
     ax.quiver(
-        # X-vals for start of each arrow
-        np.array([0] * len(hop_colors)),
-        # Y-vals for start of each arrow
-        np.array([0] * len(hop_colors)),
-        # Z-vals for start of each arrow
-        np.array([0] * len(hop_colors)),
-        # X-vecs for direction of each arrow
-        hop_vectors[:, 0],
-        # Y-vecs for direction of each arrow
-        hop_vectors[:, 1],
-        # Z-vecs for direction of each arrow
-        hop_vectors[:, 2],
-        color=hop_colors,
-        arrow_length_ratio=0,
-        linewidth=0.7,
+        np.zeros(n), np.zeros(n), np.zeros(n),
+        hop_vectors[:, 0], hop_vectors[:, 1], hop_vectors[:, 2],
+        color=hop_colors, arrow_length_ratio=0, linewidth=0.7,
     )
     ax.set_xlim([-np.max(hop_vectors[:, 0]), np.max(hop_vectors[:, 0])])
     ax.set_ylim([-np.max(hop_vectors[:, 1]), np.max(hop_vectors[:, 1])])
@@ -576,157 +551,56 @@ def plot_hop_vectors(
     cbar.ax.set_yticklabels([rf"10$^{{{x}}}$" for x in tick_location])
 
     # Name and save the figure.
-    carrier_types = ["hole", "electron"]
-    species = ["donor", "acceptor"]
-    carrier_i = carrier_types.index(carrier_type)
-    figure_title = "{} ({}) Network".format(
-            species[carrier_i].capitalize(), carrier_type.capitalize()
-            )
-    # 36 for donor 3d network, 37 for acceptor 3d network
-    filename = "{:02}_hop_vec_{}.png".format(36 + carrier_i, carrier_type)
-    filepath = os.path.join(path, "figures", filename),
+    if c_type == "hole":
+        species = "donor"
+    else:
+        species = "acceptor"
+    figure_title = f"{species.capitalize()} ({c_type.capitalize()}) Network"
+
+    filename = f"hop_vec_{c_type}.png"
+    filepath = os.path.join(path, filename),
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
     print(f"Figure saved as {filepath}")
     plt.clf()
 
 
-def plot_anisotropy(
-    carrier_data, sim_dims, carrier_type, plot3D_graphs, path,
-):
-    sim_extent = [value[1] - value[0] for value in sim_dims]
-    xvals = []
-    yvals = []
-    zvals = []
-    colors = []
-    sim_dims_nm = list(map(list, np.array(sim_dims) / 10.0))
+def plot_anisotropy(carrier_data, c_type, path):
+    box = carrier_data["box"][0]
+    xyz_vals = []
     # Get the indices of the carriers that travelled the furthest
-    if len(carrier_data["final_position"]) <= 1000:
-        carrier_indices_to_use = range(len(carrier_data["final_position"]))
-    else:
-        displacements = copy.deepcopy(np.array(carrier_data["displacement"]))
-        carrier_indices_to_use = displacements.argsort()[-1000:][::-1]
-    for carrier_no in carrier_indices_to_use:
-        pos = carrier_data["final_position"][carrier_no]
-        position = [0.0, 0.0, 0.0]
-        for axis in range(len(pos)):
-            position[axis] = (
-                carrier_data["image"][carrier_no][axis] * sim_extent[axis]
-            ) + pos[axis]
-        xvals.append(position[0] / 10.0)
-        yvals.append(position[1] / 10.0)
-        zvals.append(position[2] / 10.0)
-        colors.append("b")
-    anisotropy = calculate_anisotropy(xvals, yvals, zvals)
-    if not plot3D_graphs:
-        return anisotropy
-    print("----------------------------------------")
+    # only do the first 1000, in case there's a lot
+    for i,pos in enumerate(carrier_data["current_position"][:1000]):
+        image = combined_data["image"][i]
+        position = image * box + pos
+        xyz_vals.append(position / 10.0)
+
+    colors = ['b'] * len(xyz_vals)
+    xyz_vals = np.array(xyz_vals)
+
+    anisotropy = get_anisotropy(xyz_vals[:,0], xyz_vals[:,1], xyz_vals[:,2])
     print(
-        "{0:s} charge transport anisotropy calculated as {1:f}".format(
-            carrier_type.capitalize(), anisotropy
-        )
-    )
-    print("----------------------------------------")
+            "----------------------------------------\n",
+            f"{c_type.capitalize()} charge transport anisotropy ",
+            f"calculated as {anisotrophy}\n",
+            "----------------------------------------"
+            )
     # Reduce number of plot markers
     fig = plt.gcf()
     ax = p3.Axes3D(fig)
-    if len(xvals) > 1000:
-        xvals = xvals[0 : len(xvals) : len(xvals) // 1000]
-        yvals = yvals[0 : len(yvals) : len(yvals) // 1000]
-        zvals = zvals[0 : len(zvals) : len(zvals) // 1000]
-    plt.scatter(xvals, yvals, zs=zvals, c=colors, s=20)
+    plt.scatter(xyz_vals[:,0], xyz_vals[:,1], zs=xyz_vals[:,2], c=colors, s=20)
     plt.scatter(0, 0, zs=0, c="r", s=50)
     # Draw boxlines
-    # Varying X
-    ax.plot(
-        [sim_dims_nm[0][0], sim_dims_nm[0][1]],
-        [sim_dims_nm[1][0], sim_dims_nm[1][0]],
-        [sim_dims_nm[2][0], sim_dims_nm[2][0]],
-        c="k",
-        linewidth=1.0,
-    )
-    ax.plot(
-        [sim_dims_nm[0][0], sim_dims_nm[0][1]],
-        [sim_dims_nm[1][1], sim_dims_nm[1][1]],
-        [sim_dims_nm[2][0], sim_dims_nm[2][0]],
-        c="k",
-        linewidth=1.0,
-    )
-    ax.plot(
-        [sim_dims_nm[0][0], sim_dims_nm[0][1]],
-        [sim_dims_nm[1][0], sim_dims_nm[1][0]],
-        [sim_dims_nm[2][1], sim_dims_nm[2][1]],
-        c="k",
-        linewidth=1.0,
-    )
-    ax.plot(
-        [sim_dims_nm[0][0], sim_dims_nm[0][1]],
-        [sim_dims_nm[1][1], sim_dims_nm[1][1]],
-        [sim_dims_nm[2][1], sim_dims_nm[2][1]],
-        c="k",
-        linewidth=1.0,
-    )
-    # Varying Y
-    ax.plot(
-        [sim_dims_nm[0][0], sim_dims_nm[0][0]],
-        [sim_dims_nm[1][0], sim_dims_nm[1][1]],
-        [sim_dims_nm[2][0], sim_dims_nm[2][0]],
-        c="k",
-        linewidth=1.0,
-    )
-    ax.plot(
-        [sim_dims_nm[0][1], sim_dims_nm[0][1]],
-        [sim_dims_nm[1][0], sim_dims_nm[1][1]],
-        [sim_dims_nm[2][0], sim_dims_nm[2][0]],
-        c="k",
-        linewidth=1.0,
-    )
-    ax.plot(
-        [sim_dims_nm[0][0], sim_dims_nm[0][0]],
-        [sim_dims_nm[1][0], sim_dims_nm[1][1]],
-        [sim_dims_nm[2][1], sim_dims_nm[2][1]],
-        c="k",
-        linewidth=1.0,
-    )
-    ax.plot(
-        [sim_dims_nm[0][1], sim_dims_nm[0][1]],
-        [sim_dims_nm[1][0], sim_dims_nm[1][1]],
-        [sim_dims_nm[2][1], sim_dims_nm[2][1]],
-        c="k",
-        linewidth=1.0,
-    )
-    # Varying Z
-    ax.plot(
-        [sim_dims_nm[0][0], sim_dims_nm[0][0]],
-        [sim_dims_nm[1][0], sim_dims_nm[1][0]],
-        [sim_dims_nm[2][0], sim_dims_nm[2][1]],
-        c="k",
-        linewidth=1.0,
-    )
-    ax.plot(
-        [sim_dims_nm[0][0], sim_dims_nm[0][0]],
-        [sim_dims_nm[1][1], sim_dims_nm[1][1]],
-        [sim_dims_nm[2][0], sim_dims_nm[2][1]],
-        c="k",
-        linewidth=1.0,
-    )
-    ax.plot(
-        [sim_dims_nm[0][1], sim_dims_nm[0][1]],
-        [sim_dims_nm[1][0], sim_dims_nm[1][0]],
-        [sim_dims_nm[2][0], sim_dims_nm[2][1]],
-        c="k",
-        linewidth=1.0,
-    )
-    ax.plot(
-        [sim_dims_nm[0][1], sim_dims_nm[0][1]],
-        [sim_dims_nm[1][1], sim_dims_nm[1][1]],
-        [sim_dims_nm[2][0], sim_dims_nm[2][1]],
-        c="k",
-        linewidth=1.0,
-    )
+    dims = np.array([(-i/2, i/2) for i in box/10])
+    corners = [
+            (dims[0,i], dims[1,j], dims[2,k])
+            for i,j,k in itertools.product(range(2), repeat=3)
+            ]
+    for i in corners:
+        ax.scatter(*i, c="k", linewidth=1)
     ax.set_xlabel("X (nm)", fontsize=20, labelpad=40)
     ax.set_ylabel("Y (nm)", fontsize=20, labelpad=40)
     ax.set_zlabel("Z (nm)", fontsize=20, labelpad=40)
-    maximum = max([max(xvals), max(yvals), max(zvals)])
+    maximum = np.max(xyz_vals)
     ax.set_xlim([-maximum, maximum])
     ax.set_ylim([-maximum, maximum])
     ax.set_zlim([-maximum, maximum])
@@ -737,14 +611,9 @@ def plot_anisotropy(
     ):
         tick.label.set_fontsize(16)
     ax.dist = 11
-    # 08 for hole anisotropy, 09 for electron anisotropy
-    if carrier_type == "hole":
-        figure_i = "08"
-    elif carrier_type == "electron":
-        figure_i = "09"
-    plt.title(f"Anisotropy ({carrier_type.capitalize()})", y=1.1)
-    filename = f"{figure_i}_anisotropy_{carrier_type}.png"
-    filepath = os.path.join(path, "figures", filename)
+    plt.title(f"Anisotropy ({c_type.capitalize()})", y=1.1)
+    filename = f"anisotropy_{c_type}.png"
+    filepath = os.path.join(path, filename)
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
     plt.clf()
     print(f"Figure saved as {filepath}")
@@ -780,7 +649,7 @@ def plot_temperature_progression(
     plt.plot(temp_data, anisotropy_data, c="r")
     plt.xlabel(x_label)
     plt.ylabel(r"$\kappa$ (Arb. U)")
-    filename = f"anisotropy_{carrier_type}.png"
+    filename = f"anisotropy_{c_type}.png"
     plt.savefig(filename, dpi=300)
     plt.clf()
     print(f"Figure saved as {filename}")
@@ -2362,8 +2231,8 @@ def plot_TI_hist(
     return TI_cuts[0], TI_cuts[1]
 
 
-def plot_frequency_dist(carrier_type, carrier_history, cut_off, path):
-    carrier_types = ["hole", "electron"]
+def plot_frequency_dist(c_type, carrier_history, cut_off, path):
+    c_types = ["hole", "electron"]
     non_zero_indices = carrier_history.nonzero()
     coordinates = list(zip(non_zero_indices[0], non_zero_indices[1]))
     frequencies = []
@@ -2390,7 +2259,7 @@ def plot_frequency_dist(carrier_type, carrier_history, cut_off, path):
     if cut_off is not None:
         print("Cluster cut-off based on hop frequency set to", cut_off)
         plt.axvline(np.log10(float(cut_off)), c="k")
-    plt.xlabel("".join(["Total ", carrier_type, " hops (Arb. U.)"]))
+    plt.xlabel("".join(["Total ", c_type, " hops (Arb. U.)"]))
     ax = plt.gca()
     # tick_labels = np.arange(0, 7, 1)
     # plt.xlim([0, 6])
@@ -2404,9 +2273,9 @@ def plot_frequency_dist(carrier_type, carrier_history, cut_off, path):
     filename = "".join(
         [
             "{:02}_total_hop_freq_".format(
-                24 + carrier_types.index(carrier_type)
+                24 + c_types.index(c_type)
             ),
-            carrier_type,
+            c_type,
             ".png",
         ]
     )
@@ -2416,8 +2285,8 @@ def plot_frequency_dist(carrier_type, carrier_history, cut_off, path):
     return cut_off
 
 
-def plot_net_frequency_dist(carrier_type, carrier_history, path):
-    carrier_types = ["hole", "electron"]
+def plot_net_frequency_dist(c_type, carrier_history, path):
+    c_types = ["hole", "electron"]
     non_zero_indices = carrier_history.nonzero()
     coordinates = list(zip(non_zero_indices[0], non_zero_indices[1]))
     frequencies = []
@@ -2432,7 +2301,7 @@ def plot_net_frequency_dist(carrier_type, carrier_history, path):
             frequencies.append(np.log10(frequency))
     plt.figure()
     plt.hist(frequencies, bins=60, color="b")
-    plt.xlabel("".join(["Net ", carrier_type, " hops (Arb. U.)"]))
+    plt.xlabel("".join(["Net ", c_type, " hops (Arb. U.)"]))
     ax = plt.gca()
     tick_labels = np.arange(0, np.ceil(np.max(frequencies)) + 1, 1)
     plt.xlim([0, np.ceil(np.max(frequencies))])
@@ -2440,8 +2309,8 @@ def plot_net_frequency_dist(carrier_type, carrier_history, path):
     plt.ylabel("Frequency (Arb. U.)")
     # 26 for hole hop frequency dist, 27 for electron hop frequency dist
     filename = "{:02}_net_hop_freq_{}.png".format(
-            26 + carrier_types.index(carrier_type),
-            carrier_type
+            26 + c_types.index(c_type),
+            c_type
             )
     filepath = os.path.join(path, "figures", filename)
     plt.savefig(filepath, dpi=300)
@@ -2449,8 +2318,8 @@ def plot_net_frequency_dist(carrier_type, carrier_history, path):
     print(f"Figure saved as {filepath}")
 
 
-def plot_discrepancy_frequency_dist(carrier_type, carrier_history, path):
-    carrier_types = ["hole", "electron"]
+def plot_discrepancy_frequency_dist(c_type, carrier_history, path):
+    c_types = ["hole", "electron"]
     non_zero_indices = carrier_history.nonzero()
     coordinates = list(zip(non_zero_indices[0], non_zero_indices[1]))
     frequencies = []
@@ -2482,8 +2351,8 @@ def plot_discrepancy_frequency_dist(carrier_type, carrier_history, path):
     plt.ylabel("Frequency (Arb. U.)")
     # 28 for hole hop frequency dist, 29 for electron hop frequency dist
     filename = "{:02}_hop_discrepancy_{}.png".format(
-            28 + carrier_types.index(carrier_type),
-            carrier_type
+            28 + c_types.index(c_type),
+            c_type
             )
     filepath = os.path.join(path, "figures", filename)
     plt.savefig(filepath, dpi=300)
@@ -2501,13 +2370,13 @@ def plot_discrepancy_frequency_dist(carrier_type, carrier_history, path):
     print(f"Figure saved as {filepath}")
 
 
-def calculate_mobility(
-    path,
+def plot_mobility_MSD(
     c_type,
     times,
     MSDs,
     time_stderr,
     MSD_stderr,
+    path,
 ):
     # Create the first figure that will be replotted each time
     plt.figure()
@@ -2522,7 +2391,7 @@ def calculate_mobility(
     )
     print(
             "----------------------------------------\n",
-            f"{c_type.capitalize()} mobility for {path} = {mobility:.2E} ",
+            f"{c_type.capitalize()} mobility = {mobility:.2E} ",
             "+/- {mob_error:.2E} cm^{2} V^{-1} s^{-1}\n",
             "----------------------------------------"
             )
@@ -2570,7 +2439,7 @@ def main(
     electron_anisotropy_data = []
 
     # Create the figures path if it doesn't already exist
-    os.makedirs(os.path.join(path, "figures"), exist_ok=True)
+    fig_dir = os.makedirs(os.path.join(path, "figures"), exist_ok=True)
     # Load in all the required data
     data_dict = {}
     print("\n")
@@ -2587,10 +2456,10 @@ def main(
         times, MSDs, time_stderr, MSD_stderr = get_times_msds(hole_data)
 
         print("Plotting distribution of carrier displacements")
-        plot_displacement_dist(hole_data, c_type, path)
+        plot_displacement_dist(hole_data, c_type, fig_dir)
 
         print("Calculating mobility...")
-        mobility, mob_error, r_squared = calculate_mobility(
+        mobility, mob_error, r_squared = plot_mobility_MSD(
                 c_type,
                 times,
                 MSDs,
@@ -2599,44 +2468,33 @@ def main(
                 path,
                 )
 
-        print("Plotting hop vector distribution")
-        plot_hop_vectors(
-                carrier_data,
-                AA_morphdict,
-                chromo_list,
-                sim_dims,
-                current_carrier_type,
-                three_D,
-                path,
-                )
+        if three_D:
+            print("Plotting hop vector distribution")
+            plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path)
+
             print("Calculating carrier trajectory anisotropy...")
-            anisotropy = plot_anisotropy(
-                carrier_data,
-                sim_dims,
-                current_carrier_type,
-                three_D,
-                path,
-            )
+            anisotrophy = plot_anisotropy(carrier_data, c_type, path)
+
             print("Plotting carrier hop frequency distribution...")
-            if current_carrier_type == "hole":
+            if c_type == "hole":
                 freq_cut_donor = plot_frequency_dist(
-                    current_carrier_type,
+                    c_type,
                     carrier_history,
                     freq_cut_donor,
                     path,
                 )
             else:
                 freq_cut_acceptor = plot_frequency_dist(
-                    current_carrier_type,
+                    c_type,
                     carrier_history,
                     freq_cut_acceptor,
                     path,
                 )
             print("Plotting carrier net hop frequency distribution...")
-            plot_net_frequency_dist(current_carrier_type, carrier_history, path)
+            plot_net_frequency_dist(c_type, carrier_history, path)
             print("Plotting (total - net hops) discrepancy distribution...")
             plot_discrepancy_frequency_dist(
-                current_carrier_type, carrier_history, path,
+                c_type, carrier_history, path,
             )
             if (carrier_history is not None) and three_D:
                 print(
@@ -2646,20 +2504,19 @@ def main(
                     chromo_list,
                     sim_dims,
                     carrier_history,
-                    current_carrier_type,
+                    c_type,
                     path,
                 )
-            if current_carrier_type == "hole":
+            if c_type == "hole":
                 hole_anisotropy_data.append(anisotropy)
                 hole_mobility_data.append([mobility, mob_error])
-            elif current_carrier_type == "electron":
+            elif c_type == "electron":
                 electron_anisotropy_data.append(anisotropy)
                 electron_mobility_data.append([mobility, mob_error])
-            lower_carrier_type = current_carrier_type.lower()
             data_dict["name"] = os.path.split(path)[1]
-            data_dict[f"{lower_carrier_type}_anisotropy"] = anisotropy
-            data_dict[f"{lower_carrier_type}_mobility"] = mobility
-            data_dict[f"{lower_carrier_type}_mobility_r_squared"] = r_squared
+            data_dict[f"{c_type}_anisotropy"] = anisotropy
+            data_dict[f"{c_type}_mobility"] = mobility
+            data_dict[f"{c_type}_mobility_r_squared"] = r_squared
         # Now plot the distributions!
         temp_dir = os.path.join(path, "figures")
         chromo_to_mol_ID = determine_molecule_IDs(
