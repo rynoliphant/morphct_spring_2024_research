@@ -22,7 +22,7 @@ def v_print(string, verbosity, v_level, filename=None):
             print(string)
         else:
             with open(filename, 'a') as f:
-                f.write(string)
+                f.write(f"{string}\n")
 
 
 def time_units(elapsed_time, precision=2):
