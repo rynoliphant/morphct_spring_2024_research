@@ -118,33 +118,25 @@ def find_axis(atom1, atom2, normalise=True):
     return axis_vector
 
 
-def normalise_vec(vector):
-    """
-    This function normalises an input vector to unit magnitude
-    """
-    return vector / float(np.sqrt(np.sum(vector) ** 2))
+def get_chromo_normvec(chromo, snap):
+    coords = snap.particles.position[chromo.atom_ids[:3]]
+    AB = coords[1] - coords[0]
+    AC = coords[2] - coords[0]
+    return np.cross(AB, AC) / np.linalg.norm(normal)
 
 
 def get_rotation_matrix(vector1, vector2):
     """
-    This function returns the rotation matrix around the origin that maps vector1 to
-    vector 2
+    This function returns the rotation matrix around the origin that maps
+    vector1 to vector 2
     """
     cross_product = np.cross(vector1, vector2)
-    sin_angle = np.sqrt(
-        (
-            (cross_product[0] ** 2)
-            + ((cross_product[1]) ** 2)
-            + ((cross_product[2]) ** 2)
-        )
-    )
+    sin_angle = np.sqrt(np.sum(cross_product** 2))
     cos_angle = np.dot(vector1, vector2)
     skew_matrix = np.array(
-        [
-            [0, -cross_product[2], cross_product[1]],
-            [cross_product[2], 0, -cross_product[0]],
-            [-cross_product[1], cross_product[0], 0],
-        ]
+        [[0, -cross_product[2], cross_product[1]],
+         [cross_product[2], 0, -cross_product[0]],
+         [-cross_product[1], cross_product[0], 0],]
     )
     skew_matrix_squared = skew_matrix @ skew_matrix
     rot_matrix = (
