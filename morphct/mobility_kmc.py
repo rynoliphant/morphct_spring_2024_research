@@ -421,9 +421,15 @@ def run_kmc(
                 if key in ["initial_chromo", "current_chromo"]:
                     val = val.center
                     key = key.split("_")[0] + "_position"
+                if key not in ["hole_history", "electron_history"]:
+                    val = [val]
                 if key not in combined_data:
-                    combined_data[key] = [val]
+                    combined_data[key] = val
                 else:
-                    combined_data[key] += [val]
+                    try:
+                        combined_data[key] += val
+                    except TypeError:
+                        # catch errors trying to add None and None
+                        combined_data[key] = val
         return combined_data
     return carriers
