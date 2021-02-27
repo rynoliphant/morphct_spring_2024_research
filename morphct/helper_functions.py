@@ -1,5 +1,6 @@
 import copy
 import csv
+import itertools
 import os
 import pickle
 import sys
@@ -14,6 +15,17 @@ hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 
 
 sys.setrecursionlimit(10000)
+
+
+def box_points(box):
+    dims = np.array([(-i/2, i/2) for i in box/10])
+    corners = [
+            (dims[0,i], dims[1,j], dims[2,k])
+            for i,j,k in itertools.product(range(2), repeat=3)
+            ]
+    corner_ids = [0,1,3,1,5,4,0,2,3,7,5,4,6,2,6,7]
+    box_pts = np.array([corners[i] for i in corner_ids])
+    return box_pts
 
 
 def v_print(string, verbosity, v_level, filename=None):
