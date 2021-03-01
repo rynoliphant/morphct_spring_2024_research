@@ -3,6 +3,7 @@ import itertools
 from collections import defaultdict
 import os
 import sys
+from warnings import UserWarning
 
 import freud
 from openbabel import openbabel
@@ -118,11 +119,9 @@ def get_chromo_ids_smiles(snap, smarts_str, conversion_dict):
 
     """
     mol = openbabel.OBMol()
-    for i in range(snap.particles.N):
+    for i, typeid in enumerate(snap.particles.typeid):
         a = mol.NewAtom()
-        element = conversion_dict[
-                snap.particles.types[snap.particles.typeid[i]]
-                ]
+        element = conversion_dict[snap.particles.types[typeid]]
         a.SetAtomicNum(element.atomic_number)
         a.SetVector(*[float(x) for x in snap.particles.position[i]])
 
@@ -139,6 +138,11 @@ def get_chromo_ids_smiles(snap, smarts_str, conversion_dict):
     smarts = pybel.Smarts(smarts_str)
     # shift indices by 1
     atom_ids = [np.array(i)-1 for i in smarts.findall(pybelmol)]
+    if not atom_ids:
+        raise UserWarning(
+                f"No matches found for smarts string {smarts_str}\n",
+                "Please check the returned pybel.Molecule for errors."
+                )
     return atom_ids
 
 
