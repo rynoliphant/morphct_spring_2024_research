@@ -3,7 +3,7 @@ import itertools
 from collections import defaultdict
 import os
 import sys
-from warnings import UserWarning
+from warnings import warn
 
 import freud
 from openbabel import openbabel
@@ -139,10 +139,11 @@ def get_chromo_ids_smiles(snap, smarts_str, conversion_dict):
     # shift indices by 1
     atom_ids = [np.array(i)-1 for i in smarts.findall(pybelmol)]
     if not atom_ids:
-        raise UserWarning(
-                f"No matches found for smarts string {smarts_str}\n",
-                "Please check the returned pybel.Molecule for errors."
-                )
+        warn(
+            f"No matches found for smarts string {smarts_str}\n",
+            "Please check the returned pybel.Molecule for errors."
+            )
+        return pybelmol
     return atom_ids
 
 
