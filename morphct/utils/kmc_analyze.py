@@ -30,8 +30,12 @@ def split_carriers(combined_data):
     hole_data = {}
     elec_data = {}
     for key, val in combined_data.items():
-        hole_data[key] = [val[i] for i in hole_inds]
-        elec_data[key] = [val[i] for i in elec_inds]
+        if key.endswith("history"):
+            hole_data[key] = val
+            elec_data[key] = val
+        else:
+            hole_data[key] = [val[i] for i in hole_inds]
+            elec_data[key] = [val[i] for i in elec_inds]
     return hole_data, elec_data
 
 
@@ -1588,7 +1592,7 @@ def plot_mobility_msd(
 
 
 def carrier_plots(
-        c_type, carrier_data, chromo_list, snap, freq_cut, threeD, path
+        c_type, carrier_data, chromo_list, snap, freq_cut, three_d, path
         ):
     print(f"Considering the transport of {c_type}...")
     if c_type == "hole":
@@ -1607,7 +1611,7 @@ def carrier_plots(
             c_type, times, msds, time_stderr, msd_stderr, path
             )
 
-    if three_D:
+    if three_d:
         print("Plotting hop vector distribution")
         plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path)
 
@@ -1640,8 +1644,10 @@ def carrier_plots(
 def main(
         combined_data,
         temp,
+        chromo_list,
+        snap,
         path,
-        three_D=False,
+        three_d=False,
         d_freqcut=None,
         a_freqcut=None,
         d_sepcut=None,
@@ -1696,7 +1702,7 @@ def main(
                 chromo_list,
                 snap,
                 d_freqcut,
-                threeD,
+                three_d,
                 fig_dir
                 )
 
@@ -1715,7 +1721,7 @@ def main(
                 chromo_list,
                 snap,
                 a_freqcut,
-                threeD,
+                three_d,
                 fig_dir
                 )
 
@@ -1755,7 +1761,7 @@ def main(
 
     clusters = get_clusters(chromo_list, snap, rmax=None)
 
-    if three_D:
+    if three_d:
         print("Plotting 3D cluster location plot...")
         plot_clusters_3D(chromo_list, clusters, box, generate_tcl, path)
 
