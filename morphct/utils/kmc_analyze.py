@@ -302,6 +302,7 @@ def plot_msd(times, msds, time_stderr, msd_stderr, c_type, path):
     return mobility, mob_error, r_val ** 2
 
 
+#TODO
 def calculate_anisotropy(xvals, yvals, zvals):
     # First calculate the `centre of position' for the particles
     centre = [np.mean(xvals), np.mean(yvals), np.mean(zvals)]
@@ -1335,80 +1336,7 @@ def write_csv(data_dict, path):
     print(f"CSV file written to {filepath}")
 
 
-def create_results_pickle(path):
-    cores_list = []
-    for filename in glob.glob(os.path.join(path, "KMC", "*")):
-        if "log" not in filename:
-            continue
-        try:
-            cores_list.append(
-                os.path.split(filename)[1].split(".")[0].split("_")[-1]
-            )
-        except IndexError:
-            pass
-    cores_list = sorted(list(set(cores_list)))
-    results_pickles_list = []
-    keep_list = []
-    for core in cores_list:
-        # Check if there is already a finished KMC_results pickle
-        main = os.path.join(path, "KMC", f"KMC_results_{core:02d}.pickle")
-        if os.path.exists(main):
-            results_pickles_list.append(main)
-            keep_list.append(None)
-            continue
-        # If not, find the slot1 and slot2 pickle that is most recent
-        slot1 = os.path.join(
-            path, "KMC", f"KMC_slot1_results_{core:02d}.pickle",
-        )
-        slot2 = os.path.join(
-            path, "KMC", f"KMC_slot2_results_{core:02d}.pickle"
-        )
-        if os.path.exists(slot1) and not os.path.exists(slot2):
-            keep_list.append(slot1)
-        elif os.path.exists(slot2) and not os.path.exists(slot1):
-            keep_list.append(slot2)
-        elif os.path.getsize(slot1) >= os.path.getsize(slot2):
-            keep_list.append(slot1)
-        else:
-            keep_list.append(slot2)
-    print(f"{len(keep_list):d} pickle files found to combine!")
-    print("Combining", keep_list)
-    for keeper in zip(cores_list, keep_list):
-        # Skip this core if we already have a finished KMC_results for it
-        if keeper[1] is None:
-            continue
-        new_name = os.path.join(
-                path, "KMC", f"KMC_results_{keeper[0]}.pickle"
-        )
-        shutil.copyfile(str(keeper[1]), new_name)
-        results_pickles_list.append(new_name)
-    combine_results_pickles(path, results_pickles_list)
-
-
-def combine_results_pickles(path, pickle_files):
-    combined_data = {}
-    pickle_files = sorted(pickle_files)
-    for filename in pickle_files:
-        # The pickle was repeatedly dumped to, in order to save time.
-        # Each dump stream is self-contained, so iteratively unpickle
-        # to add the new data.
-        with open(filename, "rb") as pickle_file:
-            pickled_data = pickle.load(pickle_file)
-            for key, val in pickled_data.items():
-                if val is None:
-                    continue
-                if key not in combined_data:
-                    combined_data[key] = val
-                else:
-                    combined_data[key] += val
-    # Write out the combined data
-    print("Writing out the combined pickle file...")
-    combined_file_loc = os.path.join(path, "KMC", "KMC_results.pickle")
-    with open(combined_file_loc, "wb+") as pickle_file:
-        pickle.dump(combined_data, pickle_file)
-    print("Complete data written to", combined_file_loc)
-
-
+#TODO
 def calculate_cutoff_from_dist(
     bin_centres,
     frequencies,
