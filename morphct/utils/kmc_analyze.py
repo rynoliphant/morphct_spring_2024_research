@@ -1700,7 +1700,7 @@ def carrier_plots(
             c_type, carrier_history, freq_cut, path
             )
 
-    print(if"Plotting {c_type} net hop frequency distribution...")
+    print(f"Plotting {c_type} net hop frequency distribution...")
     plot_net_frequency_dist(c_type, carrier_history, path)
 
     print("Plotting (total - net hops) discrepancy distribution...")
@@ -1801,7 +1801,7 @@ def main(
 
     plot_energy_levels(chromo_list, data_dict, fig_dir)
 
-    orientations = get_orientations(chromo_list, snap):
+    orientations = get_orientations(chromo_list, snap)
 
     d_sepcut, a_sepcut = plot_neighbor_hist(
         chromo_list, chromo_mol_id, box, d_sepcut, a_sepcut, fig_dir,
@@ -1825,7 +1825,7 @@ def main(
     print("Cut-offs specified (value format: [donor, acceptor])")
     print(*[f"\t{i}" for i in cutoff_dict.items()], sep="\n")
 
-    clusters = get_clusters(chromo_list, snap, rmax=None):
+    clusters = get_clusters(chromo_list, snap, rmax=None)
 
     if three_D:
         print("Plotting 3D cluster location plot...")
