@@ -1110,7 +1110,7 @@ def fix_images(original_morphology):
                     [morphology["lx"], morphology["ly"], morphology["lz"]]
                 )
             )
-            separation = calculate_separation(posn1, posn2)
+            separation = np.linalg.norm(posn1 - posn2)
             if separation >= morphology["lx"] / 2.0:
                 print(
                     "Periodic bond found:",
