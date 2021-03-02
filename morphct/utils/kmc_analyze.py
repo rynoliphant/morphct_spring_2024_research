@@ -1,12 +1,7 @@
 from collections import defaultdict
-import copy
 import csv
-import glob
 import itertools
 import os
-import pickle
-import shutil
-import sys
 
 import freud
 import numpy as np
@@ -21,7 +16,6 @@ from morphct import helper_functions as hf
 
 plt = None
 p3 = None
-temperature = 290  # K
 
 
 def split_carriers(combined_data):
@@ -48,7 +42,7 @@ def get_times_msds(carrier_data):
         if (
             carrier_data["current_time"][i] > carrier_data["lifetime"][i] * 2
             or
-            carrier_data["current_time"][i] < carrier_data["lifetime"] / 2
+            carrier_data["current_time"][i] < carrier_data["lifetime"][i] / 2
             or
             carrier_data["n_hops"][i] == 1
             ):
@@ -63,11 +57,9 @@ def get_times_msds(carrier_data):
         total_averaged += 1
         total += 1
     if total > total_averaged:
-        print(
-        f"Notice: The data from {total - total_averaged} carriers were ",
-        "discarded due to the carrier lifetime being more than double (or ",
-        "less than half of) the specified carrier lifetime."
-        )
+        print(f"\tNotice: The data from {total - total_averaged} carriers were")
+        print("\tdiscarded due to the carrier lifetime being more than double")
+        print("\t(or less than half of) the specified carrier lifetime.")
     times = []
     msds = []
     time_stderr = []
@@ -88,7 +80,7 @@ def plot_displacement_dist(carrier_data, c_type, path):
     filename = f"{c_type}_displacement_dist.png"
     filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
-    print(f"Figure saved as {filepath}")
+    print(f"\tFigure saved as {filename}")
     plt.close()
 
 
@@ -97,6 +89,8 @@ def plot_cluster_size_dist(clusters, path):
     for i, cl in enumerate(clusters):
         if cl is not None:
             sizes = [np.log10(len(c)) for c in cl.cluster_keys if len(c) > 5]
+        else:
+            sizes = None
         if sizes:
             plt.figure()
             plt.hist(
@@ -111,7 +105,7 @@ def plot_cluster_size_dist(clusters, path):
             filename = f"{species[i]}_cluster_dist.png"
             filepath = os.path.join(path, filename)
             plt.savefig(filepath, dpi=300)
-            print(f"Figure saved as {filepath}")
+            print(f"\tFigure saved as {filename}")
             plt.close()
 
 
@@ -223,7 +217,7 @@ def plot_connections(chromo_list, carrier_history, c_type, path):
     filename = f"3d_{c_type}_network.png"
     filepath = os.path.join(path, filename),
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
-    print(f"Figure saved as {filepath}")
+    print(f"\tFigure saved as {filename}")
 
     plt.clf()
 
@@ -254,7 +248,7 @@ def calc_mobility(lin_fit_X, lin_fit_Y, time_err, msd_err, temp):
     return mobility, mob_err
 
 
-def plot_msd(times, msds, time_stderr, msd_stderr, c_type, path):
+def plot_msd(times, msds, time_stderr, msd_stderr, c_type, temp, path):
     fit_X = np.linspace(np.min(times), np.max(times), 100)
     gradient, intercept, r_val, p_val, std_err = linregress(times, msds)
     print(f"Standard Error {std_err}")
@@ -265,6 +259,7 @@ def plot_msd(times, msds, time_stderr, msd_stderr, c_type, path):
         fit_Y,
         np.average(time_stderr),
         np.average(msd_stderr),
+        temp
     )
     plt.plot(times, msds)
     plt.errorbar(times, msds, xerr=time_stderr, yerr=msd_stderr)
@@ -276,7 +271,7 @@ def plot_msd(times, msds, time_stderr, msd_stderr, c_type, path):
     filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
     plt.clf()
-    print(f"Figure saved as {filepath}")
+    print(f"\tFigure saved as {filename}")
 
     plt.semilogx(times, msds)
     plt.errorbar(times, msds, xerr=time_stderr, yerr=msd_stderr)
@@ -285,10 +280,10 @@ def plot_msd(times, msds, time_stderr, msd_stderr, c_type, path):
     plt.ylabel(r"MSD (m$^{2}$)")
     plt.title(rf"$\mu_{{0, {c_type[0]}}}$ = {mobility:.3e} cm$^{2}$/Vs", y=1.1)
     filename = f"semi_log_MSD_{c_type}.png"
-    filepath = os.path.join(path, "figures", filename)
+    filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
     plt.clf()
-    print(f"Figure saved as {filepath}")
+    print(f"\tFigure saved as {filename}")
 
     plt.plot(times, msds)
     plt.errorbar(times, msds, xerr=time_stderr, yerr=msd_stderr)
@@ -299,46 +294,35 @@ def plot_msd(times, msds, time_stderr, msd_stderr, c_type, path):
     plt.yscale("log")
     plt.title(rf"$\mu_{{0,{c_type[0]}}}$ = {mobility:.3e} cm$^{{2}}$/Vs", y=1.1)
     filename = f"log_MSD_{c_type}.png"
-    filepath = os.path.join(path, "figures", filename)
+    filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
     plt.clf()
-    print(f"Figure saved as {filepath}")
+    print(f"\tFigure saved as {filename}")
     return mobility, mob_error, r_val ** 2
 
 
-#TODO
-def calculate_anisotropy(xvals, yvals, zvals):
-    # First calculate the `centre of position' for the particles
-    centre = [np.mean(xvals), np.mean(yvals), np.mean(zvals)]
+def get_anisotropy(xyzs):
+    # First calculate the `center of position' for the particles
+    center = np.mean(xyzs, axis=0)
     # First calculate the gyration tensor:
-    sxx = 0
-    sxy = 0
-    sxz = 0
-    syy = 0
-    syz = 0
-    szz = 0
-    for carrier_ID, raw_xval in enumerate(xvals):
-        xval = raw_xval - centre[0]
-        yval = yvals[carrier_ID] - centre[1]
-        zval = zvals[carrier_ID] - centre[2]
-        sxx += xval * xval
-        sxy += xval * yval
-        sxz += xval * zval
-        syy += yval * yval
-        syz += yval * zval
-        szz += zval * zval
-    S = np.array([[sxx, sxy, sxz], [sxy, syy, syz], [sxz, syz, szz]])
-    eigenvalues, eigenvectors = np.linalg.eig(S)
-    # Diagonalisation of S is the diagonal matrix of the eigenvalues in ascending order
-    # diagonalMatrix = np.diag(sorted(eigenValues))
+    sxx = sxy = sxz = syy = syz = szz = 0
+
+    shift_xyzs = xyzs - center
+    sxx = np.sum(shift_xyzs[:,0]**2)
+    sxy = np.sum(shift_xyzs[:,0] * shift_xyzs[:,1])
+    sxz = np.sum(shift_xyzs[:,0] * shift_xyzs[:,2])
+    syy = np.sum(shift_xyzs[:,1]**2)
+    syz = np.sum(shift_xyzs[:,1] * shift_xyzs[:,2])
+    szz = np.sum(shift_xyzs[:,2]**2)
+
+    S = np.array([[sxx, sxy, sxz],
+                  [sxy, syy, syz],
+                  [sxz, syz, szz]])
+
+    eigenvals, eigenvecs = np.linalg.eig(S)
     # We only need the eigenvalues though, no more matrix multiplication
-    diagonal = sorted(eigenvalues)
     # Then calculate the relative shape anisotropy (kappa**2)
-    anisotropy = (3 / 2) * (
-        ((diagonal[0] ** 2) + (diagonal[1] ** 2) + (diagonal[2] ** 2))
-        / ((diagonal[0] + diagonal[1] + diagonal[2]) ** 2)
-    ) - (1 / 2)
-    return anisotropy
+    return 3 / 2 * np.sum(eigenvals**2) / np.sum(eigenvals)**2 - 1 / 2
 
 
 def plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path,):
@@ -429,60 +413,60 @@ def plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path,):
     filename = f"hop_vec_{c_type}.png"
     filepath = os.path.join(path, filename),
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
-    print(f"Figure saved as {filepath}")
+    print(f"\tFigure saved as {filename}")
     plt.clf()
 
 
-def plot_anisotropy(carrier_data, c_type, path):
+def plot_anisotropy(carrier_data, c_type, three_d, path):
     box = carrier_data["box"][0]
-    xyz_vals = []
+    xyzs = []
     # Get the indices of the carriers that travelled the furthest
     # only do the first 1000, in case there's a lot
     for i,pos in enumerate(carrier_data["current_position"][:1000]):
-        image = combined_data["image"][i]
+        image = carrier_data["image"][i]
         position = image * box + pos
-        xyz_vals.append(position / 10.0)
+        xyzs.append(position / 10.0)
 
-    colors = ['b'] * len(xyz_vals)
-    xyz_vals = np.array(xyz_vals)
+    colors = ['b'] * len(xyzs)
+    xyzs = np.array(xyzs)
 
-    anisotropy = get_anisotropy(xyz_vals[:,0], xyz_vals[:,1], xyz_vals[:,2])
-    print(
-            "----------------------------------------\n",
-            f"{c_type.capitalize()} charge transport anisotropy ",
-            f"calculated as {anisotrophy}\n",
-            "----------------------------------------"
-            )
-    # Reduce number of plot markers
-    fig = plt.gcf()
-    ax = p3.Axes3D(fig)
-    plt.scatter(xyz_vals[:,0], xyz_vals[:,1], zs=xyz_vals[:,2], c=colors, s=20)
-    plt.scatter(0, 0, zs=0, c="r", s=50)
+    anisotropy = get_anisotropy(xyzs)
+    print("----------------------------------------")
+    print(f"{c_type} charge transport anisotropy: {anisotropy:.3f}")
+    print("----------------------------------------")
 
-    # Draw boxlines
-    box_pts = hf.box_points(box)
-    ax.plot(box_pts[:,0], box_pts[:,1], box_pts[:,2], c="k", linewidth=1)
+    if three_d:
+        # Reduce number of plot markers
+        fig = plt.gcf()
+        ax = p3.Axes3D(fig)
+        plt.scatter(xyzs[:,0], xyzs[:,1], zs=xyzs[:,2], c=colors, s=20)
+        plt.scatter(0, 0, zs=0, c="r", s=50)
 
-    ax.set_xlabel("X (nm)", fontsize=20, labelpad=40)
-    ax.set_ylabel("Y (nm)", fontsize=20, labelpad=40)
-    ax.set_zlabel("Z (nm)", fontsize=20, labelpad=40)
-    maximum = np.max(xyz_vals)
-    ax.set_xlim([-maximum, maximum])
-    ax.set_ylim([-maximum, maximum])
-    ax.set_zlim([-maximum, maximum])
-    ticks = [
-        getattr(ax, f"{xyz}axis").get_major_ticks() for xyz in ["x","y","z"]
-            ]
-    ticks = [i for l in ticks for i in l]
-    for tick in ticks:
-        tick.label.set_fontsize(16)
-    ax.dist = 11
-    plt.title(f"Anisotropy ({c_type.capitalize()})", y=1.1)
-    filename = f"anisotropy_{c_type}.png"
-    filepath = os.path.join(path, filename)
-    plt.savefig(filepath, bbox_inches="tight", dpi=300)
-    plt.clf()
-    print(f"Figure saved as {filepath}")
+        # Draw boxlines
+        box_pts = hf.box_points(box)
+        ax.plot(box_pts[:,0], box_pts[:,1], box_pts[:,2], c="k", linewidth=1)
+
+        ax.set_xlabel("X (nm)", fontsize=20, labelpad=40)
+        ax.set_ylabel("Y (nm)", fontsize=20, labelpad=40)
+        ax.set_zlabel("Z (nm)", fontsize=20, labelpad=40)
+        maximum = np.max(xyzs)
+        ax.set_xlim([-maximum, maximum])
+        ax.set_ylim([-maximum, maximum])
+        ax.set_zlim([-maximum, maximum])
+        ticks = [
+                getattr(ax, f"{xyz}axis").get_major_ticks()
+                for xyz in ["x","y","z"]
+                ]
+        ticks = [i for l in ticks for i in l]
+        for tick in ticks:
+            tick.label.set_fontsize(16)
+        ax.dist = 11
+        plt.title(f"Anisotropy ({c_type.capitalize()})", y=1.1)
+        filename = f"anisotropy_{c_type}.png"
+        filepath = os.path.join(path, filename)
+        plt.savefig(filepath, bbox_inches="tight", dpi=300)
+        plt.clf()
+        print(f"\tFigure saved as {filename}")
     return anisotropy
 
 
@@ -508,7 +492,7 @@ def plot_temp_progression(temp, mobility, mob_err, anisotropy, c_type, path):
     filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
     plt.clf()
-    print(f"Figure saved as {filepath}")
+    print(f"\tFigure saved as {filename}")
 
     plt.plot(temp, anisotropy, c="r")
     plt.xlabel("Temperature (Arb. U)")
@@ -517,10 +501,10 @@ def plot_temp_progression(temp, mobility, mob_err, anisotropy, c_type, path):
     filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
     plt.clf()
-    print(f"Figure saved as {filepath}")
+    print(f"\tFigure saved as {filename}")
 
 
-def calculate_lambda_ij(chromo_length):
+def get_lambda_ij(chromo_length):
     # The equation for the internal reorganisation energy was obtained from
     # the data given in
     # Johansson, E and Larsson, S; 2004, Synthetic Metals 144: 183-191.
@@ -553,9 +537,7 @@ def gauss_fit(data):
     return bin_edges, fit_args, mean, std
 
 
-def plot_neighbor_hist(
-    chromo_list, chromo_mol_id, box, d_sepcut, a_sepcut, path,
-):
+def plot_neighbor_hist(chromo_list, chromo_mol_id, box, sepcut, path):
     seps_donor = []
     seps_acceptor = []
     for i, ichromo in enumerate(chromo_list):
@@ -571,54 +553,39 @@ def plot_neighbor_hist(
                 seps_acceptor.append(sep)
     species = ["donor", "acceptor"]
     seps = [seps_donor, seps_acceptor]
-    for sp, sep in zip(species, seps):
+    for sp_i, sp in enumerate(species):
+        sep = seps[sp_i]
         if len(sep) == 0:
             continue
 
-        if sp == "donor":
-            sep_cut = d_sepcut
-        else:
-            sep_cut = a_sepcut
-
         plt.figure()
         n, bin_edges, _ = plt.hist(sep, bins=40, color="b")
-        bin_centres = (bin_edges[1:] + bin_edges[:-1]) / 2.0
-        bin_centres = np.insert(bin_centres, 0, 0)
+        bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
+        bin_centers = np.insert(bin_centers, 0, 0)
         n = np.insert(n, 0, 0)
-        smoothed_n = gaussian_filter(n, 1.0)
-        plt.plot(bin_centres, smoothed_n, color="r")
-        if sep_cut is None:
-            sep_cut = calculate_cutoff_from_dist(
-                bin_centres,
-                smoothed_n,
-                minimum_i=0,
-                value_at_least=100,
-                logarithmic=False,
+        smooth_n = gaussian_filter(n, 1.0)
+        plt.plot(bin_centers, smooth_n, color="r")
+        if sepcut[sp_i] is None:
+            sepcut[sp_i] = get_dist_cutoff(
+                bin_centers,
+                smooth_n,
+                min_i=0,
+                at_least=100,
             )
-        print(
-            f"Cluster cut-off based on {sp} chromophore separation set ",
-            f"to {sep_cut}"
-            )
-        plt.axvline(sep_cut, c="k")
+        if sepcut[sp_i] is not None:
+            print(f"{sp} separation cluster cut-off set to {sepcut[sp_i]}")
+            plt.axvline(sepcut[sp_i], c="k")
         plt.xlabel(rf"{sp.capitalize()} r$_{{i,j}}$ (\AA)")
         plt.ylabel("Frequency (Arb. U.)")
         filename = f"neighbor_hist_{sp}.png"
         filepath = os.path.join(path, filename)
         plt.savefig(filepath, dpi=300)
         plt.close()
-        print(f"Neighbour histogram figure saved as {filepath}")
+        print(f"Neighbor histogram figure saved as {filename}")
         plt.close()
 
-        if sp == "donor":
-            d_sepcut = sep_cut
-        else:
-            a_sepcut = sep_cut
-    return d_sepcut, a_sepcut
 
-
-def plot_orientation_hist(
-    chromo_list, chromo_mol_id, orientations, d_ocut, a_ocut, path,
-):
+def plot_orientation_hist(chromo_list, chromo_mol_id, orientations, ocut, path):
     orientations_donor = []
     orientations_acceptor = []
     for i, ichromo in enumerate(chromo_list):
@@ -638,33 +605,28 @@ def plot_orientation_hist(
                 orientations_acceptor.append(angle)
     species = ["donor", "acceptor"]
     orients = [orientations_donor, orientations_acceptor]
-    for sp, orient in zip(species, orients):
+    for sp_i, sp, in enumerate(species):
+        orient = orients[sp_i]
         if len(orient) == 0:
             continue
-        if sp == "donor":
-            ocut = d_ocut
-        else:
-            ocut = a_ocut,
+
         plt.figure()
         n, bin_edges, _ = plt.hist(orient, bins=40, color="b")
-        bin_centres = (bin_edges[1:] + bin_edges[:-1]) / 2.0
-        bin_centres = np.insert(bin_centres, 0, 0)
+        bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
+        bin_centers = np.insert(bin_centers, 0, 0)
         n = np.insert(n, 0, 0)
-        smoothed_n = gaussian_filter(n, 1.0)
-        plt.plot(bin_centres, smoothed_n, color="r")
-        if ocut is None:
-            ocut = calculate_cutoff_from_dist(
-                bin_centres,
-                smoothed_n,
-                maximum_i=0,
-                value_at_least=100,
-                logarithmic=False,
+        smooth_n = gaussian_filter(n, 1.0)
+        plt.plot(bin_centers, smooth_n, color="r")
+        if ocut[sp_i] is None:
+            ocut[sp_i] = get_dist_cutoff(
+                bin_centers,
+                smooth_n,
+                max_i=0,
+                at_least=100,
             )
-        print(
-            "Cluster cut-off based on {sp} relative chromophore orientations",
-            " set to {ocut}"
-            )
-        plt.axvline(ocuts, c="k")
+        if ocut[sp_i] is not None:
+            print(f"{sp} orientation cluster cut-off set to {ocut[sp_i]}")
+            plt.axvline(ocuts[sp_i], c="k")
         plt.xlabel(f"{sp.capitalize()} Orientations (rad)")
         plt.xlim([0, np.deg2rad(90)])
         plt.xticks(np.arange(0, np.deg2rad(91), np.deg2rad(15)))
@@ -673,27 +635,21 @@ def plot_orientation_hist(
         filepath = os.path.join(path, filename)
         plt.savefig(filepath, dpi=300)
         plt.close()
-        print(f"Orientation histogram figure saved as {filepath}")
-        if sp == "donor":
-            d_ocut = ocut
-        else:
-            a_ocut = ocut
-    return d_ocut, a_ocut
+        print(f"Orientation histogram figure saved as {filename}")
 
 
-def create_cutoff_dict(
-    d_sepcut, a_sepcut, d_ocut, a_ocut, d_ticut, a_ticut, d_freqcut, a_freqcut,
-):
+def create_cutoff_dict(sepcut, ocut, ticut, freqcut):
     cutoff_dict = {
-        "separation": [d_sepcut, a_sepcut],
-        "orientation": [d_ocut, a_ocut],
-        "ti": [d_ticut, a_ticut],
-        "freq": [d_freqcut, a_freqcut],
+        "separation": sepcut,
+        "orientation": ocut,
+        "ti": ticut,
+        "freq": freqcut,
     }
     return cutoff_dict
 
 
 def get_clusters(chromo_list, snap, rmax=None):
+    clusters = []
     box = snap.configuration.box
     species = ["donor", "acceptor"]
     for sp_i, sp in enumerate(species):
@@ -707,7 +663,7 @@ def get_clusters(chromo_list, snap, rmax=None):
         print("Calculating clusters...")
         if rmax is None:
             rmax = max(box)/4
-            print(f"No cutoff provided: cluster cutoff set to {rmax}")
+            print(f"No cutoff provided: cluster cutoff set to {rmax:.3f}")
 
         cl = freud.cluster.Cluster()
 
@@ -717,11 +673,12 @@ def get_clusters(chromo_list, snap, rmax=None):
         biggest = max([len(c) for c in cl.cluster_keys])
         psi = large / cl.num_clusters
         print("----------------------------------------")
-        print(f"{sp}: Detected {cl.num_clusters} total")
+        print(f"{sp.capitalize()}: Detected {cl.num_clusters} total")
         print(f"and {large} large clusters (size > 6).")
         print(f"Largest cluster size: {biggest} chromophores.")
-        print(f'Ratio in "large" clusters: {psi:.3f}')
+        print(f'Ratio in "large" clusters: {psi:.2f}')
         print("----------------------------------------")
+        clusters.append(cl)
     return clusters
 
 
@@ -733,12 +690,12 @@ def get_orientations(chromo_list, snap):
         # There is a really cool way to do this with single value composition
         # but on the time crunch I didn't have time to learn how to implement
         # it properly. Check https://goo.gl/jxuhvJ for more details.
-        plane = calculate_plane(positions)
+        plane = get_plane(positions)
         orientations.append(np.array(plane) / np.linalg.norm(plane))
     return orientations
 
 
-def calculate_plane(positions):
+def get_plane(positions):
     ## See https://goo.gl/jxuhvJ for details on this methodology.
     vec1 = hf.find_axis(positions[0], positions[1])
     vec2 = hf.find_axis(positions[0], positions[2])
@@ -907,9 +864,10 @@ def plot_clusters_3D(chromo_list, clusters, box, generate_tcl, path):
     ax.set_ylim([-box[1]/2, box[1]/2])
     ax.set_zlim([-box[2]/2, box[2]/2])
 
-    filepath = os.path.join(path, "figures", "clusters.png"),
+    filename = "clusters.png"
+    filepath = os.path.join(path, "figures", filename)
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
-    print(f"3D cluster figure saved as {filepath}")
+    print(f"3D cluster figure saved as {filename}")
     plt.close()
 
 
@@ -929,14 +887,14 @@ def snap_molecule_indices(snap):
     numpy array (N_particles,)
     """
     system = freud.AABBQuery.from_system(snap)
-    num_query_points = num_points = snap.bonds.N
-    query_point_indices = snap.bonds.group[:, 0]
-    point_indices = snap.bonds.group[:, 1]
+    n_query_pts = n_pts = snap.bonds.N
+    query_pt_inds = snap.bonds.group[:, 0]
+    pt_inds = snap.bonds.group[:, 1]
     distances = system.box.compute_distances(
-        system.points[query_point_indices], system.points[point_indices]
+        system.points[query_pt_inds], system.points[pt_inds]
     )
     nlist = freud.NeighborList.from_arrays(
-        num_query_points, num_points, query_point_indices, point_indices, distances
+        n_query_pts, n_pts, query_pt_inds, pt_inds, distances
     )
     cluster = freud.cluster.Cluster()
     cluster.compute(system=system, neighbors=nlist)
@@ -993,10 +951,8 @@ def plot_energy_levels(chromo_list, data_dict, path,):
         data_dict["donor_homo_mean"] = homo_av
         data_dict["donor_homo_std"] = homo_std
         data_dict["donor_homo_err"] = homo_err
-        print(
-            f"Donor HOMO Level = {homo_av:.3f} +/- {homo_err:.3f}\n",
-            f"Donor Delta E_ij mean = {donor_mean:.3f} +/- {donor_err:.3f}"
-            )
+        print(f"Donor HOMO Level = {homo_av:.3f} +/- {homo_err:.3f}")
+        print(f"Donor Delta E_ij mean = {donor_mean:.3f} +/- {donor_err:.3f}")
         plot_delta_eij(
             donor_delta_eij,
             donor_bin_edges,
@@ -1057,7 +1013,7 @@ def plot_delta_eij(delta_eij, gauss_bins, fit_args, species, lambda_ij, path):
     filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
-    print(f"Figure saved as {filepath}")
+    print(f"\tFigure saved as {filename}")
 
 
 def plot_mixed_hopping_rates(
@@ -1080,13 +1036,13 @@ def plot_mixed_hopping_rates(
     prop_lists = defaultdict(list)
     for i, ichromo in enumerate(chromo_list):
         imol = chromo_mol_id[i]
-        for ineighbor, ti in enumerate(chromo.neighbors_ti):
+        for ineighbor, ti in enumerate(ichromo.neighbors_ti):
             if ti is None or ti == 0:
                 continue
             j = ichromo.neighbors[ineighbor][0]
             jchromo = chromo_list[j]
             jmol = chromo_mol_id[j]
-            delta_e = ichromo.neighbors_delta_E[ineighbor]
+            delta_e = ichromo.neighbors_delta_e[ineighbor]
             if ichromo.species == jchromo.species:
                 lambda_ij = ichromo.reorganization_energy
             else:
@@ -1106,7 +1062,7 @@ def plot_mixed_hopping_rates(
                 rel_image = ichromo.neighbors[ineighbor][1]
                 jchromo_center = jchromo.center + rel_image * box
                 rij = np.linalg.norm(ichromo.center - jchromo_center) * 1e-10
-                rate = hf.calculate_carrier_hop_rate(
+                rate = hf.get_carrier_hop_rate(
                     lambda_ij,
                     ti,
                     delta_e,
@@ -1118,7 +1074,7 @@ def plot_mixed_hopping_rates(
                     boltz_pen=boltz_pen,
                 )
             else:
-                rate = hf.calculate_carrier_hop_rate(
+                rate = hf.get_carrier_hop_rate(
                     lambda_ij,
                     ti,
                     delta_e,
@@ -1134,36 +1090,36 @@ def plot_mixed_hopping_rates(
                     for cluster in clusters[1].cluster_keys:
                         if i in cluster and j in cluster:
                             prop_lists["intra_cra"].append(rate)
-                            prop_lists["intra_cTa"].append(T_ij)
+                            prop_lists["intra_cTa"].append(ti)
                             break
                         else:
                             prop_lists["inter_cra"].append(rate)
-                            prop_lists["inter_cTa"].append(T_ij)
+                            prop_lists["inter_cTa"].append(ti)
             else:
                 if clusters[0] is not None:
                     for cluster in clusters[0].cluster_keys:
                         if i in cluster and j in cluster:
                             prop_lists["intra_crd"].append(rate)
-                            prop_lists["intra_cTd"].append(T_ij)
+                            prop_lists["intra_cTd"].append(ti)
                             break
                         else:
                             prop_lists["inter_crd"].append(rate)
-                            prop_lists["inter_cTd"].append(T_ij)
+                            prop_lists["inter_cTd"].append(ti)
             # Now do intra- / inter- molecules
             if imol == jmol:
-                if chromo.species == "acceptor":
+                if ichromo.species == "acceptor":
                     prop_lists["intra_mra"].append(rate)
-                    prop_lists["intra_mTa"].append(T_ij)
+                    prop_lists["intra_mTa"].append(ti)
                 else:
                     prop_lists["intra_mrd"].append(rate)
-                    prop_lists["intra_mTd"].append(T_ij)
+                    prop_lists["intra_mTd"].append(ti)
             else:
-                if chromo.species == "acceptor":
+                if ichromo.species == "acceptor":
                     prop_lists["inter_mra"].append(rate)
-                    prop_lists["inter_mTa"].append(T_ij)
+                    prop_lists["inter_mTa"].append(ti)
                 else:
                     prop_lists["inter_mrd"].append(rate)
-                    prop_lists["inter_mTd"].append(T_ij)
+                    prop_lists["inter_mTd"].append(ti)
     # Donor cluster Plots:
     if prop_lists["intra_crd"]:
         val = prop_lists["intra_crd"]
@@ -1215,7 +1171,7 @@ def plot_mixed_hopping_rates(
             path,
         )
         plot_stacked_hist_tis(
-            prop_lists["intra_cTa"],
+           ["intra_cTa"],
             prop_lists["inter_cTa"],
             ["Intra-cluster", "Inter-cluster"],
             "acceptor",
@@ -1305,7 +1261,7 @@ def plot_stacked_hist_rates(data1, data2, labels, species, path):
     filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
-    print(f"Figure saved as {filepath}")
+    print(f"\tFigure saved as {filename}")
 
 
 def plot_stacked_hist_tis(data1, data2, labels, species, cutoff, path):
@@ -1328,7 +1284,7 @@ def plot_stacked_hist_tis(data1, data2, labels, species, cutoff, path):
     filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
-    print(f"Figure saved as {filepath}")
+    print(f"\tFigure saved as {filename}")
 
 
 def write_csv(data_dict, path):
@@ -1337,93 +1293,90 @@ def write_csv(data_dict, path):
         w = csv.writer(f)
         for key, val in data_dict.items():
             w.writerow([key, val])
-    print(f"CSV file written to {filepath}")
+    print(f"\tCSV file written to {filepath}")
 
 
 #TODO
-def calculate_cutoff_from_dist(
-    bin_centres,
-    frequencies,
-    minimum_i=None,
-    maximum_i=None,
-    value_at_least=100,
-    logarithmic=False,
+def get_dist_cutoff(
+    bin_centers,
+    dist,
+    min_i=None,
+    max_i=None,
+    at_least=100,
+    log=False,
 ):
     try:
-        if minimum_i is not None:
+        if min_i is not None:
             # Looking for minima
-            minima = argrelextrema(frequencies, np.less)[0]
-            if minimum_i < 0:
+            minima = argrelextrema(dist, np.less)[0]
+            if min_i < 0:
                 # Sometimes a tiny minimum at super RHS breaks this
                 cutoff = 0.0
                 while True:
-                    selected_minimum = minima[minimum_i]
-                    cutoff = bin_centres[selected_minimum]
-                    if frequencies[selected_minimum] > value_at_least:
+                    selected_min = minima[min_i]
+                    cutoff = bin_centers[selected_min]
+                    if dist[selected_min] > at_least:
                         break
-                    minimum_i -= 1
+                    min_i -= 1
             else:
                 # Sometimes a tiny maximum at super LHS breaks this
                 cutoff = 0.0
                 while True:
-                    selected_minimum = minima[minimum_i]
-                    cutoff = bin_centres[selected_minimum]
-                    if frequencies[selected_minimum] > value_at_least:
+                    selected_min = minima[min_i]
+                    cutoff = bin_centers[selected_min]
+                    if dist[selected_min] > at_least:
                         break
-                    minimum_i += 1
-        elif maximum_i is not None:
+                    min_i += 1
+        elif max_i is not None:
             # Looking for maxima
-            maxima = argrelextrema(frequencies, np.greater)[0]
-            if maximum_i < 0:
+            maxima = argrelextrema(dist, np.greater)[0]
+            if max_i < 0:
                 # Sometimes a tiny maximum at super RHS breaks this
                 cutoff = 0.0
                 while True:
-                    selected_maximum = maxima[maximum_i]
-                    cutoff = bin_centres[selected_maximum]
-                    if frequencies[selected_maximum] > value_at_least:
+                    selected_max = maxima[max_i]
+                    cutoff = bin_centers[selected_max]
+                    if dist[selected_max] > at_least:
                         break
-                    maximum_i -= 1
+                    max_i -= 1
             else:
                 # Sometimes a tiny maximum at super LHS breaks this
                 cutoff = 0.0
                 while True:
-                    selected_maximum = maxima[maximum_i]
-                    cutoff = bin_centres[selected_maximum]
-                    if frequencies[selected_maximum] > value_at_least:
+                    selected_max = maxima[max_i]
+                    cutoff = bin_centers[selected_max]
+                    if dist[selected_max] > at_least:
                         break
-                    maximum_i += 1
-        if logarithmic is True:
+                    max_i += 1
+        if log is True:
             cutoff = 10 ** cutoff
-        # Return as string, as it will be converted to a float later
-        return str(cutoff)
+        return cutoff
     except IndexError:
-        print(
-            "EXCEPTION: No minima found in frequency distribution.",
-            " Setting cutoff to None."
-        )
+        print("Notice: No minima found in distribution. Cutoff set to None.")
         return None
 
 
-def plot_ti_hist(
-    chromo_list, chromo_mol_id, d_ticut, a_ticut, path,
-):
+def plot_ti_hist(chromo_list, chromo_mol_id, ticut, path):
     # ti_dist [[DONOR], [ACCEPTOR]]
     ti_intra = [[], []]
     ti_inter = [[], []]
     species = ["donor", "acceptor"]
     labels = ["Intra-mol", "Inter-mol"]
-    ti_cuts = [d_ticut, a_ticut]
     for sp_i, sp in enumerate(species):
         for i, ichromo in enumerate(chromo_list):
+            if ichromo.species != sp:
+                continue
             for i_neighbor, (j, img) in enumerate(ichromo.neighbors):
                 jchromo = chromo_list[j]
+                if jchromo.species != sp:
+                    continue
                 if i >= j:
                     continue
                 if chromo_mol_id[i] == chromo_mol_id[j]:
                     ti_intra[sp_i].append(ichromo.neighbors_ti[i_neighbor])
                 else:
                     ti_inter[sp_i].append(ichromo.neighbors_ti[i_neighbor])
-        if not ti_intra[sp_i] and ti_inter[sp_i]:
+        if not(ti_intra[sp_i] and ti_inter[sp_i]):
             continue
         plt.figure()
         maxti = np.max(ti_intra[sp_i] + ti_inter[sp_i])
@@ -1434,18 +1387,16 @@ def plot_ti_hist(
             stacked=True,
             label=labels,
         )
-        bin_centres = (bin_edges[1:] + bin_edges[:-1]) / 2
-        smoothed_n = gaussian_filter(n[0] + n[1], 1.0)
-        plt.plot(bin_centres, smoothed_n, color="r")
-        if ti_cuts[sp_i] is None:
-            ti_cuts[sp_i] = calculate_cutoff_from_dist(
-                bin_centres, smoothed_n, minimum_i=-1, value_at_least=100
+        bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2
+        smooth_n = gaussian_filter(n[0] + n[1], 1.0)
+        plt.plot(bin_centers, smooth_n, color="r")
+        if ticut[sp_i] is None:
+            ticut[sp_i] = get_dist_cutoff(
+                bin_centers, smooth_n, min_i=-1, at_least=100
             )
-        print(
-            f"Cluster cut-off based on {sp} ",
-            f"transfer integrals set to {ti_cuts[sp_i]}"
-            )
-        plt.axvline(float(ti_cuts[species_i]), c="k")
+        if ticut[sp_i] is not None:
+            print(f"{sp} TI cluster cut-off set to {ticuts[sp_i]}")
+            plt.axvline(ticut[sp_i], c="k")
         plt.xlim([0, np.max(ti_intra[sp_i] + ti_inter[sp_i])])
         plt.ylim([0, np.max(n) * 1.02])
         plt.ylabel("Frequency (Arb. U.)")
@@ -1455,11 +1406,11 @@ def plot_ti_hist(
         filepath = os.path.join(path, filename)
         plt.savefig(filepath, dpi=300)
         plt.close()
-        print(f"Figure saved as {filepath}")
-    return ti_cuts
+        print(f"\tFigure saved as {filename}")
 
 
-def plot_frequency_dist(c_type, carrier_history, cutoff, path):
+def plot_frequency_dist(c_type, carrier_history, freqcut, path):
+    c_ind = ["hole","electron"].index(c_type)
     nonzero = list(zip(*carrier_history.nonzero()))
     frequencies = []
     for i,j in nonzero:
@@ -1470,20 +1421,18 @@ def plot_frequency_dist(c_type, carrier_history, cutoff, path):
         frequencies.append(np.log10(frequency))
     plt.figure()
     n, bin_edges, _ = plt.hist(frequencies, bins=60, color="b")
-    bin_centres = (bin_edges[1:] + bin_edges[:-1]) / 2.0
-    smoothed_n = gaussian_filter(n, 1.0)
-    plt.plot(bin_centres, smoothed_n, color="r")
-    if cutoff is None:
+    bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
+    smooth_n = gaussian_filter(n, 1.0)
+    plt.plot(bin_centers, smooth_n, color="r")
+    if freqcut[c_ind] is None:
         print("DYNAMIC CUT")
-        cutoff = calculate_cutoff_from_dist(
-            bin_centres,
-            smoothed_n,
-            minimum_i=-1,
-            value_at_least=100,
-            logarithmic=True,
+        freqcut[c_ind] = get_dist_cutoff(
+            bin_centers, smooth_n, min_i=-1, at_least=100, log=True,
         )
-    print(f"Cluster cut-off based on hop frequency set to {cutoff}")
-    plt.axvline(np.log10(cutoff), c="k")
+        print(f"Cluster cut-off based on hop frequency set to {cutoff}")
+    if freqcut[c_ind] is not None:
+        plt.axvline(np.log10(freqcut[c_ind]), c="k")
+
     plt.xlabel(f"Total {c_type} hops (Arb. U.)")
     ax = plt.gca()
     tick_labels = np.arange(0, np.ceil(np.max(frequencies)) + 1, 1)
@@ -1494,8 +1443,7 @@ def plot_frequency_dist(c_type, carrier_history, cutoff, path):
     filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
-    print(f"Figure saved as {filepath}")
-    return cutoff
+    print(f"\tFigure saved as {filename}")
 
 
 def plot_net_frequency_dist(c_type, carrier_history, path):
@@ -1520,7 +1468,7 @@ def plot_net_frequency_dist(c_type, carrier_history, path):
     filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
-    print(f"Figure saved as {filepath}")
+    print(f"\tFigure saved as {filename}")
 
 
 def plot_discrepancy_frequency_dist(c_type, carrier_history, path):
@@ -1554,12 +1502,9 @@ def plot_discrepancy_frequency_dist(c_type, carrier_history, path):
     filepath = os.path.join(path, filename)
     plt.savefig(filepath, dpi=300)
     plt.close()
-    print(
-        f"There are {net_equals_total} paths in this morphology with ",
-        f"one-way transport. \nThere are {net_near_total} paths in this ",
-        "morphology with total - net < 10."
-        )
-    print(f"Figure saved as {filepath}")
+    print(f"There are {net_equals_total} paths with one-way transport.")
+    print(f"There are {net_near_total} paths with total - net < 10.")
+    print(f"\tFigure saved as {filename}")
 
 
 def plot_mobility_msd(
@@ -1568,6 +1513,7 @@ def plot_mobility_msd(
     msds,
     time_stderr,
     msd_stderr,
+    temp,
     path,
 ):
     # Create the first figure that will be replotted each time
@@ -1579,21 +1525,22 @@ def plot_mobility_msd(
         time_stderr,
         msd_stderr,
         c_type,
+        temp,
         path,
     )
+    print("----------------------------------------")
     print(
-            "----------------------------------------\n",
-            f"{c_type.capitalize()} mobility = {mobility:.2E} ",
-            "+/- {mob_error:.2E} cm^{2} V^{-1} s^{-1}\n",
-            "----------------------------------------"
-            )
+          f"{c_type.capitalize()} mobility = {mobility:.2E} ",
+          f"+/- {mob_error:.2E} cm^2 V^-1 s^-1",
+          )
+    print("----------------------------------------")
     plt.close()
     return mobility, mob_error, r_squared
 
 
 def carrier_plots(
-        c_type, carrier_data, chromo_list, snap, freq_cut, three_d, path
-        ):
+    c_type, carrier_data, chromo_list, snap, freqcut, three_d, temp, path
+):
     print(f"Considering the transport of {c_type}...")
     if c_type == "hole":
         carrier_history = carrier_data["hole_history"]
@@ -1608,15 +1555,15 @@ def carrier_plots(
 
     print("Calculating mobility...")
     mobility, mob_error, r_squared = plot_mobility_msd(
-            c_type, times, msds, time_stderr, msd_stderr, path
+            c_type, times, msds, time_stderr, msd_stderr, temp, path
             )
+
+    print(f"Calculating {c_type} trajectory anisotropy...")
+    anisotropy = plot_anisotropy(carrier_data, c_type, three_d, path)
 
     if three_d:
         print("Plotting hop vector distribution")
         plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path)
-
-        print(f"Calculating {c_type} trajectory anisotropy...")
-        anisotrophy = plot_anisotropy(carrier_data, c_type, path)
 
         if carrier_history is not None:
             print("Determining carrier hopping connections...")
@@ -1628,9 +1575,7 @@ def carrier_plots(
             )
 
     print(f"Plotting {c_type} hop frequency distribution...")
-    freq_cut = plot_frequency_dist(
-            c_type, carrier_history, freq_cut, path
-            )
+    plot_frequency_dist(c_type, carrier_history, freqcut, path)
 
     print(f"Plotting {c_type} net hop frequency distribution...")
     plot_net_frequency_dist(c_type, carrier_history, path)
@@ -1638,7 +1583,7 @@ def carrier_plots(
     print("Plotting (total - net hops) discrepancy distribution...")
     plot_discrepancy_frequency_dist(c_type, carrier_history, path)
 
-    return anisotropy, mobility, mob_error, r_squared, freq_cut
+    return anisotropy, mobility, mob_error, r_squared
 
 
 def main(
@@ -1648,14 +1593,10 @@ def main(
         snap,
         path,
         three_d=False,
-        d_freqcut=None,
-        a_freqcut=None,
-        d_sepcut=None,
-        a_sepcut=None,
-        d_ocut=None,
-        a_ocut=None,
-        d_ticut=None,
-        a_ticut=None,
+        freqcut=[None,None],
+        sepcut=[None,None],
+        ocut=[None,None],
+        ticut=[None,None],
         generate_tcl=False,
         sequence_donor=None,
         sequence_acceptor=None,
@@ -1676,33 +1617,33 @@ def main(
     try:
         import mpl_toolkits.mplot3d as p3
     except ImportError:
-        print(
-            "Could not import 3D plotting engine, calling the plotMolecule3D ",
-            "function will result in an error!"
-            )
+        print("Could not import 3D plotting engine!")
+        three_d = False
 
     # Create the figures path if it doesn't already exist
-    fig_dir = os.makedirs(os.path.join(path, "figures"), exist_ok=True)
+    fig_dir = os.path.join(path, "figures")
+    os.makedirs(fig_dir, exist_ok=True)
     # Load in all the required data
     data_dict = {}
-    print("\n")
     print("---------- KMC_ANALYZE ----------")
-    print(path)
+    print(f"All figures saved in {fig_dir}")
     print("---------------------------------")
 
+    box = snap.configuration.box[:3]
     hole_data, elec_data = split_carriers(combined_data)
     # Calculate the mobilities
     if hole_data["id"]:
         c_type = "hole"
         carrier_data = hole_data
 
-        anisotropy, mobility, mob_error, r_squared, d_freqcut = carrier_plots(
+        anisotropy, mobility, mob_error, r_squared = carrier_plots(
                 c_type,
                 carrier_data,
                 chromo_list,
                 snap,
-                d_freqcut,
+                freqcut,
                 three_d,
+                temp,
                 fig_dir
                 )
 
@@ -1715,13 +1656,14 @@ def main(
         c_type = "electron"
         carrier_data = elec_data
 
-        anisotropy, mobility, mob_error, r_squared, a_freqcut = carrier_plots(
+        anisotropy, mobility, mob_error, r_squared = carrier_plots(
                 c_type,
                 carrier_data,
                 chromo_list,
                 snap,
-                a_freqcut,
+                freqcut,
                 three_d,
+                temp,
                 fig_dir
                 )
 
@@ -1737,26 +1679,13 @@ def main(
 
     orientations = get_orientations(chromo_list, snap)
 
-    d_sepcut, a_sepcut = plot_neighbor_hist(
-        chromo_list, chromo_mol_id, box, d_sepcut, a_sepcut, fig_dir,
+    plot_neighbor_hist(chromo_list, chromo_mol_id, box, sepcut, fig_dir)
+    plot_orientation_hist(
+        chromo_list, chromo_mol_id, orientations, ocut, fig_dir,
     )
-    d_ocut, a_ocut = plot_orientation_hist(
-        chromo_list, chromo_mol_id, orientations, d_ocut, a_ocut, fig_dir,
-    )
-    d_ticut, a_ticut = plot_ti_hist(
-        chromo_list, chromo_mol_id, d_ticut, a_ticut, fig_dir,
-    )
-    cutoff_dict = create_cutoff_dict(
-        d_sepcut,
-        a_sepcut,
-        d_ocut,
-        a_ocut,
-        d_ticut,
-        a_ticut,
-        d_freqcut,
-        a_freqcut,
-    )
-    print("Cut-offs specified (value format: [donor, acceptor])")
+    plot_ti_hist(chromo_list, chromo_mol_id, ticut, fig_dir)
+    cutoff_dict = create_cutoff_dict(sepcut, ocut, ticut, freqcut)
+    print("Cut-offs: ('value', [donor, acceptor])")
     print(*[f"\t{i}" for i in cutoff_dict.items()], sep="\n")
 
     clusters = get_clusters(chromo_list, snap, rmax=None)
@@ -1772,7 +1701,7 @@ def main(
         data_dict,
         cutoff_dict,
         temp,
-        path,
+        fig_dir,
         use_vrh=use_vrh,
         koopmans=koopmans,
         boltz_pen=boltz_pen,
@@ -1793,7 +1722,7 @@ def main(
                 data_dict["hole_mobility_err"],
                 data_dict["hole_anisotropy"],
                 "hole",
-                path,
+                fig_dir,
             )
     if sequence_acceptor is not None:
         data_dict["electron_anisotropy"]
@@ -1805,7 +1734,7 @@ def main(
                 data_dict["electron_mobility_err"],
                 data_dict["electron_anisotropy"],
                 "electron",
-                path,
+                fig_dir,
             )
     else:
         print("Skipping plotting mobility evolution.")
