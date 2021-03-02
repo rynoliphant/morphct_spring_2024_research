@@ -15,8 +15,7 @@ on:
 jobs:
   pytest:
     runs-on: ubuntu-latest
-    container: 
-      image: cmelab/morphct:latest
+    container: cmelab/morphct:latest
 
     steps:
     - uses: actions/checkout@v2
