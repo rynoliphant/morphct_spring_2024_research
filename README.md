@@ -1,8 +1,9 @@
-[<img src="morphCTLogo.png" width="500">](https://github.com/cmelab/morphct)
+[<img src=".github/logo.png" width="500">](https://github.com/cmelab/morphct)
 
 [![DOI](https://zenodo.org/badge/100152281.svg)](https://zenodo.org/badge/latestdoi/100152281)
-[![Run Status](https://api.shippable.com/projects/5ae1ee243e7d2b0700153be4/badge?branch=dev)](https://app.shippable.com/bitbucket/cmelab/morphct) 
-[![Coverage Status](https://codecov.io/bb/cmelab/morphct/branch/dev/graph/badge.svg)](https://codecov.io/bb/cmelab/morphct)
+[![build](https://github.com/cmelab/morphct/actions/workflows/build.yml/badge.svg)](https://github.com/cmelab/morphct/actions/workflows/build.yml)
+[![pytest](https://github.com/cmelab/morphct/actions/workflows/pytest.yml/badge.svg)](https://github.com/cmelab/morphct/actions/workflows/pytest.yml)
+[![codecov](https://codecov.io/gh/cmelab/morphct/branch/master/graph/badge.svg?token=PhAfcr15av)](https://codecov.io/gh/cmelab/morphct)
 
 # Intellectual Property #
 
