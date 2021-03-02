@@ -115,19 +115,19 @@ def calc_COM(
     return mass_weighted / float(total_mass)
 
 
-def find_axis(atom1, atom2, normalise=True):
+def find_axis(atom1, atom2, normalize=True):
     """
-    This function determines the normalised vector from the location of atom1 to atom2.
+    This function determines the normalized vector from the location of
+    atom1 to atom2.
     The positions can enter as lists or arrays, but are output as arrays
     """
-    x_sep = atom2[0] - atom1[0]
-    y_sep = atom2[1] - atom1[1]
-    z_sep = atom2[2] - atom1[2]
-    if normalise is True:
-        axis_vector = normalise_vec(np.array([x_sep, y_sep, z_sep]))
-    else:
-        axis_vector = np.array([x_sep, y_sep, z_sep])
-    return axis_vector
+    sep = atom2 - atom1
+    if normalize is True:
+        norm = np.linalg.norm(sep)
+        if norm == 0:
+            return sep
+        return sep / norm
+    return sep
 
 
 def get_chromo_normvec(chromo, snap):
@@ -1172,7 +1172,7 @@ def fix_images(original_morphology):
 # ---============================---
 # ---=== KMC HELPER FUNCTIONS ===---
 # ---============================---
-def calculate_carrier_hop_rate(
+def get_carrier_hop_rate(
     lambda_ij,
     T_ij,
     delta_E_ij,
@@ -1215,9 +1215,7 @@ def calculate_carrier_hop_rate(
     return k_ij
 
 
-def calculate_FRET_hop_rate(
-    prefactor, lifetime_parameter, r_F, rij, delta_E_ij, T
-):
+def get_FRET_hop_rate(prefactor, lifetime_parameter, r_F, rij, delta_E_ij, T):
     # Foerster Transport Hopping Rate Equation
     # The prefactor included here is a bit of a bodge to try and get the
     # mean-free paths of the excitons more in line with the 5nm of experiment.
@@ -1237,7 +1235,7 @@ def calculate_FRET_hop_rate(
     return k_FRET
 
 
-def calculate_miller_abrahams_hop_rate(
+def get_miller_abrahams_hop_rate(
     prefactor, separation, radius, delta_E_ij, T
 ):
     k_ij = prefactor * np.exp(-2 * separation / radius)
