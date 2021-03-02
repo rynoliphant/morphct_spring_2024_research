@@ -24,24 +24,6 @@ p3 = None
 temperature = 290  # K
 
 
-def load_KMC_results_pickle(path):
-    KMC_pickle = os.path.join(path, "KMC", "KMC_results.pickle")
-    try:
-        with open(KMC_pickle, "rb") as pickle_file:
-            carrier_data = pickle.load(pickle_file)
-    except FileNotFoundError:
-        print(
-            "No final KMC_results.pickle found. ",
-            "Creating it from incomplete parts..."
-        )
-        create_results_pickle(path)
-        with open(KMC_pickle, "rb") as pickle_file:
-            carrier_data = pickle.load(pickle_file)
-    except UnicodeDecodeError:
-        with open(KMC_pickle, "rb") as pickle_file:
-            carrier_data = pickle.load(pickle_file, encoding="latin1")
-    return carrier_data
-
 def split_carriers(combined_data):
     hole_inds = np.where(np.array(combined_data["c_type"]) == "hole")[0]
     elec_inds = np.where(np.array(combined_data["c_type"]) == "electron")[0]
@@ -54,7 +36,6 @@ def split_carriers(combined_data):
 
 
 def get_times_msds(carrier_data):
-
     total = 0
     total_averaged = 0
     squared_disps = defaultdict(list)
@@ -84,15 +65,15 @@ def get_times_msds(carrier_data):
         "less than half of) the specified carrier lifetime."
         )
     times = []
-    MSDs = []
+    msds = []
     time_stderr = []
-    MSD_stderr = []
+    msd_stderr = []
     for lt, disps in squared_disps.items():
         times.append(lt)
         time_stderr.append(np.std(actual_times[lt]) / len(actual_times[lt]))
-        MSDs.append(np.average(disps))
-        MSD_stderr.append(np.std(disps) / len(disps))
-    return times, MSDs, time_stderr, MSD_stderr
+        msds.append(np.average(disps))
+        msd_stderr.append(np.std(disps) / len(disps))
+    return times, msds, time_stderr, msd_stderr
 
 
 def plot_displacement_dist(carrier_data, c_type, path):
@@ -107,41 +88,27 @@ def plot_displacement_dist(carrier_data, c_type, path):
     plt.close()
 
 
-def plot_cluster_size_dist(cluster_freqs, path):
-    c_types = ["hole", "electron"]
-    for c_type_i, c_type in enumerate(c_types):
-        try:
-            sizes = list(cluster_freqs[c_type_i].values())
-            sizes = [np.log10(size) for size in sizes if size > 5]
-            if len(sizes) == 0:
-                raise IndexError
-        except IndexError:
-            return
-        plt.figure()
-        try:
+def plot_cluster_size_dist(clusters, path):
+    species = ["donor", "acceptor"]
+    for i, cl in enumerate(clusters):
+        if cl is not None:
+            sizes = [np.log10(len(c)) for c in cl.cluster_keys if len(c) > 5]
+        if sizes:
+            plt.figure()
             plt.hist(
                 sizes,
                 bins=np.logspace(0, np.ceil(np.max(sizes)), 20),
                 color="b",
             )
             plt.xscale("log")
-            plt.xlim([1, 10 ** (np.ceil(np.max(sizes)))])
-        except ValueError:
-            print(
-                "EXCEPTION: No clusters found. ",
-                "Are you sure the cluster criteria are correct?"
-            )
-        plt.xlabel("Cluster Size (Arb. U.)")
-        plt.ylabel("Frequency (Arb. U.)")
-        # 32 for hole cluster size dist, 33 for electron cluster size dist
-        filename = "{:02}_{}_cluster_dist.png".format(
-                32 + c_types.index(c_type),
-                c_type
-                )
-        filepath = os.path.join(path, "figures", filename)
-        plt.savefig(filepath, dpi=300)
-        print(f"Figure saved as {filepath}")
-        plt.close()
+            plt.xlim([1, 10 ** np.ceil(np.max(sizes))])
+            plt.xlabel("Cluster Size (Arb. U.)")
+            plt.ylabel("Frequency (Arb. U.)")
+            filename = f"{species[i]}_cluster_dist.png"
+            filepath = os.path.join(path, filename)
+            plt.savefig(filepath, dpi=300)
+            print(f"Figure saved as {filepath}")
+            plt.close()
 
 
 def get_connections(chromo_list, carrier_history, box):
@@ -257,31 +224,35 @@ def plot_connections(chromo_list, carrier_history, c_type, path):
     plt.clf()
 
 
-def calc_mobility(lin_fit_X, lin_fit_Y, av_time_error, av_MSD_error):
-    # YVals have a std error avMSDError associated with them
+def calc_mobility(lin_fit_X, lin_fit_Y, time_err, msd_err, temp):
+    # YVals have a std error avmsdError associated with them
     # XVals have a std error avTimeError assosciated with them
     numerator = lin_fit_Y[-1] - lin_fit_Y[0]
     denominator = lin_fit_X[-1] - lin_fit_X[0]
+
     # Diffusion coeff D = d(MSD)/dt * 1/2n (n = 3 = number of dimensions)
     # Ref: Carbone2014a (Carbone and Troisi)
-    diffusion_coeff = numerator / (6 * denominator)
+    diff_coeff = numerator / (6 * denominator)
+
     # The error in the mobility is proportionally the same as the error in the
     # diffusion coefficient as the other variables are constants without error
-    diff_error = diffusion_coeff * np.sqrt(
-        (av_MSD_error / numerator) ** 2 + (av_time_error / denominator) ** 2
+    diff_err = diff_coeff * np.sqrt(
+            (msd_err / numerator) ** 2 + (time_err / denominator) ** 2
     )
+
     # Use Einstein-Smoluchowski relation
     # This is in m^{2} / Vs
-    mobility = (hf.elem_chrg * diffusion_coeff / (hf.k_B * temperature))
+    mobility = (hf.elem_chrg * diff_coeff / (hf.k_B * temp))
+
     # Convert to cm^{2}/ Vs
     mobility *= 100 ** 2
-    mob_error = (diff_error / diffusion_coeff) * mobility
-    return mobility, mob_error
+    mob_err = (diff_err / diff_coeff) * mobility
+    return mobility, mob_err
 
 
-def plot_MSD(times, MSDs, time_stderr, MSD_stderr, c_type, path):
+def plot_msd(times, msds, time_stderr, msd_stderr, c_type, path):
     fit_X = np.linspace(np.min(times), np.max(times), 100)
-    gradient, intercept, r_val, p_val, std_err = linregress(times, MSDs)
+    gradient, intercept, r_val, p_val, std_err = linregress(times, msds)
     print(f"Standard Error {std_err}")
     print(f"Fitting r_val = {r_val}")
     fit_Y = (fit_X * gradient) + intercept
@@ -289,10 +260,10 @@ def plot_MSD(times, MSDs, time_stderr, MSD_stderr, c_type, path):
         fit_X,
         fit_Y,
         np.average(time_stderr),
-        np.average(MSD_stderr),
+        np.average(msd_stderr),
     )
-    plt.plot(times, MSDs)
-    plt.errorbar(times, MSDs, xerr=time_stderr, yerr=MSD_stderr)
+    plt.plot(times, msds)
+    plt.errorbar(times, msds, xerr=time_stderr, yerr=msd_stderr)
     plt.plot(fit_X, fit_Y, "r")
     plt.xlabel("Time (s)")
     plt.ylabel(r"MSD (m$^{2}$)")
@@ -303,8 +274,8 @@ def plot_MSD(times, MSDs, time_stderr, MSD_stderr, c_type, path):
     plt.clf()
     print(f"Figure saved as {filepath}")
 
-    plt.semilogx(times, MSDs)
-    plt.errorbar(times, MSDs, xerr=time_stderr, yerr=MSD_stderr)
+    plt.semilogx(times, msds)
+    plt.errorbar(times, msds, xerr=time_stderr, yerr=msd_stderr)
     plt.semilogx(fit_X, fit_Y, "r")
     plt.xlabel("Time (s)")
     plt.ylabel(r"MSD (m$^{2}$)")
@@ -315,8 +286,8 @@ def plot_MSD(times, MSDs, time_stderr, MSD_stderr, c_type, path):
     plt.clf()
     print(f"Figure saved as {filepath}")
 
-    plt.plot(times, MSDs)
-    plt.errorbar(times, MSDs, xerr=time_stderr, yerr=MSD_stderr)
+    plt.plot(times, msds)
+    plt.errorbar(times, msds, xerr=time_stderr, yerr=msd_stderr)
     plt.plot(fit_X, fit_Y, "r")
     plt.xlabel("Time (s)")
     plt.ylabel(r"MSD (m$^{2}$)")
@@ -518,15 +489,13 @@ def get_frame_val(string):
     return string.split("-")[0][1:]
 
 
-def plot_temperature_progression(
-    temp_data, mobility_data, anisotropy_data, c_type, x_label, path
-):
+def plot_temp_progression(temp, mobility, mob_err, anisotropy, c_type, path):
     plt.gcf()
     plt.clf()
-    xvals = temp_data
-    yvals = list(np.array(mobility_data)[:, 0])
-    yerrs = list(np.array(mobility_data)[:, 1])
-    plt.xlabel(x_label)
+    xvals = temp
+    yvals = mobility
+    yerrs = mob_err
+    plt.xlabel("Temperature (Arb. U)")
     plt.ylabel(r"Mobility (cm$^{2}$ / Vs)")
     plt.errorbar(xvals, yvals, xerr=0, yerr=yerrs)
     plt.yscale("log")
@@ -536,8 +505,8 @@ def plot_temperature_progression(
     plt.clf()
     print(f"Figure saved as {filepath}")
 
-    plt.plot(temp_data, anisotropy_data, c="r")
-    plt.xlabel(x_label)
+    plt.plot(temp, anisotropy, c="r")
+    plt.xlabel("Temperature (Arb. U)")
     plt.ylabel(r"$\kappa$ (Arb. U)")
     filename = f"anisotropy_{c_type}.png"
     filepath = os.path.join(path, filename)
@@ -722,64 +691,33 @@ def create_cutoff_dict(
 def get_clusters(chromo_list, snap, rmax=None):
     box = snap.configuration.box
     species = ["donor", "acceptor"]
-    carriers = ["hole", "electron"]
-    cluster_freqs = [{}, {}]
-    cluster_dicts = [{}, {}]
-    clusters_total = [0, 0]
-    clusters_large = [0, 0]
-    clusters_biggest = [0, 0]
-    species_psi = [0, 0]
-    clusters_cutoffs = [[], []]
     for sp_i, sp in enumerate(species):
         chromo_ids = [c.id for c in chromo_list if c.species == sp]
         positions = np.array([chromo_list[i].center for i in chromo_ids])
-        print("Examining the {sp} material...")
+        print(f"Examining the {sp} material...")
         if len(positions) == 0:
             print("No material found. Continuing...")
+            clusters.append(None)
             continue
         print("Calculating clusters...")
         if rmax is None:
-            rmax = max(box)/4}
+            rmax = max(box)/4
+            print(f"No cutoff provided: cluster cutoff set to {rmax}")
 
         cl = freud.cluster.Cluster()
 
         cl.compute((box,positions), neighbors={'r_max': rmax})
 
-        for chromo_ID, cluster_ID in enumerate(clusters_list):
-            cluster_dict[chromo_ID] = cluster_ID
-        cluster_freq = {}
-        for cluster_ID in set(clusters_list):
-            cluster_freq[cluster_ID] = clusters_list.count(cluster_ID)
-        species_psi[type_i] = sum(
-                [p for p in cluster_freq.values() if p > 6]
-        ) / len(clusters_list)
-        clusters_total[type_i] = len(cluster_freq.keys())
-        clusters_large[type_i] = len(
-            [k for k, v in cluster_freq.items() if v > 6]
-        )
-        clusters_biggest[type_i] = np.max(list(cluster_freq.values()))
-        clusters_cutoffs[type_i] = [
-            cutoff_dict[cut_type][type_i]
-            for cut_type in ["separation", "orientation", "ti", "freq"]
-        ]
+        large = sum([1 for c in cl.cluster_keys if len(c) > 6])
+        biggest = max([len(c) for c in cl.cluster_keys])
+        psi = large / cl.num_clusters
         print("----------------------------------------")
-        print(f"{species_type}: Detected {clusters_total[type_i]} total")
-        print(f"and large {clusters_large[type_i]} clusters (size > 6).")
-        print(f"Largest cluster size ={clusters_biggest[type_i]} chromophores.")
-        print(
-            f'Ratio in "large" clusters: {species_psi[type_i]:.3f}'
-            )
+        print(f"{sp}: Detected {cl.num_clusters} total")
+        print(f"and {large} large clusters (size > 6).")
+        print(f"Largest cluster size: {biggest} chromophores.")
+        print(f'Ratio in "large" clusters: {psi:.3f}')
         print("----------------------------------------")
-        cluster_dicts[type_i] = cluster_dict
-        cluster_freqs[type_i] = cluster_freq
-    return (
-        cluster_dicts,
-        cluster_freqs,
-        clusters_total,
-        clusters_large,
-        clusters_biggest,
-        clusters_cutoffs,
-    )
+    return clusters
 
 
 def get_orientations(chromo_list, snap):
@@ -834,139 +772,127 @@ def update_cluster(atom_ID, cluster_list, neighbor_dict):
     return cluster_list
 
 
-def write_cluster_tcl_script(path, cluster_dict, large_cluster):
+def cluster_tcl_script(clusters, large_cluster, path):
     """
     Create a tcl script for each identified cluster.
     """
     # Obtain the IDs of the cluster sizes, sorted by largest first
     print("Sorting the clusters by size...")
-    cluster_order = list(zip(*sorted(
-        zip([len(v) for v in cluster_dict.values()], cluster_dict.keys(),),
-        reverse=True,
-        )))[1]
-    colors = list(range(int(1e6)))
-    count = 0
+    species = ["donor", "acceptor"]
+    for i,cl in enumerate(clusters):
+        sp = species[i]
 
-    print("Creating tcl header...")
-    tcl_text = ["mol delrep 0 0;"]
-    tcl_text += ["pbc wrap -center origin;"]
-    tcl_text += ["pbc box -color black -center origin -width 4;"]
-    tcl_text += ["display resetview;"]
-    tcl_text += ["color change rgb 9 1.0 0.29 0.5;"]
-    tcl_text += ["color change rgb 16 0.25 0.25 0.25;"]
+        if cl is None:
+            print(f"No clusters found for {sp}, continuing...")
 
-    for i, cluster_ID in enumerate(cluster_order):
-        print(
-            f"Creating tcl commands for cluster {i+1:d}/{len(cluster_order):d}",
-            end=" ",
-            )
-        chromos = cluster_dict[cluster_ID]
-        chromo_IDs = [c.ID for c in chromos if c.species == "donor"]
-        if (len(chromo_IDs) > large_cluster):
-            # Only make clusters that are ``large''
-            inclust = ""
-            for chromo in chromo_IDs:
-                inclust += f"{inclust}{chromo:d} "
-            tcl_text += ["mol material AOEdgy;"]  # Use AOEdgy if donor
-            # The +1 makes the largest cluster red rather than blue (looks
-            # better with AO, DoF, shadows)
-            tcl_text += [f"mol color ColorID {colors[count + 1 % 32]:d};"]
-            # VMD has 32 unique colors
-            tcl_text += ["mol representation VDW 4.0 8.0;"]
-            tcl_text += [f"mol selection resid {inclust:s};"]
-            tcl_text += ["mol addrep 0;"]
-            count += 1
-        chromo_IDs = [c.ID for c in chromos if c.species == "acceptor"]
-        if len(chromo_IDs) > large_cluster:
-            inclust = ""
-            for chromo in chromo_IDs:
-                inclust += f"{inclust}{chromo:d} "
-            tcl_text += ["mol material Glass2;"]  # Use Glass2 if acceptor
-            # The +1 makes the largest cluster red rather than blue (looks
-            # better with AO, DoF, shadows)
-            tcl_text += [
-                "mol color ColorID {:d};".format(colors[count + 1 % 32])
-            ]
-            tcl_text += ["mol representation VDW 4.0 8.0;"]
-            tcl_text += ["mol selection resid {:s};".format(inclust)]
-            tcl_text += ["mol addrep 0;"]
-            count += 1
-    tcl_file_path = os.path.join(
-        path.replace("figures", "morphology"), "cluster_colors.tcl"
-    )
+        sorted_cl = sorted(cl.cluster_keys, key=lambda i: len(i), reverse=True)
+        colors = list(range(int(1e6)))
+        count = 0
+
+        print("Creating tcl header...")
+        tcl_text = ["mol delrep 0 0;"]
+        tcl_text += ["pbc wrap -center origin;"]
+        tcl_text += ["pbc box -color black -center origin -width 4;"]
+        tcl_text += ["display resetview;"]
+        tcl_text += ["color change rgb 9 1.0 0.29 0.5;"]
+        tcl_text += ["color change rgb 16 0.25 0.25 0.25;"]
+
+        if sp == "donor":
+            for i, chromo_ids in enumerate(sorted_cl):
+                print(f"Creating tcl for cluster {i+1}/{len(sorted_cl)}")
+                if len(chromo_ids) > large_cluster:
+                    # Only make clusters that are ``large''
+                    inclust = ""
+                    for chromo in chromo_ids:
+                        inclust += f"{inclust}{chromo:d} "
+                tcl_text += ["mol material AOEdgy;"]
+                # Use AOEdgy if donor
+                # The +1 makes the largest cluster red rather than
+                # blue (looks better with AO, DoF, shadows)
+                tcl_text += [f"mol color ColorID {colors[count + 1 % 32]:d};"]
+                # VMD has 32 unique colors
+                tcl_text += ["mol representation VDW 4.0 8.0;"]
+                tcl_text += [f"mol selection resid {inclust:s};"]
+                tcl_text += ["mol addrep 0;"]
+                count += 1
+        else:
+            for i, chromo_ids in enumerate(sorted_cl):
+                print(f"Creating tcl for cluster {i+1}/{len(sorted_cl)}")
+                if len(chromo_ids) > large_cluster:
+                    inclust = ""
+                    for chromo in chromo_ids:
+                        inclust += f"{inclust}{chromo:d} "
+                tcl_text += ["mol material Glass2;"]
+                # Use Glass2 if acceptor
+                # The +1 makes the largest cluster red rather than blue (looks
+                # better with AO, DoF, shadows)
+                tcl_text += [f"mol color ColorID {colors[count + 1 % 32]:d};"]
+                tcl_text += ["mol representation VDW 4.0 8.0;"]
+                tcl_text += [f"mol selection resid {inclust};"]
+                tcl_text += ["mol addrep 0;"]
+                count += 1
+    tcl_file_path = os.path.join(path, "{sp}_cluster_colors.tcl")
     with open(tcl_file_path, "w+") as tcl_file:
         tcl_file.writelines("".join(tcl_text))
-    print("\nClusters coloring written to {:s}".format(tcl_file_path))
+    print(f"\nClusters coloring written to {tcl_file_path}")
 
 
-def generate_lists_for_3d_clusters(cluster_dict, colors, large_cluster):
+def get_lists_for_3d_clusters(clusters, chromo_list, colors, large_cluster):
     data = []
-    for cluster_ID, chromos in cluster_dict.items():
-        if len(chromos) > large_cluster:
-            for chromo in chromos:
-                if chromo.species == "donor":
-                    data.append(
-                        [
-                            chromo.pos[0],
-                            chromo.pos[1],
-                            chromo.pos[2],
-                            "w",
-                            colors[cluster_ID % 7],
-                        ]
-                    )
-                if chromo.species == "acceptor":
-                    data.append(
-                        [
-                            chromo.pos[0],
-                            chromo.pos[1],
-                            chromo.pos[2],
-                            colors[cluster_ID % 7],
-                            "none",
-                        ]
-                    )
+    species = ["donor", "acceptor"]
+    for i,cl in enumerate(clusters):
+        sp = species[i]
+
+        if cl is None:
+            print(f"No clusters found for {sp}, continuing...")
+
+        if sp == "donor":
+            for clust_id, chromo_ids in enumerate(cl.cluster_keys):
+                if len(chromo_ids) > large_cluster:
+                    for c_id in chromo_ids:
+                        chromo = chromo_list[c_id]
+                        data.append(
+                                [*chromo.center, "w", colors[clust_id % 7]]
+                                )
+        else:
+            for clust_id, chromo_ids in enumerate(cl.cluster_keys):
+                if len(chromo_ids) > large_cluster:
+                    for c_id in chromo_ids:
+                        chromo = chromo_list[c_id]
+                        data.append(
+                                [*chromo.center, colors[clust_id % 7], "none"]
+                                )
+
     # Needs a sort so that final image is layered properly
     data = list(sorted(data, key=lambda x: x[0]))
     # Split up list into sublists
-    xs = [row[0] for row in data]
-    ys = [row[1] for row in data]
-    zs = [row[2] for row in data]
+    xyzs = np.array([row[:3] for row in data])
+
     face_colors = [row[3] for row in data]
     edge_colors = [row[4] for row in data]
-    return xs, ys, zs, face_colors, edge_colors
+    return xyzs, face_colors, edge_colors
 
 
-def plot_clusters_3D(
-    chromo_list, cluster_dicts, sim_dims, generate_tcl, path,
-):
+def plot_clusters_3D(chromo_list, clusters, box, generate_tcl, path):
     fig = plt.figure()
     ax = p3.Axes3D(fig)
     colors = ["r", "g", "b", "c", "m", "y", "k"]
     large_cluster = 6
-    cluster_dict = {}
-    for dictionary in cluster_dicts:
-        if dictionary is not None:
-            cluster_dict.update(dictionary)
-    cluster_dict = {}
-    for chromo_ID, cluster_ID in cluster_dict.items():
-        if cluster_ID not in cluster_dict.keys():
-            cluster_dict[cluster_ID] = []
-        else:
-            cluster_dict[cluster_ID].append(chromo_list[chromo_ID])
     if generate_tcl:
-        write_cluster_tcl_script(path, cluster_dict, large_cluster)
+        cluster_tcl_script(clusters, large_cluster, path)
 
-    xs, ys, zs, face_colors, edge_colors = generate_lists_for_3d_clusters(
-        cluster_dict, colors, large_cluster
-    )
+    xyzs, face_colors, edge_colors = get_lists_for_3d_clusters(
+        clusters, chromo_list, colors, large_cluster
+        )
     ax.scatter(
-        xs,
-        ys,
-        zs,
-        facecolors=face_colors,
-        edgecolors=edge_colors,
-        alpha=0.6,
-        s=40,
-    )
+            xyzs[:,0],
+            xyzs[:,1],
+            xyzs[:,2],
+            facecolors=face_colors,
+            edgecolors=edge_colors,
+            alpha=0.6,
+            s=40,
+            )
 
     # Draw boxlines
     box_pts = hf.box_points(box)
@@ -974,9 +900,9 @@ def plot_clusters_3D(
 
     ax.set_xlim([-box[0]/2, box[0]/2])
     ax.set_ylim([-box[1]/2, box[1]/2])
-    ax.set_zlim([-box[2]/2, box[2]/2]])
+    ax.set_zlim([-box[2]/2, box[2]/2])
 
-    filepath = os.path.join(path, "clusters.png"),
+    filepath = os.path.join(path, "figures", "clusters.png"),
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
     print(f"3D cluster figure saved as {filepath}")
     plt.close()
@@ -1104,9 +1030,7 @@ def plot_energy_levels(chromo_list, data_dict, path,):
         )
 
 
-def plot_delta_eij(
-    delta_eij, gauss_bins, fit_args, species, lambda_ij, path
-):
+def plot_delta_eij(delta_eij, gauss_bins, fit_args, species, lambda_ij, path):
     plt.figure()
     n, bins, patches = plt.hist(
         delta_eij,
@@ -1133,114 +1057,95 @@ def plot_delta_eij(
 
 def plot_mixed_hopping_rates(
     chromo_list,
-    param_dict,
-    cluster_dicts,
+    clusters,
     chromo_mol_id,
     data_dict,
-    AA_morphdict,
     cutoff_dict,
+    temp,
     path,
+    use_vrh=False,
+    koopmans=None,
+    boltz_pen=False,
 ):
     # Create all the empty lists we need
-    hop_types = ["intra_", "inter_"]
+    hop_types = ["intra", "inter"]
     hop_targets = ["c", "m"]
     # hop_properties = ["r", "T"]
-    chromo_species = ["d", "a"]
+    species = ["d", "a"]
     prop_lists = defaultdict(list)
-    T = 290
-    for chromo in chromo_list:
-        mol1ID = chromo_mol_id[chromo.ID]
-        for i, T_ij in enumerate(chromo.neighbors_ti):
-            if (T_ij is None) or (T_ij == 0):
+    for i, ichromo in enumerate(chromo_list):
+        imol = chromo_mol_id[i]
+        for ineighbor, ti in enumerate(chromo.neighbors_ti):
+            if ti is None or ti == 0:
                 continue
-            chromo2 = chromo_list[chromo.neighbors[i][0]]
-            mol2ID = chromo_mol_id[chromo2.ID]
-            delta_E = chromo.neighbors_delta_E[i]
-            if chromo.sub_species == chromo2.sub_species:
-                lambda_ij = chromo.reorganisation_energy
+            j = ichromo.neighbors[ineighbor][0]
+            jchromo = chromo_list[j]
+            jmol = chromo_mol_id[j]
+            delta_e = ichromo.neighbors_delta_E[ineighbor]
+            if ichromo.species == jchromo.species:
+                lambda_ij = ichromo.reorganization_energy
             else:
                 lambda_ij = (
-                    chromo.reorganisation_energy + chromo2.reorganisation_energy
+                    ichromo.reorganization_energy +
+                    jchromo.reorganization_energy
                 ) / 2
             # Now take into account the various behaviours we can have from
             # the parameter file
             prefactor = 1.0
             # Apply the koopmans prefactor
-            try:
-                use_koop = param_dict["use_koopmans_approximation"]
-                if use_koop:
-                    prefactor *= param_dict["koopmans_hopping_prefactor"]
-            except KeyError:
-                pass
-            # Apply the simple energetic penalty model
-            try:
-                boltz_pen = param_dict["use_simple_energetic_penalty"]
-            except KeyError:
-                boltz_pen = False
+            if koopmans is not None:
+                prefactor *= koopmans
             # Apply the distance penalty due to VRH
-            try:
-                VRH = param_dict["use_VRH"]
-                if VRH is True:
-                    VRH_delocalisation = 1.0 / chromo.VRH_delocalisation
-            except KeyError:
-                VRH = False
-            if VRH is True:
-                relative_image = chromo.neighbors[i][1]
-                neighbor_chromo_pos = chromo2.pos + (
-                    np.array(relative_image)
-                    * np.array(
-                        [AA_morphdict[axis] for axis in ["lx", "ly", "lz"]]
-                    )
-                )
-                chromo_separation = (
-                    hf.calculate_separation(chromo.pos, neighbor_chromo_pos)
-                    * 1e-10
-                )
+            if use_vrh:
+                vrh_delocalization = 1.0 / ichromo.vrh_delocalization
+                rel_image = ichromo.neighbors[ineighbor][1]
+                jchromo_center = jchromo.center + rel_image * box
+                rij = np.linalg.norm(ichromo.center - jchromo_center) * 1e-10
                 rate = hf.calculate_carrier_hop_rate(
                     lambda_ij,
-                    T_ij,
-                    delta_E,
+                    ti,
+                    delta_e,
                     prefactor,
-                    T,
-                    use_VRH=VRH,
-                    rij=chromo_separation,
-                    VRH_delocalisation=VRH_delocalisation,
+                    temp,
+                    use_VRH=use_vrh,
+                    rij=rij,
+                    VRH_delocalisation=vrh_delocalisation,
                     boltz_pen=boltz_pen,
                 )
             else:
                 rate = hf.calculate_carrier_hop_rate(
                     lambda_ij,
-                    T_ij,
-                    delta_E,
+                    ti,
+                    delta_e,
                     prefactor,
-                    T,
+                    temp,
                     boltz_pen=boltz_pen,
                 )
-            if chromo2.ID < chromo.ID:
+            if j < i:
                 continue
             # Do intra- / inter- clusters
-            if chromo.species == "acceptor":
-                if (
-                    cluster_dicts[1][chromo.ID]
-                    == cluster_dicts[1][chromo.neighbors[i][0]]
-                ):
-                    prop_lists["intra_cra"].append(rate)
-                    prop_lists["intra_cTa"].append(T_ij)
-                else:
-                    prop_lists["inter_cra"].append(rate)
-                    prop_lists["inter_cTa"].append(T_ij)
+            if ichromo.species == "acceptor":
+                if clusters[1] is not None:
+                    for cluster in clusters[1].cluster_keys:
+                        if i in cluster and j in cluster:
+                            prop_lists["intra_cra"].append(rate)
+                            prop_lists["intra_cTa"].append(T_ij)
+                            break
+                        else:
+                            prop_lists["inter_cra"].append(rate)
+                            prop_lists["inter_cTa"].append(T_ij)
             else:
-                if (
-                    cluster_dicts[0][chromo.ID]
-                    == cluster_dicts[0][chromo.neighbors[i][0]]
-                ):
-                    prop_lists["intra_crd"].append(rate)
-                    prop_lists["intra_cTd"].append(T_ij)
-                else:
-                    prop_lists["inter_crd"].append(rate)
-                    prop_lists["inter_cTd"].append(T_ij)
+                if clusters[0] is not None:
+                    for cluster in clusters[0].cluster_keys:
+                        if i in cluster and j in cluster:
+                            prop_lists["intra_crd"].append(rate)
+                            prop_lists["intra_cTd"].append(T_ij)
+                            break
+                        else:
+                            prop_lists["inter_crd"].append(rate)
+                            prop_lists["inter_cTd"].append(T_ij)
             # Now do intra- / inter- molecules
-            if mol1ID == mol2ID:
+            if imol == jmol:
                 if chromo.species == "acceptor":
                     prop_lists["intra_mra"].append(rate)
                     prop_lists["intra_mTa"].append(T_ij)
@@ -1254,9 +1159,6 @@ def plot_mixed_hopping_rates(
                 else:
                     prop_lists["inter_mrd"].append(rate)
                     prop_lists["inter_mTd"].append(T_ij)
-    # 12 for the donor cluster ti, 13 for the acceptor cluster ti, 14 for
-    # the donor mol kij, 15 for the acceptor mol kij, 16 for the donor
-    # cluster kij, 17 for the acceptor cluster kij
     # Donor cluster Plots:
     if prop_lists["intra_crd"]:
         val = prop_lists["intra_crd"]
@@ -1358,32 +1260,29 @@ def plot_mixed_hopping_rates(
             path,
         )
     # Update the dataDict
-    for sp in chromo_species:
-        for hop_type in hop_types:
-            for target in hop_targets:
-                hop_name = f"{hop_type}_{target}r{sp}"
-                n_hops = len(prop_lists[hop_name])
-                if n_hops == 0:
-                    continue
+    for hop_type,target,sp in itertools.product(hop_types,hop_targets,species):
+        hop_name = f"{hop_type}_{target}r{sp}"
+        n_hops = len(prop_lists[hop_name])
+        if n_hops == 0:
+            continue
 
-                other_hop = hop_types[hop_types.index(hop_type) * -1 + 1]
-                other_hop_name = f"{other_hop}_{target}r{sp}"
+        other_hop = hop_types[hop_types.index(hop_type) * -1 + 1]
+        other_hop_name = f"{other_hop}_{target}r{sp}"
 
-                total_hops = n_hops + len(prop_lists[other_hop_name])
-                proportion = n_hops / total_hops
+        total_hops = n_hops + len(prop_lists[other_hop_name])
+        proportion = n_hops / total_hops
 
-                mean_rate = np.mean(prop_lists[hop_name])
-                dev_rate = np.std(prop_lists[hop_name])
-                data_dict[f"{sp}_{hop_type}_{target}_hops"]= n_hops
-                data_dict[f"{sp}_{hop_type}_{target}_proportion"] = proportion
-                data_dict[f"{sp}_{hop_type}_{target}_rate_mean"] = mean_rate
-                data_dict[f"{sp}_{hop_type}_{target}_rate_std"] = dev_rate
-    return data_dict
+        mean_rate = np.mean(prop_lists[hop_name])
+        stdev_rate = np.std(prop_lists[hop_name])
+        data_dict[f"{hop_name}_hops"]= n_hops
+        data_dict[f"{hop_name}_proportion"] = proportion
+        data_dict[f"{hop_name}_rate_mean"] = mean_rate
+        data_dict[f"{hop_name}_rate_std"] = stdev_rate
 
 
 def plot_stacked_hist_rates(data1, data2, labels, species, path):
     plt.figure()
-    (n, bins, patches) = plt.hist(
+    n, bins, patches = plt.hist(
         [data1, data2],
         bins=np.logspace(1, 18, 40),
         stacked=True,
@@ -1406,7 +1305,7 @@ def plot_stacked_hist_rates(data1, data2, labels, species, path):
 
 def plot_stacked_hist_tis(data1, data2, labels, species, cutoff, path):
     plt.figure()
-    (n, bins, patches) = plt.hist(
+    n, bins, patches = plt.hist(
         [data1, data2],
         bins=np.linspace(0, 1.2, 20),
         stacked=True,
@@ -1415,7 +1314,6 @@ def plot_stacked_hist_tis(data1, data2, labels, species, cutoff, path):
     )
     plt.ylabel("Frequency (Arb. U.)")
     plt.xlabel(rf"{species.capitalize()} J$_{{i,j}}$ (eV)")
-    # plt.xlim([0, 1.2])
     plt.ylim([0, np.max(n) * 1.02])
     if cutoff is not None:
         plt.axvline(float(cutoff), c="k")
@@ -1428,13 +1326,13 @@ def plot_stacked_hist_tis(data1, data2, labels, species, cutoff, path):
     print(f"Figure saved as {filepath}")
 
 
-def write_CSV(data_dict, path):
-    CSV_filename = os.path.join(path, "results.csv")
-    with open(CSV_filename, "w+") as CSV_file:
-        CSV_writer = csv.writer(CSV_file)
-        for key in sorted(data_dict.keys()):
-            CSV_writer.writerow([key, data_dict[key]])
-    print("CSV file written to {:s}".format(CSV_filename))
+def write_csv(data_dict, path):
+    filepath = os.path.join(path, "results.csv")
+    with open(filepath, "w") as f:
+        w = csv.writer(f)
+        for key, val in data_dict.items():
+            w.writerow([key, val])
+    print(f"CSV file written to {filepath}")
 
 
 def create_results_pickle(path):
@@ -1732,22 +1630,22 @@ def plot_discrepancy_frequency_dist(c_type, carrier_history, path):
     print(f"Figure saved as {filepath}")
 
 
-def plot_mobility_MSD(
+def plot_mobility_msd(
     c_type,
     times,
-    MSDs,
+    msds,
     time_stderr,
-    MSD_stderr,
+    msd_stderr,
     path,
 ):
     # Create the first figure that will be replotted each time
     plt.figure()
-    times, MSDs = hf.parallel_sort(times, MSDs)
-    mobility, mob_error, r_squared = plot_MSD(
+    times, msds = hf.parallel_sort(times, msds)
+    mobility, mob_error, r_squared = plot_msd(
         times,
-        MSDs,
+        msds,
         time_stderr,
-        MSD_stderr,
+        msd_stderr,
         c_type,
         path,
     )
@@ -1771,14 +1669,14 @@ def carrier_plots(
         carrier_history = carrier_data["electron_history"]
 
     print("Obtaining mean squared displacements...")
-    times, MSDs, time_stderr, MSD_stderr = get_times_msds(carrier_data)
+    times, msds, time_stderr, msd_stderr = get_times_msds(carrier_data)
 
     print(f"Plotting distribution of {c_type} displacements")
     plot_displacement_dist(carrier_data, c_type, path)
 
     print("Calculating mobility...")
-    mobility, mob_error, r_squared = plot_mobility_MSD(
-            c_type, times, MSDs, time_stderr, MSD_stderr, path
+    mobility, mob_error, r_squared = plot_mobility_msd(
+            c_type, times, msds, time_stderr, msd_stderr, path
             )
 
     if three_D:
@@ -1808,11 +1706,12 @@ def carrier_plots(
     print("Plotting (total - net hops) discrepancy distribution...")
     plot_discrepancy_frequency_dist(c_type, carrier_history, path)
 
-    return anisotropy, mobility, r_squared, freq_cut
+    return anisotropy, mobility, mob_error, r_squared, freq_cut
 
 
 def main(
         combined_data,
+        temp,
         path,
         three_D=False,
         d_freqcut=None,
@@ -1826,8 +1725,10 @@ def main(
         generate_tcl=False,
         sequence_donor=None,
         sequence_acceptor=None,
-        xlabel="Temperature (Arb. U.)",
         backend=None,
+        use_vrh=False,
+        koopmans=None,
+        boltz_pen=False,
         ):
     # Load the matplotlib backend and the plotting subroutines
     global plt
@@ -1861,7 +1762,7 @@ def main(
         c_type = "hole"
         carrier_data = hole_data
 
-        anisotropy, mobility, r_squared, d_freqcut = carrier_plots(
+        anisotropy, mobility, mob_error, r_squared, d_freqcut = carrier_plots(
                 c_type,
                 carrier_data,
                 chromo_list,
@@ -1873,13 +1774,14 @@ def main(
 
         data_dict[f"{c_type}_anisotropy"] = anisotropy
         data_dict[f"{c_type}_mobility"] = mobility
+        data_dict[f"{c_type}_mobility_err"] = mob_error
         data_dict[f"{c_type}_mobility_r_squared"] = r_squared
 
     if elec_data["id"]:
         c_type = "electron"
         carrier_data = elec_data
 
-        anisotropy, mobility, r_squared, a_freqcut = carrier_plots(
+        anisotropy, mobility, mob_error, r_squared, a_freqcut = carrier_plots(
                 c_type,
                 carrier_data,
                 chromo_list,
@@ -1891,6 +1793,7 @@ def main(
 
         data_dict[f"{c_type}_anisotropy"] = anisotropy
         data_dict[f"{c_type}_mobility"] = mobility
+        data_dict[f"{c_type}_mobility_err"] = mob_error
         data_dict[f"{c_type}_mobility_r_squared"] = r_squared
 
     # Now plot the distributions!
@@ -1921,95 +1824,53 @@ def main(
     )
     print("Cut-offs specified (value format: [donor, acceptor])")
     print(*[f"\t{i}" for i in cutoff_dict.items()], sep="\n")
-    (cluster_dicts,
-     cluster_freqs,
-     clusters_total,
-     clusters_large,
-     clusters_biggest,
-     clusters_cutoffs) = get_clusters(
-         chromo_list,
-         carrier_history_dict,
-         orientations,
-         cutoff_dict,
-         AA_morphdict
-         )
-    if clusters_total[0] > 0:
-        data_dict["donor_clusters_total"] = clusters_total[0]
-        data_dict["donor_clusters_large"] = clusters_large[0]
-        data_dict["donor_clusters_biggest"] = clusters_biggest[0]
-        data_dict["donor_clusters_separation_cut"] = repr(
-            clusters_cutoffs[0][0]
-        )
-        data_dict["donor_clusters_orientation_cut"] = repr(
-            clusters_cutoffs[0][1]
-        )
-        data_dict["donor_clusters_transfer_integral_cut"] = repr(
-            clusters_cutoffs[0][2]
-        )
-        data_dict["donor_clusters_hop_freq_cut"] = repr(
-            clusters_cutoffs[0][3]
-        )
-    if clusters_total[1] > 0:
-        data_dict["acceptor_clusters_total"] = clusters_total[1]
-        data_dict["acceptor_clusters_large"] = clusters_large[1]
-        data_dict["acceptor_clusters_biggest"] = clusters_biggest[1]
-        data_dict["acceptor_clusters_separation_cut"] = repr(
-            clusters_cutoffs[1][0]
-        )
-        data_dict["acceptor_clusters_orientation_cut"] = repr(
-            clusters_cutoffs[1][1]
-        )
-        data_dict["acceptor_clusters_transfer_integral_cut"] = repr(
-            clusters_cutoffs[1][2]
-        )
-        data_dict["acceptor_clusters_hop_freq_cut"] = repr(
-                clusters_cutoffs[1][3]
-                )
+
+    clusters = get_clusters(chromo_list, snap, rmax=None):
+
     if three_D:
         print("Plotting 3D cluster location plot...")
-        plot_clusters_3D(
-            chromo_list,
-            cluster_dicts,
-            sim_dims,
-            generate_tcl,
-            temp_dir,
-        )
-    data_dict = plot_mixed_hopping_rates(
+        plot_clusters_3D(chromo_list, clusters, box, generate_tcl, path)
+
+    plot_mixed_hopping_rates(
         chromo_list,
-        param_dict,
-        cluster_dicts,
+        clusters,
         chromo_mol_id,
         data_dict,
-        AA_morphdict,
         cutoff_dict,
-        temp_dir,
+        temp,
+        path,
+        use_vrh=use_vrh,
+        koopmans=koopmans,
+        boltz_pen=boltz_pen,
     )
 
     print("Plotting cluster size distribution...")
-    plot_cluster_size_dist(cluster_freqs, path)
+    plot_cluster_size_dist(clusters, fig_dir)
 
     print("Writing CSV Output File...")
-    write_CSV(data_dict, path)
+    write_csv(data_dict, path)
 
     print("Plotting Mobility and Anisotropy progressions...")
     if sequence_donor is not None:
-        if len(hole_anisotropy_data) > 0:
-            plot_temperature_progression(
+        if data_dict["hole_anisotropy"]:
+            plot_temp_progression(
                 sequence_donor,
-                hole_mobility_data,
-                hole_anisotropy_data,
+                data_dict["hole_mobility"],
+                data_dict["hole_mobility_err"],
+                data_dict["hole_anisotropy"],
                 "hole",
-                xlabel,
                 path,
             )
     if sequence_acceptor is not None:
-        if len(electron_anisotropy_data) > 0:
-            plot_temperature_progression(
+        data_dict["electron_anisotropy"]
+        data_dict["electron_mobility"]
+        if data_dict["electron_anisotropy"]:
+            plot_temp_progression(
                 sequence_acceptor,
-                electron_mobility_data,
-                electron_anisotropy_data,
+                data_dict["electron_mobility"],
+                data_dict["electron_mobility_err"],
+                data_dict["electron_anisotropy"],
                 "electron",
-                xlabel,
                 path,
             )
     else:
