@@ -1,12 +1,13 @@
-[<img src="morphCTLogo.png" width="500">](https://github.com/cmelab/morphct)
+[<img src=".github/logo.png" width="500">](https://github.com/cmelab/morphct)
 
 [![DOI](https://zenodo.org/badge/100152281.svg)](https://zenodo.org/badge/latestdoi/100152281)
-[![Run Status](https://api.shippable.com/projects/5ae1ee243e7d2b0700153be4/badge?branch=dev)](https://app.shippable.com/bitbucket/cmelab/morphct) 
-[![Coverage Status](https://codecov.io/bb/cmelab/morphct/branch/dev/graph/badge.svg)](https://codecov.io/bb/cmelab/morphct)
+[![build](https://github.com/cmelab/morphct/actions/workflows/build.yml/badge.svg)](https://github.com/cmelab/morphct/actions/workflows/build.yml)
+[![pytest](https://github.com/cmelab/morphct/actions/workflows/pytest.yml/badge.svg)](https://github.com/cmelab/morphct/actions/workflows/pytest.yml)
+[![codecov](https://codecov.io/gh/cmelab/morphct/branch/master/graph/badge.svg?token=PhAfcr15av)](https://codecov.io/gh/cmelab/morphct)
 
 # Intellectual Property #
 
-MorphCT has been released under a GPL3 license (please see LICENSE.TXT for conditions). Please read and cite our [Molecular Simulations paper](https://doi.org/10.1080/08927022.2017.1296958), and our [zenodo DOI](https://zenodo.org/badge/latestdoi/100152281) if you use our code in your published work.
+MorphCT has been released under a GPL3 license (see LICENSE). Please read and cite our [Molecular Simulations paper](https://doi.org/10.1080/08927022.2017.1296958) and our [zenodo DOI](https://zenodo.org/badge/latestdoi/100152281) if you use our code in your published work.
 
 ---
 
