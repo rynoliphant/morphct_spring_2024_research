@@ -1,8 +1,8 @@
 def test_imports():
     import morphct
-    from morphct import chromophores
-    from morphct import execute_qcc as eqcc
-    from morphct import helper_functions as hf
-    from morphct import mobility_kmc as kmc
-    from morphct import transfer_integrals as ti
-    from morphct.utils import kmc_analyze
+    import morphct.chromophores
+    import morphct.execute_qcc as eqcc
+    import morphct.helper_functions as hf
+    import morphct.mobility_kmc as kmc
+    import morphct.transfer_integrals as ti
+    import morphct.utils.kmc_analyze
