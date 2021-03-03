@@ -20,12 +20,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
  
-    - name: Install morphct # This will be changed once a new stable version released
-      run: |
-          pwd
-          ls
-          python -m pip install .
-          
     - name: Run pytest with coverage report
       run: python -m pytest --cov=./ --cov-report=xml -v
 
