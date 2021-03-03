@@ -119,12 +119,15 @@ def get_chromo_ids_smiles(snap, smarts_str, conversion_dict):
     -------
 
     """
+    box = snap.configuration.box[:3]
+    unwrapped_positions = snap.particles.position + snap.particles.image * box
+
     mol = openbabel.OBMol()
     for i, typeid in enumerate(snap.particles.typeid):
         a = mol.NewAtom()
         element = conversion_dict[snap.particles.types[typeid]]
         a.SetAtomicNum(element.atomic_number)
-        a.SetVector(*[float(x) for x in snap.particles.position[i]])
+        a.SetVector(*[float(x) for x in unwrapped_positions[i]])
 
     for i,j in snap.bonds.group:
         # openbabel indexes atoms from 1
