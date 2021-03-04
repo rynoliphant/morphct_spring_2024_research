@@ -12,3 +12,15 @@ class TestEQCC(BaseTest):
                 data,
                 np.array([[-9.01337182, -8.5404688, 0.17193304, 0.86523495]])
                 )
+
+    def test_dimer_homolumo(self, p3ht_qcc_pairs):
+        from morphct.execute_qcc import dimer_homolumo
+
+        qcc_pair = p3ht_qcc_pairs[0]
+        pair, energies = dimer_homolumo([qcc_pair])[0]
+
+        assert pair == (0,1)
+        assert np.allclose(
+                energies,
+                np.array([-8.70917208, -8.21756382, -0.26434042, 0.35184321])
+                )
