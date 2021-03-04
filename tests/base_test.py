@@ -32,3 +32,12 @@ class BaseTest:
         with open(name=filepath, mode='rb') as f:
             chromo_list = pickle.load(f)
         return chromo_list
+
+    @pytest.fixture
+    def p3ht_qcc_pairs(self):
+        import pickle
+
+        filepath = os.path.join(test_dir, "assets/qcc_pairs.pkl")
+        with open(name=filepath, mode='rb') as f:
+            qcc_pairs = pickle.load(f)
+        return qcc_pairs
