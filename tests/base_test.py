@@ -43,17 +43,11 @@ class BaseTest:
         return qcc_pairs
 
     @pytest.fixture
-    def p3ht_singlesdata(self):
-        from morphct.execute_qcc import get_singlesdata
-
+    def p3ht_sfilename(self):
         filepath = os.path.join(test_dir, "assets/singles_energies.txt")
-        data = get_singlesdata(filepath)
-        return data
+        return filepath
 
     @pytest.fixture
-    def p3ht_dimerdata(self):
-        from morphct.execute_qcc import get_dimerdata
-
+    def p3ht_dfilename(self):
         filepath = os.path.join(test_dir, "assets/dimer_energies.txt")
-        data = get_dimerdata(filepath)
-        return data
+        return filepath
