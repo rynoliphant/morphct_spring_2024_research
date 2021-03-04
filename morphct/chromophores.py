@@ -106,8 +106,7 @@ class Chromophore:
         """
         if self.species == "acceptor":
             return self.lumo
-        elif self.species == "donor":
-            return self.homo
+        return self.homo
 
 
 def get_chromo_ids_smiles(snap, smarts_str, conv_dict, ff=None, steps=100):
