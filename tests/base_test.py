@@ -21,7 +21,7 @@ class BaseTest:
         import pickle
 
         filepath = os.path.join(test_dir, "assets/chromo_list.pkl")
-        with open(name=filepath, mode='rb') as f:
+        with open(filepath, mode='rb') as f:
             chromo_list = pickle.load(f)
         return chromo_list
 
@@ -30,7 +30,7 @@ class BaseTest:
         import pickle
 
         filepath = os.path.join(test_dir, "assets/chromo_list_neighbors.pkl")
-        with open(name=filepath, mode='rb') as f:
+        with open(filepath, mode='rb') as f:
             chromo_list = pickle.load(f)
         return chromo_list
 
@@ -39,7 +39,7 @@ class BaseTest:
         import pickle
 
         filepath = os.path.join(test_dir, "assets/qcc_pairs.pkl")
-        with open(name=filepath, mode='rb') as f:
+        with open(filepath, mode='rb') as f:
             qcc_pairs = pickle.load(f)
         return qcc_pairs
 
@@ -58,6 +58,6 @@ class BaseTest:
         import pickle
 
         filepath = os.path.join(test_dir, "assets/chromo_list_energies.pkl")
-        with open(name=filepath, mode='rb') as f:
+        with open(filepath, mode='rb') as f:
             chromo_list = pickle.load(f)
         return chromo_list
