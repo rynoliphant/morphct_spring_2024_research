@@ -9,8 +9,7 @@ class BaseTest:
         import gsd.hoomd
 
         test_dir = os.path.dirname(__file__)
-        rel_path = "assets/p3ht_2_15mers.gsd"
-        filepath = os.path.join(main_script_dir, rel_path)
+        filepath = os.path.join(test_dir, "assets/p3ht_2_15mers.gsd")
         with gsd.hoomd.open(name=filepath, mode='rb') as f:
             snap = f[0]
 
