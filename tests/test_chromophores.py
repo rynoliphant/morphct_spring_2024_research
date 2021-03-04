@@ -1,5 +1,5 @@
-from base_test import BaseTest
 import numpy as np
+from base_test import BaseTest
 
 class TestChromophores(BaseTest):
 
