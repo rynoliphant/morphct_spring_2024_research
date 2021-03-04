@@ -131,7 +131,7 @@ class Carrier:
                             self.current_chromo.center - neighbor_pos
                             ) * 1e-10
 
-                    hop_rate = hf.calculate_carrier_hop_rate(
+                    hop_rate = hf.get_carrier_hop_rate(
                         self.lambda_ij,
                         ti,
                         delta_E_ij,
@@ -143,7 +143,7 @@ class Carrier:
                         boltz_pen=self.boltz_penalty,
                     )
                 else:
-                    hop_rate = hf.calculate_carrier_hop_rate(
+                    hop_rate = hf.get_carrier_hop_rate(
                         self.lambda_ij,
                         ti,
                         delta_E_ij,
