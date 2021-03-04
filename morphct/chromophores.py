@@ -110,10 +110,12 @@ class Chromophore:
             return self.homo
 
 
-def get_chromo_ids_smiles(snap, smarts_str, conversion_dict):
+def get_chromo_ids_smiles(snap, smarts_str, conv_dict, ff=None, steps=100):
     """
     Parameters
     ----------
+    ff:
+    http://open-babel.readthedocs.io/en/latest/Forcefields/Overview.html
 
     Returns
     -------
@@ -125,7 +127,7 @@ def get_chromo_ids_smiles(snap, smarts_str, conversion_dict):
     mol = openbabel.OBMol()
     for i, typeid in enumerate(snap.particles.typeid):
         a = mol.NewAtom()
-        element = conversion_dict[snap.particles.types[typeid]]
+        element = conv_dict[snap.particles.types[typeid]]
         a.SetAtomicNum(element.atomic_number)
         a.SetVector(*[float(x) for x in unwrapped_positions[i]])
 
@@ -134,20 +136,30 @@ def get_chromo_ids_smiles(snap, smarts_str, conversion_dict):
         # AddBond(i_index, j_index, bond_order)
         mol.AddBond(int(i+1), int(j+1), 1)
 
-    pybelmol = pybel.Molecule(mol)
     # This will correctly set the bond order
     # (necessary for smarts matching)
-    pybelmol.OBMol.PerceiveBondOrders()
+    mol.PerceiveBondOrders()
+    mol.SetAromaticPerceived()
+
+    # Energy minimization may be needed to find some matches
+    if ff is not None:
+        uff = openbabel.OBForceField.FindForceField(ff)
+        uff.Setup(mol)
+        uff.ConjugateGradients(steps)
+        uff.UpdateCoordinates(mol)
+
+    pybelmol = pybel.Molecule(mol)
 
     smarts = pybel.Smarts(smarts_str)
     # shift indices by 1
     atom_ids = [np.array(i)-1 for i in smarts.findall(pybelmol)]
     if not atom_ids:
         warn(
-            f"No matches found for smarts string {smarts_str}\n",
-            "Please check the returned pybel.Molecule for errors."
+            f"No matches found for smarts string {smarts_str}. " +
+            "Please check the returned pybel.Molecule for errors.\n",
             )
         return pybelmol
+    print(f"Found {len(atom_ids)} chromophores.")
     return atom_ids
 
 
