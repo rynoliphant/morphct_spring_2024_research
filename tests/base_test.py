@@ -23,3 +23,12 @@ class BaseTest:
         with open(name=filepath, mode='rb') as f:
             chromo_list = pickle.load(f)
         return chromo_list
+
+    @pytest.fixture
+    def p3ht_chromo_list_neighbors(self):
+        import pickle
+
+        filepath = os.path.join(test_dir, "assets/chromo_list_neighbors.pkl")
+        with open(name=filepath, mode='rb') as f:
+            chromo_list = pickle.load(f)
+        return chromo_list
