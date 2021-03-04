@@ -2,8 +2,9 @@ import os
 import pytest
 
 
+test_dir = os.path.dirname(__file__)
+
 class BaseTest:
-    test_dir = os.path.dirname(__file__)
 
     @pytest.fixture
     def p3ht_snap(self):
