@@ -13,7 +13,10 @@ from morphct import helper_functions as hf
 from morphct.helper_functions import v_print
 
 
-mp.set_start_method("fork")
+try:
+    mp.set_start_method("fork")
+except RuntimeError:
+    pass
 
 
 class Carrier:
