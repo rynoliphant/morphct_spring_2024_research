@@ -3,16 +3,23 @@ import pytest
 
 
 class BaseTest:
+    test_dir = os.path.dirname(__file__)
 
     @pytest.fixture
     def p3ht_snap(self):
         import gsd.hoomd
 
-        test_dir = os.path.dirname(__file__)
         filepath = os.path.join(test_dir, "assets/p3ht_2_15mers.gsd")
         with gsd.hoomd.open(name=filepath, mode='rb') as f:
             snap = f[0]
 
         return snap
 
+    @pytest.fixture
+    def p3ht_chromo_list(self):
+        import pickle
 
+        filepath = os.path.join(test_dir, "assets/chromo_list.pkl")
+        with open(name=filepath, mode='rb') as f:
+            chromo_list = pickle.load(f)
+        return chromo_list
