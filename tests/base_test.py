@@ -41,3 +41,19 @@ class BaseTest:
         with open(name=filepath, mode='rb') as f:
             qcc_pairs = pickle.load(f)
         return qcc_pairs
+
+    @pytest.fixture
+    def p3ht_singlesdata(self):
+        from morphct.execute_qcc import get_singlesdata
+
+        filepath = os.path.join(test_dir, "assets/singles_energies.txt")
+        data = get_singlesdata(filepath)
+        return data
+
+    @pytest.fixture
+    def p3ht_dimerdata(self):
+        from morphct.execute_qcc import get_dimerdata
+
+        filepath = os.path.join(test_dir, "assets/dimer_energies.txt")
+        data = get_dimerdata(filepath)
+        return data
