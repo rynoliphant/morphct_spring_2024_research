@@ -6,10 +6,10 @@ dependencies:
 - freud=2.4.1
 - gsd=2.4.0
 - matplotlib=3.3.4
-- numpy=1.20.1
+- numpy=1.19
 - openbabel=3.1.1
 - pip=21.0.1
-- python=3.8.6
+- python=3.7
 - scipy=1.4.1
 - pytest
 - pytest-cov
