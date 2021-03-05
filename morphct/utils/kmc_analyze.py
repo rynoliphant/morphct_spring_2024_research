@@ -1429,7 +1429,7 @@ def plot_frequency_dist(c_type, carrier_history, freqcut, path):
         freqcut[c_ind] = get_dist_cutoff(
             bin_centers, smooth_n, min_i=-1, at_least=100, log=True,
         )
-        print(f"Cluster cut-off based on hop frequency set to {cutoff}")
+        print(f"Cluster cut-off based on hop frequency set to {freqcut[c_ind]}")
     if freqcut[c_ind] is not None:
         plt.axvline(np.log10(freqcut[c_ind]), c="k")
 
