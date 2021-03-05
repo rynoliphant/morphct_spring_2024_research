@@ -14,5 +14,5 @@ dependencies:
 - pytest
 - pytest-cov
 - pip:
-  - pyscf==1.7.5
+  - pyscf==1.7.6a1
   - git+https://github.com/cmelab/morphct@v4.0.0
