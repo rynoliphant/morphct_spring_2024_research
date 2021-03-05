@@ -2,9 +2,13 @@ name: morphct
 channels:
 - conda-forge
 dependencies:
+- blas=*=openblas
+- cython=0.29
 - ele=0.1.0
 - freud=2.4.1
 - gsd=2.4.0
+- h5py=2.10
+- hdf5=1.10
 - matplotlib=3.3.4
 - numpy=1.19
 - openbabel=3.1.1
