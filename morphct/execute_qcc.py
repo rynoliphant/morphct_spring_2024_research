@@ -63,7 +63,7 @@ def singles_homolumo(chromo_list, filename=None, nprocs=None):
         Array of energies where each row corresponds to the MO energies of each
         chromophore in the list.
     """
-    if nprocs is not None:
+    if nprocs is None:
         nprocs = mp.cpu_count()
     with get_context("spawn").Pool(processes=nprocs) as p:
         data = p.map(get_homolumo, [i.qcc_input for i in chromo_list])
@@ -98,7 +98,7 @@ def dimer_homolumo(qcc_pairs, filename=None, nprocs=None):
         Each list item contains the indices of the pair and an array of its MO
         energies.
     """
-    if nprocs is not None:
+    if nprocs is None:
         nprocs = mp.cpu_count()
 
     with get_context("spawn").Pool(processes=nprocs) as p:
