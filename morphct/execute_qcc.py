@@ -101,9 +101,8 @@ def dimer_homolumo(qcc_pairs, filename=None, nprocs=None):
     if nprocs is not None:
         nprocs = mp.cpu_count()
 
-    p = mp.Pool(processes=nprocs)
-    data = p.map(get_homolumo, [qcc_input for pair,qcc_input in qcc_pairs])
-    p.close()
+    with get_context("spawn").Pool(processes=nprocs) as p:
+        data = p.map(get_homolumo, [qcc_input for pair,qcc_input in qcc_pairs])
 
     dimer_data = [i for i in zip([pair for pair,qcc_input in qcc_pairs],data)]
     if filename is not None:
