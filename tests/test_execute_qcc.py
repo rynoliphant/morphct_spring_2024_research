@@ -14,7 +14,7 @@ class TestEQCC(BaseTest):
         from morphct.execute_qcc import singles_homolumo
 
         chromos = p3ht_chromo_list[:2]
-        data = singles_homolumo(chromos)
+        data = singles_homolumo(chromos, nprocs=2)
         assert np.allclose(
                 data[0],
                 np.array([[-9.01337182, -8.5404688, 0.17193304, 0.86523495]])
