@@ -1,7 +1,15 @@
 import numpy as np
+import pytest
+
 from base_test import BaseTest
 
 class TestChromophores(BaseTest):
+
+    def test_simple(self):
+        from morphct.chromophores import Chromophore
+        with pytest.raises(TypeError):
+            Chromophore()
+
 
     def test_chromos_from_smiles(self, p3ht_snap):
         from morphct.chromophores import get_chromo_ids_smiles, conversion_dict
