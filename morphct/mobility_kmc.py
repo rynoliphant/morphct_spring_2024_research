@@ -3,6 +3,7 @@ import multiprocessing as mp
 import os
 import pickle
 import signal
+from sys import platform
 import time
 import traceback
 
@@ -14,7 +15,9 @@ from morphct.helper_functions import v_print
 
 
 try:
-    mp.set_start_method("fork")
+    if platform == "darwin":
+        # OS X
+        mp.set_start_method("fork")
 except RuntimeError:
     pass
 
