@@ -3,12 +3,15 @@ from base_test import BaseTest
 
 class TestEQCC(BaseTest):
 
-    def test_pyscf(self):
-        import pyscf
-        from pyscf.semiempirical import MINDO3
+    def test_gets_homolumo(self, p3ht_chromo_list):
+        from morphct.execute_qcc import get_homolumo
 
-        mol = pyscf.M(atom="H 0 0 0; F 0.9 0 0;")
-        mf = MINDO3(mol).run(verbose=5)
+        chromo = p3ht_chromo_list[0]
+        data = get_homolumo(chromo.qcc_input)
+        assert np.allclose(
+                data,
+                np.array([[-9.01337182, -8.5404688, 0.17193304, 0.86523495]])
+                )
 
     def test_singles_homolumo(self, p3ht_chromo_list):
         from morphct.execute_qcc import singles_homolumo
