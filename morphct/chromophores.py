@@ -162,49 +162,6 @@ def get_chromo_ids_smiles(snap, smarts_str, conv_dict, ff=None, steps=100):
     return atom_ids
 
 
-def update_chromo_list_voronoi(
-    update_ids, sc_chromos, neighbor_ids, chromo_list
-):
-    # update_ids is a list of the periodic chromophores with image [0, 0, 0]
-    for periodic_id in update_ids:
-        # Obtain the real chromophore corresponding to this periodic_id
-        chromo1 = chromo_list[sc_chromos[periodic_id].original_id]
-        # Get latest neighbor information
-        chromo1_neighbor_ids = [i for i,img in chromo1.neighbors]
-        chromo1_d_neighbor_ids = [i for i,img in chromo1.dissociation_neighbors]
-        for neighbor_p_id in neighbor_ids[periodic_id]:
-            neighbor_sc_chromo = sc_chromos[neighbor_p_id]
-            chromo2 = chromo_list[neighbor_sc_chromo.original_id]
-            chromo2_neighbor_ids = [i for i,img in chromo2.neighbors]
-            chromo2_d_neighbor_ids = [
-                    i for i,img in chromo2.dissociation_neighbors
-            ]
-            relative_image = neighbor_sc_chromo.image
-            if chromo1.species == chromo2.species:
-                if chromo2.id not in chromo1_neighbor_ids:
-                    chromo1.neighbors.append([chromo2.id, relative_image])
-                    chromo1.neighbors_delta_e.append(None)
-                    chromo1.neighbors_ti.append(None)
-                    chromo1_neighbor_ids.append(chromo2.id)
-                if chromo1.id not in chromo2_neighbor_ids:
-                    chromo2.neighbors.append([chromo1.id, -relative_image])
-                    chromo2.neighbors_delta_e.append(None)
-                    chromo2.neighbors_ti.append(None)
-                    chromo2_neighbor_ids.append(chromo1.id)
-            else:
-                if chromo2.id not in chromo1_d_neighbor_ids:
-                    chromo1.dissociation_neighbors.append(
-                        [chromo2.id, relative_image]
-                    )
-                    chromo1_d_neighbor_ids.append(chromo2.id)
-                if chromo1.id not in chromo2_d_neighbor_ids:
-                    chromo2.dissociation_neighbors.append(
-                        [chromo1.id, -relative_image]
-                    )
-                    chromo2_d_neighbor_ids.append(chromo1.id)
-    return chromo_list
-
-
 def set_neighbors_voronoi(chromo_list, snap, conversion_dict, d_cut=10):
     """
     Parameters
