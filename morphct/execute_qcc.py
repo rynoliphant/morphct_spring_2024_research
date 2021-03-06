@@ -19,7 +19,7 @@ def get_homolumo(molstr, verbose=0, tol=1e-6):
     molstr : str
         Input string for pySCF containing elements and positions in Angstroms
         (e.g., "C 0.0 0.0 0.0; H 1.54 0.0 0.0")
-    verbose : False or int
+    verbose : int
         Verbosity level of the MINDO calculation output. 0 will silence output,
         4 will show convergence. (default 0)
     tol : float
@@ -83,7 +83,8 @@ def dimer_homolumo(qcc_pairs, filename=None, nprocs=None):
     ----------
     qcc_pairs : list of (tuple and string)
         Each list item contains a tuple with the indices of the pair and the
-        qcc input string. qcc_pairs is returned by create_inputs.
+        qcc input string.
+        qcc_pairs is returned by morphct.chromophores.set_neighbors_voronoi()
     filename : str
         Path to file where the pair energies will be saved. If None, energies
         will not be saved. (default None)
@@ -159,7 +160,7 @@ def get_singlesdata(filename):
 
 def set_energyvalues(chromo_list, s_filename, d_filename):
     """
-    Set the energy attributes of the Chromophore objects.
+    Set the energy attributes of the Chromophore objects in chromo_list.
     Run singles_homolumo and dimer_homolumo first to get the energy files.
     Energy values set by this function:
         homo_1, homo, lumo, lumo_1, neighbors_delta_E, neighbors_TI
@@ -195,86 +196,6 @@ def set_energyvalues(chromo_list, s_filename, d_filename):
             TI = ti.calculate_TI(lumo - lumo_1, deltaE)
         chromo1.neighbors_ti[neighborind1] = TI
         chromo2.neighbors_ti[neighborind2] = TI
-
-
-def create_inputs(chromo_list, AA_morphdict, param_dict):
-    """
-
-    Parameters
-    ----------
-
-    Returns
-    -------
-
-    """
-    # Determine how many pairs there are first:
-    n_pairs = np.sum([len(chromo.neighbors) for chromo in chromo_list])
-    print(f"There are {n_pairs // 2} total neighbor pairs to consider.")
-    # /2 because the forwards and backwards hops are identical
-    # Then consider each chromophore against every other chromophore
-    qcc_pairs = []
-    for chromo1 in chromo_list:
-        neighbors_id = [i for i,img in chromo1.neighbors]
-        neighbors_image = [img for i,img in chromo1.neighbors]
-        for chromo2 in chromo_list:
-            # Skip if chromo2 is not one of chromo1's neighbors
-            # Also skip if chromo2's ID is < chromo1's ID to prevent
-            # duplicates
-            if (chromo2.id not in neighbors_id) or (chromo2.id < chromo1.id):
-                continue
-            # Update the qcc_pairs name
-            pair = (chromo1.ID, chromo2.ID)
-            # Find the correct relative image for the neighbor chromophore
-            chromo2_rel_image = neighbors_image[neighbors_ID.index(chromo2.ID)]
-            chromo2_transformation = (
-                chromo1.image - chromo2.image + chromo2_rel_image
-                )
-            # Find the dimer AAIDs and relative images for each atom
-            atom_ids = chromo1.atom_ids + chromo2.atom_ids
-            images = [np.zeros(3) for i in chromo1.atom_ids.n_atoms]
-            images += [chromo2_transform for i in chromo2.n_atoms]
-
-            # Now add the terminating groups to both chromophores
-            # Note that we would only ever expect both chromophores to require
-            # termination or neither
-            if chromo1.terminate is True:
-                term_group_pos1 = terminate_monomers(
-                    chromo1, param_dict, AA_morphdict
-                )
-                term_group_pos2 = terminate_monomers(
-                    chromo2, param_dict, AA_morphdict
-                )
-                # We don't want to add the terminating hydrogens for adjacent
-                # monomers, so remove the ones that are within a particular
-                # distance
-                term_group_pos1, term_group_pos2 = remove_adjacent_terminators(
-                    term_group_pos1, term_group_pos2
-                )
-                terminating_group_images1 = [
-                    [0, 0, 0] for i in range(len(term_group_pos1))
-                ]
-                terminating_group_images2 = [
-                    chromo2_transformation for i in range(len(term_group_pos2))
-                ]
-                # Write the dimer input file
-                qcc_input = write_qcc_inp(
-                    AA_morphdict,
-                    AAIDs,
-                    images,
-                    term_group_pos1 + term_group_pos2,
-                    terminating_group_images1 + terminating_group_images2,
-                )
-            else:
-                # Write the dimer input file
-                qcc_input = write_qcc_inp(
-                    AA_morphdict,
-                    AAIDs,
-                    images,
-                    None,
-                    None,
-                )
-            qcc_pairs.append((pair,qcc_input))
-    return qcc_pairs
 
 
 def write_qcc_inp(snap, atom_ids, conversion_dict):
