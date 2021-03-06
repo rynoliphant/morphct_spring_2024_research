@@ -1,4 +1,5 @@
 import multiprocessing as mp
+from multiprocessing import get_context
 import numpy as np
 
 import pyscf
@@ -64,9 +65,9 @@ def singles_homolumo(chromo_list, filename=None, nprocs=None):
     """
     if nprocs is not None:
         nprocs = mp.cpu_count()
-    p = mp.Pool(processes=nprocs)
-    data = p.map(get_homolumo, [i.qcc_input for i in chromo_list])
-    p.close()
+    with get_context("spawn").Pool(processes=nprocs) as p:
+        data = p.map(get_homolumo, [i.qcc_input for i in chromo_list])
+
     data = np.stack(data)
     if filename is not None:
         np.savetxt(filename, data)
