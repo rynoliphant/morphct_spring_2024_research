@@ -45,6 +45,16 @@ def time_units(elapsed_time, precision=2):
     return f"{elapsed_time:.{precision}f} {time_units}"
 
 
+def parallel_sort(list1, list2):
+    """
+    Sort a pair of lists by the first list in ascending order.
+    (e.g., given mass and position, it will sort by mass and return lists
+    such that mass[i] still corresponds to position[i])
+    """
+    list1, list2 = zip(*sorted(zip(list1, list2)))
+    return list1, list2
+
+
 def get_hop_rate(
     lambd,
     ti,
