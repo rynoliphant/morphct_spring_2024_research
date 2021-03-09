@@ -38,8 +38,8 @@ class Carrier:
         average_intra_hop_rate = None,
         average_inter_hop_rate = None,
         use_koopmans = False,
-        boltz_penalty = False,
-        use_VRH = False,
+        boltz = False,
+        use_vrh = False,
         hopping_prefactor = 1.0
     ):
         self.id = carrier_no
@@ -76,11 +76,11 @@ class Carrier:
         # exist in the parameter dict
         self.use_koopmans = use_koopmans
         # Are we using a simple Boltzmann penalty?
-        self.boltz_penalty = boltz_penalty
+        self.boltz = boltz
         # Are we applying a distance penalty beyond the transfer integral?
-        self.use_VRH = use_VRH
-        if self.use_VRH:
-            self.VRH_delocalization = (self.current_chromo.VRH_delocalization)
+        self.use_vrh = use_vrh
+        if self.use_vrh:
+            self.vrh_delocalization = (self.current_chromo.vrh_delocalization)
 
         self.hopping_prefactor = hopping_prefactor
 
@@ -128,7 +128,7 @@ class Carrier:
                 # after the hop
                 rel_img = self.current_chromo.neighbors[i_neighbor][1]
                 # All of the energies are in eV currently, so convert them to J
-                if self.use_VRH is True:
+                if self.use_vrh is True:
                     neighbor_chromo = chromo_list[n_ind]
                     neighbor_pos = neighbor_chromo.center + rel_img * self.box
 
@@ -137,25 +137,25 @@ class Carrier:
                             self.current_chromo.center - neighbor_pos
                             ) * 1e-10
 
-                    hop_rate = hf.get_carrier_hop_rate(
+                    hop_rate = hf.get_hop_rate(
                         self.lambda_ij,
                         ti,
                         delta_E_ij,
                         prefactor,
                         self.temp,
-                        use_VRH=True,
+                        use_vrh=True,
                         rij=separation,
-                        VRH_delocalization=self.VRH_delocalization,
-                        boltz_pen=self.boltz_penalty,
+                        vrh=self.vrh_delocalization,
+                        boltz=self.boltz,
                     )
                 else:
-                    hop_rate = hf.get_carrier_hop_rate(
+                    hop_rate = hf.get_hop_rate(
                         self.lambda_ij,
                         ti,
                         delta_E_ij,
                         prefactor,
                         self.temp,
-                        boltz_pen=self.boltz_penalty,
+                        boltz=self.boltz,
                     )
                 hop_time = hf.get_event_tau(hop_rate)
                 # Keep track of the chromophoreid and the corresponding tau
@@ -276,7 +276,7 @@ def run_single_kmc(
     else:
         filename = None
 
-    v_print(f"Found {len(jobs):d} jobs to run", verbose, filename)
+    v_print(f"Found {len(jobs):d} jobs to run", verbose, filename=filename)
 
     try:
         use_avg_hop_rates = carrier_kwargs["use_avg_hop_rates"]
@@ -294,7 +294,7 @@ def run_single_kmc(
     t0 = time.perf_counter()
     carrier_list = []
     for i_job, [carrier_no, lifetime, ctype] in enumerate(jobs):
-        v_print(f"starting job {i_job}", verbose, filename)
+        v_print(f"starting job {i_job}", verbose, filename=filename)
         t1 = time.perf_counter()
         # Find a random position to start the carrier in
         while True:
@@ -332,7 +332,7 @@ def run_single_kmc(
             f"into image {i_carrier.image} for a displacement of" +
             f"\n\t{i_carrier.displacement:.2f} (took walltime {time_str})",
             verbose,
-            filename
+            filename=filename
             )
         carrier_list.append(i_carrier)
     t3 = time.perf_counter()
