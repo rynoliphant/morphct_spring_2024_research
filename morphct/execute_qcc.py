@@ -181,21 +181,21 @@ def set_energyvalues(chromo_list, s_filename, d_filename):
         chromo.homo_1, chromo.homo, chromo.lumo, chromo.lumo_1 = s_data[i]
 
     for (i,j), (homo_1, homo, lumo, lumo_1) in d_data:
-        chromo1 = chromo_list[i]
-        chromo2 = chromo_list[j]
-        neighborind1 = [i[0] for i in chromo1.neighbors].index(j)
-        neighborind2 = [i[0] for i in chromo2.neighbors].index(i)
-        deltaE = ti.calculate_delta_E(chromo1,chromo2)
-        chromo1.neighbors_delta_e[neighborind1] = deltaE
-        chromo2.neighbors_delta_e[neighborind2] = -deltaE
+        ichromo = chromo_list[i]
+        jchromo = chromo_list[j]
+        ineighborind = [i for i,img in ichromo.neighbors].index(j)
+        jneighborind = [i for i,img in jchromo.neighbors].index(i)
+        deltaE = ti.calculate_delta_E(ichromo,jchromo)
+        ichromo.neighbors_delta_e[ineighborind] = deltaE
+        jchromo.neighbors_delta_e[jneighborind] = -deltaE
 
-        assert chromo1.species == chromo2.species
-        if chromo1.species == "donor":
-            TI = ti.calculate_TI(homo - homo_1, deltaE)
+        assert ichromo.species == jchromo.species
+        if ichromo.species == "donor":
+            ti = ti.calculate_ti(homo - homo_1, deltaE)
         else:
-            TI = ti.calculate_TI(lumo - lumo_1, deltaE)
-        chromo1.neighbors_ti[neighborind1] = TI
-        chromo2.neighbors_ti[neighborind2] = TI
+            ti = ti.calculate_ti(lumo - lumo_1, deltaE)
+        ichromo.neighbors_ti[ineighborind] = ti
+        jchromo.neighbors_ti[jneighborind] = ti
 
 
 def write_qcc_inp(snap, atom_ids, conversion_dict):
