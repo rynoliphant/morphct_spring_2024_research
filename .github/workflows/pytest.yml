@@ -5,12 +5,10 @@ on:
     branches: [ master ]
     paths:
       - 'morphct/*'
-      - 'tests/*'
   pull_request:
     branches: [ master ]
     paths:
       - 'morphct/*'
-      - 'tests/*'
   # Allows workflow to be manually triggered
   workflow_dispatch:
 
