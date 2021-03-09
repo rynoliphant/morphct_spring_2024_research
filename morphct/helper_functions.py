@@ -149,6 +149,9 @@ def get_event_tau(
     return tau
 
 
+# TODO delete?
+# functions below here do not seem to be used
+
 def find_axis(atom1, atom2, normalize=True):
     """
     This function determines the normalized vector from the location of
@@ -163,13 +166,13 @@ def find_axis(atom1, atom2, normalize=True):
     return sep
 
 
-def get_coords_normvec(coords):
+def get_coords_normvec(coords): # pragma: no cover
     AB = coords[1] - coords[0]
     AC = coords[2] - coords[0]
     return np.cross(AB, AC) / np.linalg.norm(normal)
 
 
-def get_rotation_matrix(vector1, vector2):
+def get_rotation_matrix(vector1, vector2): # pragma: no cover
     """
     This function returns the rotation matrix around the origin that maps
     vector1 to vector 2
@@ -191,7 +194,7 @@ def get_rotation_matrix(vector1, vector2):
     return rot_matrix
 
 
-def get_nprocs():
+def get_nprocs(): # pragma: no cover
     # Determine the number of available processors, either by querying the
     # SLURM_NPROCS environment variable, or by using multiprocessing to count
     # the number of visible CPUs.
@@ -203,7 +206,9 @@ def get_nprocs():
     return procs
 
 
-def get_FRET_hop_rate(prefactor, lifetime, r_F, rij, delta_e, temp):
+def get_FRET_hop_rate(
+        prefactor, lifetime, r_F, rij, delta_e, temp
+        ): # pragma: no cover
     # Foerster Transport Hopping Rate Equation
     # The prefactor included here is a bit of a bodge to try and get the
     # mean-free paths of the excitons more in line with the 5nm of experiment.
@@ -218,7 +223,9 @@ def get_FRET_hop_rate(prefactor, lifetime, r_F, rij, delta_e, temp):
     return k_FRET
 
 
-def get_miller_abrahams_hop_rate(prefactor, separation, radius, delta_e, temp):
+def get_miller_abrahams_hop_rate(
+        prefactor, separation, radius, delta_e, temp
+        ): # pragma: no cover
     k = prefactor * np.exp(-2 * separation / radius)
     if delta_e > 0:
         k *= np.exp(-delta_e / (k_B * temp))
