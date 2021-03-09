@@ -1,11 +1,8 @@
 import math
 import multiprocessing as mp
 import os
-import pickle
-import signal
 from sys import platform
 import time
-import traceback
 
 import numpy as np
 from scipy.sparse import lil_matrix
@@ -200,56 +197,6 @@ class Carrier:
             self.hole_history[init_id, dest_id] += 1
         elif self.c_type == "electron" and self.electron_history is not None:
             self.electron_history[init_id, dest_id] += 1
-
-
-# TODO this function is outdated
-def split_molecules(input_dictionary, chromo_list):
-    # Split the full morphology into individual molecules
-    # Create a lookup table `neighbor list' for all connected atoms called
-    # {bondedAtoms}
-    bonded_atoms = hf.obtain_bonded_list(input_dictionary["bond"])
-    molecule_list = [i for i in range(len(input_dictionary["type"]))]
-    # Recursively add all atoms in the neighbor list to this molecule
-    for mol_id in range(len(molecule_list)):
-        molecule_list = update_molecule(mol_id, molecule_list, bonded_atoms)
-    # Here we have a list of len(atoms) where each index gives the molid
-    mol_id_dict = {}
-    for chromo in chromo_list:
-        AAID_to_check = chromo.AAIDs[0]
-        mol_id_dict[chromo.id] = molecule_list[AAID_to_check]
-    return mol_id_dict
-
-
-# TODO this function is outdated
-def update_molecule(atom_id, molecule_list, bonded_atoms):
-    # Recursively add all neighbors of atom number atomid to this molecule
-    try:
-        for bonded_atom in bonded_atoms[atom_id]:
-            # If the moleculeid of the bonded atom is larger than that of the
-            # current one, update the bonded atom's id to the current one's to
-            # put it in this molecule, then iterate through all of the bonded
-            # atom's neighbors
-            if molecule_list[bonded_atom] > molecule_list[atom_id]:
-                molecule_list[bonded_atom] = molecule_list[atom_id]
-                molecule_list = update_molecule(
-                    bonded_atom, molecule_list, bonded_atoms
-                )
-            # If the moleculeid of the current atom is larger than that of the
-            # bonded one, update the current atom's id to the bonded one's to
-            # put it in this molecule, then iterate through all of the current
-            # atom's neighbors
-            elif molecule_list[bonded_atom] < molecule_list[atom_id]:
-                molecule_list[atom_id] = molecule_list[bonded_atom]
-                molecule_list = update_molecule(
-                    atom_id, molecule_list, bonded_atoms
-                )
-            # Else: both the current and the bonded atom are already known to
-            # be in this molecule, so we don't have to do anything else.
-    except KeyError:
-        # This means that there are no bonded CG sites
-        # (i.e. it's a single molecule)
-        pass
-    return molecule_list
 
 
 def run_single_kmc(
