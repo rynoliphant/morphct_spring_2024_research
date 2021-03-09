@@ -575,7 +575,7 @@ def plot_neighbor_hist(chromo_list, chromo_mol_id, box, sepcut, path):
         if sepcut[sp_i] is not None:
             print(f"{sp} separation cluster cut-off set to {sepcut[sp_i]}")
             plt.axvline(sepcut[sp_i], c="k")
-        plt.xlabel(rf"{sp.capitalize()} r$_{{i,j}}$ (\AA)")
+        plt.xlabel(rf"{sp.capitalize()} r$_{{i,j}}$ ($\AA$)")
         plt.ylabel("Frequency (Arb. U.)")
         filename = f"neighbor_hist_{sp}.png"
         filepath = os.path.join(path, filename)
@@ -1026,7 +1026,7 @@ def plot_mixed_hopping_rates(
     path,
     use_vrh=False,
     koopmans=None,
-    boltz_pen=False,
+    boltz=False,
 ):
     # Create all the empty lists we need
     hop_types = ["intra", "inter"]
@@ -1058,29 +1058,29 @@ def plot_mixed_hopping_rates(
                 prefactor *= koopmans
             # Apply the distance penalty due to VRH
             if use_vrh:
-                vrh_delocalization = 1.0 / ichromo.vrh_delocalization
+                vrh = 1.0 / ichromo.vrh_delocalization
                 rel_image = ichromo.neighbors[ineighbor][1]
                 jchromo_center = jchromo.center + rel_image * box
                 rij = np.linalg.norm(ichromo.center - jchromo_center) * 1e-10
-                rate = hf.get_carrier_hop_rate(
+                rate = hf.get_hop_rate(
                     lambda_ij,
                     ti,
                     delta_e,
                     prefactor,
                     temp,
-                    use_VRH=use_vrh,
+                    use_vrh=use_vrh,
                     rij=rij,
-                    VRH_delocalisation=vrh_delocalisation,
-                    boltz_pen=boltz_pen,
+                    vrh=vrh,
+                    boltz=boltz,
                 )
             else:
-                rate = hf.get_carrier_hop_rate(
+                rate = hf.get_hop_rate(
                     lambda_ij,
                     ti,
                     delta_e,
                     prefactor,
                     temp,
-                    boltz_pen=boltz_pen,
+                    boltz=boltz,
                 )
             if j < i:
                 continue
@@ -1603,7 +1603,7 @@ def main(
         backend=None,
         use_vrh=False,
         koopmans=None,
-        boltz_pen=False,
+        boltz=False,
         ):
     # Load the matplotlib backend and the plotting subroutines
     global plt
@@ -1704,7 +1704,7 @@ def main(
         fig_dir,
         use_vrh=use_vrh,
         koopmans=koopmans,
-        boltz_pen=boltz_pen,
+        boltz=boltz,
     )
 
     print("Plotting cluster size distribution...")
