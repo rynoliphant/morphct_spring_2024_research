@@ -80,7 +80,7 @@ class Carrier:
         # Are we applying a distance penalty beyond the transfer integral?
         self.use_VRH = use_VRH
         if self.use_VRH:
-            self.VRH_delocalisation = (self.current_chromo.VRH_delocalisation)
+            self.VRH_delocalization = (self.current_chromo.VRH_delocalization)
 
         self.hopping_prefactor = hopping_prefactor
 
@@ -110,11 +110,11 @@ class Carrier:
                     hop_rate = self.average_intra_hop_rate
                 else:
                     hop_rate = self.average_inter_hop_rate
-                hop_time = hf.determine_event_tau(hop_rate)
+                hop_time = hf.get_event_tau(hop_rate)
                 # Keep track of the chromophoreid and the corresponding tau
                 hop_times.append([neighbor.id, hop_time, img])
         else:
-            # Obtain the reorganisation energy in J (from eV)
+            # Obtain the reorganization energy in J (from eV)
             for i_neighbor, ti in enumerate(self.current_chromo.neighbors_ti):
                 # Ignore any hops with a NoneType transfer integral
                 if ti is None:
@@ -145,7 +145,7 @@ class Carrier:
                         self.temp,
                         use_VRH=True,
                         rij=separation,
-                        VRH_delocalisation=self.VRH_delocalisation,
+                        VRH_delocalization=self.VRH_delocalization,
                         boltz_pen=self.boltz_penalty,
                     )
                 else:
@@ -157,7 +157,7 @@ class Carrier:
                         self.temp,
                         boltz_pen=self.boltz_penalty,
                     )
-                hop_time = hf.determine_event_tau(hop_rate)
+                hop_time = hf.get_event_tau(hop_rate)
                 # Keep track of the chromophoreid and the corresponding tau
                 hop_times.append([n_ind, hop_time, rel_img])
         # Sort by ascending hop time
@@ -177,10 +177,10 @@ class Carrier:
         # Take the quickest hop
         n_ind, hop_time, rel_img = hop_times[0]
 
-        v_print("\thop_times:", verbose, 1)
+        v_print("\thop_times:", verbose, v_level=1)
         hop_str = "\n".join([f"\t\t{i} {j:.2e} {k}" for (i,j,k) in hop_times])
-        v_print(hop_str, verbose, 1)
-        v_print(f"\tHopping to {n_ind}", verbose, 1)
+        v_print(hop_str, verbose, v_level=1)
+        v_print(f"\tHopping to {n_ind}", verbose, v_level=1)
 
         self.perform_hop(chromo_list[n_ind], hop_time, rel_img)
         return True
@@ -276,7 +276,7 @@ def run_single_kmc(
     else:
         filename = None
 
-    v_print(f"Found {len(jobs):d} jobs to run", verbose, 0, filename)
+    v_print(f"Found {len(jobs):d} jobs to run", verbose, filename)
 
     try:
         use_avg_hop_rates = carrier_kwargs["use_avg_hop_rates"]
@@ -294,7 +294,7 @@ def run_single_kmc(
     t0 = time.perf_counter()
     carrier_list = []
     for i_job, [carrier_no, lifetime, ctype] in enumerate(jobs):
-        v_print(f"starting job {i_job}", verbose, 0, filename)
+        v_print(f"starting job {i_job}", verbose, filename)
         t1 = time.perf_counter()
         # Find a random position to start the carrier in
         while True:
@@ -332,7 +332,6 @@ def run_single_kmc(
             f"into image {i_carrier.image} for a displacement of" +
             f"\n\t{i_carrier.displacement:.2f} (took walltime {time_str})",
             verbose,
-            0,
             filename
             )
         carrier_list.append(i_carrier)
@@ -416,9 +415,9 @@ def run_kmc(
 
     carriers = [item for sublist in carriers_lists for item in sublist]
     # Now combine the carrier data
-    v_print("All KMC jobs completed!", verbose, 0)
+    v_print("All KMC jobs completed!", verbose)
     if combine_KMC_results:
-        v_print("Combining outputs...", verbose, 0)
+        v_print("Combining outputs...", verbose)
 
         combined_data = {}
         for carrier in carriers:
