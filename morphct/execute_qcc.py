@@ -191,11 +191,11 @@ def set_energyvalues(chromo_list, s_filename, d_filename):
 
         assert ichromo.species == jchromo.species
         if ichromo.species == "donor":
-            ti = ti.calculate_ti(homo - homo_1, deltaE)
+            transint = ti.calculate_ti(homo - homo_1, deltaE)
         else:
-            ti = ti.calculate_ti(lumo - lumo_1, deltaE)
-        ichromo.neighbors_ti[ineighborind] = ti
-        jchromo.neighbors_ti[jneighborind] = ti
+            transint = ti.calculate_ti(lumo - lumo_1, deltaE)
+        ichromo.neighbors_ti[ineighborind] = transint
+        jchromo.neighbors_ti[jneighborind] = transint
 
 
 def write_qcc_inp(snap, atom_ids, conversion_dict):

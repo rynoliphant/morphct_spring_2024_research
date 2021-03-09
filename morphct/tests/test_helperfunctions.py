@@ -33,7 +33,7 @@ class TestHelperFunctions(BaseTest):
         from morphct.helper_functions import time_units
 
         assert time_units(10) == '10.00 seconds'
-        assert time_units(1000, precision) == '17 minutes'
+        assert time_units(1000, precision=0) == '17 minutes'
         assert time_units(10000) == '2.78 hours'
         assert time_units(100000) == '1.16 days'
 
