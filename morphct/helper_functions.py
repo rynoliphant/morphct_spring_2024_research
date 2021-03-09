@@ -51,8 +51,24 @@ def parallel_sort(list1, list2):
     (e.g., given mass and position, it will sort by mass and return lists
     such that mass[i] still corresponds to position[i])
     """
-    list1, list2 = zip(*sorted(zip(list1, list2)))
-    return list1, list2
+    types = [None,None]
+
+    for i,l in enumerate([list1,list2]):
+        if isinstance(l, np.ndarray):
+            types[i] = "array"
+        elif isinstance(l, list):
+            types[i] = "list"
+
+    list1,list2 = zip(*sorted(zip(list1,list2)))
+    lists = [list1,list2]
+
+    for i,t in enumerate(types):
+        if t == "array":
+            lists[i] = np.array(lists[i])
+        elif t == "list":
+            lists[i] = list(lists[i])
+
+    return lists
 
 
 def get_hop_rate(

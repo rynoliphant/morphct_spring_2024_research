@@ -59,5 +59,21 @@ class TestHelperFunctions(BaseTest):
                 np.array([0,0,0])
                 )
 
-    def test_
-        from morphct.helper_functions import time_units
+    def test_parallel_sort(self):
+        from morphct.helper_functions import parallel_sort
+
+        list1 = [3,2,5,1]
+        list2 = ["A","B","C","D"]
+
+        list1,list2 = parallel_sort(list1,list2)
+
+        assert list1 == [1,2,3,5]
+        assert list2 == ['D', 'B', 'A', 'C']
+
+        list1 = np.array([3,2,5,1])
+        list2 = ("A","B","C","D")
+
+        list1,list2 = parallel_sort(list1,list2)
+
+        assert np.array_equal(list1, np.array([1,2,3,5]))
+        assert list2 == ('D', 'B', 'A', 'C')
