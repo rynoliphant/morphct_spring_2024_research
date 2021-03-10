@@ -141,7 +141,7 @@ class Carrier:
                         prefactor,
                         self.temp,
                         use_vrh=True,
-                        rij=separation,
+                        rij=sep,
                         vrh=self.vrh_delocalization,
                         boltz=self.boltz,
                     )

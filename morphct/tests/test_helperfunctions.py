@@ -77,3 +77,39 @@ class TestHelperFunctions(BaseTest):
 
         assert np.array_equal(list1, np.array([1,2,3,5]))
         assert list2 == ('D', 'B', 'A', 'C')
+
+    def get_hop_rate(self):
+        from morphct.helper_functions import get_hop_rate
+
+        lamda = 0.3064
+        ti = 0
+        delta = 0.06218457533310762
+        factor = 1
+        temp = 300
+
+        # ti is zero so hop rate should be zero
+        assert get_hop_rate(lamda, ti, delta, factor, temp) == 0
+
+        ti = 0.2456720694088973
+        delta = 0.016112646653095197
+
+        assert get_hop_rate(lamda, ti, delta, factor, temp) == pytest.approx(
+                68518361827044,
+                1
+                )
+
+        ti = 0.0013270585750558073
+        delta = -0.021286665397703075
+        rij=3.659072209672184e-09
+        vrh=2e-10
+
+        assert get_hop_rate(
+                lamda,
+                ti,
+                delta,
+                factor,
+                temp,
+                use_vrh=True,
+                rij=rij,
+                vrh=2e-10,
+                boltz=True) == pytest.approx(603.98144350, 1e-8)
