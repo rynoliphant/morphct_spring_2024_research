@@ -117,15 +117,6 @@ def get_event_tau(
     log_file=None,
     verbose=0,
 ):
-    print(
-            "get_event_tau",
-            rate,
-            slowest,
-            fastest,
-            max_attempts,
-            log_file,
-            verbose,
-            )
     if rate == 0:
         # If rate == 0, then make the hopping time extremely long
         return 1e99
@@ -137,7 +128,6 @@ def get_event_tau(
         while x == 0 or x == 1:
             x = np.random.random()
         tau = -np.log(x) / rate
-        print("tau",tau)
         return tau
     while counter < max_attempts:
         x = np.random.random()
@@ -148,7 +138,6 @@ def get_event_tau(
         tau = -np.log(x) / rate
         if (fastest is not None) and (slowest is not None):
             if (fastest < tau < slowest):
-                print("tau",tau)
                 return tau
             counter += 1
 
@@ -159,7 +148,6 @@ def get_event_tau(
     Permitting the event anyway with tau={tau:.2e}...
     """
     v_print(err_msg, verbose, filename=log_file)
-    print("tau",tau)
     return tau
 
 
