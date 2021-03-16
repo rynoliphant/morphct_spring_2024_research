@@ -115,18 +115,30 @@ def get_event_tau(
     fastest=None,
     max_attempts=None,
     log_file=None,
-    verbose=0
+    verbose=0,
 ):
+    print(
+            "get_event_tau",
+            rate,
+            slowest,
+            fastest,
+            max_attempts,
+            log_file,
+            verbose,
+            )
     if rate == 0:
         # If rate == 0, then make the hopping time extremely long
         return 1e99
+
     # Use the KMC algorithm to determine the wait time to this hop
     counter = 0
     if max_attempts is None:
         x = np.random.random()
         while x == 0 or x == 1:
             x = np.random.random()
-        return -np.log(x) / rate
+        tau = -np.log(x) / rate
+        print("tau",tau)
+        return tau
     while counter < max_attempts:
         x = np.random.random()
         # Ensure that we don't get exactly 0.0 or 1.0, which would break our
@@ -136,16 +148,18 @@ def get_event_tau(
         tau = -np.log(x) / rate
         if (fastest is not None) and (slowest is not None):
             if (fastest < tau < slowest):
+                print("tau",tau)
                 return tau
             counter += 1
 
-    err_msg = """
+    err_msg = f"""
     Attempted {max_attempts:d} times to obtain an event timescale within the
     tolerances: {fastest:.2e} <= tau < {slowest:.2e} with the given rate
     {rate:.2e}, without success.
     Permitting the event anyway with tau={tau:.2e}...
     """
     v_print(err_msg, verbose, filename=log_file)
+    print("tau",tau)
     return tau
 
 

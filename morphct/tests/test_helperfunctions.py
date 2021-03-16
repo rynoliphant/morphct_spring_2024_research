@@ -113,3 +113,24 @@ class TestHelperFunctions(BaseTest):
                 rij=rij,
                 vrh=2e-10,
                 boltz=True) == pytest.approx(603.98144350, 1e-8)
+
+    def get_event_tau(self):
+        from morphct.helper_functions import get_event_tau
+
+        rate = 0
+
+        assert get_event_tau(rate) == 1e99
+
+        np.random.seed(42)
+        rate = 10
+
+        assert get_event_tau(rate) == pytest.approx(0.098205635, 1e-8)
+
+        slowest = 3
+        fastest = 0.5
+        max_attempts = 100
+        assert get_event_tau(
+                rate,
+                slowest=slowest,
+                fastest=fastest,
+                max_attempts=max_attempts) == pytest.approx(0.519899395,1e-8)
