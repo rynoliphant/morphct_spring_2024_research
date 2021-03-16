@@ -21,7 +21,7 @@ def box_points(box):
     return box_pts
 
 
-def v_print(string, verbosity, v_level=0, filename=None):
+def v_print(string, verbosity, v_level=0, filename=None): # pragma: no cover
     if verbosity > v_level:
         if filename is None:
             print(string)
