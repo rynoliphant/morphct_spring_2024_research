@@ -54,7 +54,7 @@ class BaseTest:
         return filepath
 
     @pytest.fixture
-    def p3ht_chromo_list_energiess(self):
+    def p3ht_chromo_list_energies(self):
         import pickle
 
         filepath = os.path.join(test_dir, "assets/chromo_list_energies.pkl")
