@@ -206,7 +206,7 @@ def run_single_kmc(
     jobs,
     KMC_directory,
     chromo_list,
-    box,
+    snap,
     temp,
     carrier_kwargs={},
     cpu_rank=None,
@@ -236,13 +236,14 @@ def run_single_kmc(
     if use_avg_hop_rates:
         # Chosen to split hopping by inter-intra molecular hops, so get
         # molecule data
-        mol_id_dict = split_molecules(AA_morphdict, chromo_list)
+        mol_id_dict = get_molecule_ids(snap, chromo_list)
         # molidDict is a dictionary where the keys are the chromoids, and
         # the vals are the molids
     else:
         mol_id_dict = None
     t0 = time.perf_counter()
     carrier_list = []
+    box = snap.configuration.box[:3]
     for i_job, [carrier_no, lifetime, ctype] in enumerate(jobs):
         v_print(f"starting job {i_job}", verbose, filename=filename)
         t1 = time.perf_counter()
@@ -371,7 +372,6 @@ def run_kmc(
 ):
     running_jobs = []
     pipes = []
-    box = snap.configuration.box[:3]
 
     for cpu_rank, jobs in enumerate(jobs_list):
         child_seed = np.random.randint(0, 2 ** 32)
@@ -379,7 +379,7 @@ def run_kmc(
         recv_end, send_end = mp.Pipe(False)
         p = mp.Process(
             target=run_single_kmc,
-            args=(jobs, KMC_directory, chromo_list, box, temp),
+            args=(jobs, KMC_directory, chromo_list, snap, temp),
             kwargs={
                 "carrier_kwargs": carrier_kwargs,
                 "seed": child_seed,
