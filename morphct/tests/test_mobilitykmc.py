@@ -37,16 +37,34 @@ class TestKMC(BaseTest):
         assert len(jobs) == n
         assert jobs[0][0] == [9, 1e-13, 'electron']
 
-    def test_runsinglekmc(self, tmpdir, p3ht_chromo_list_energies):
+    def test_runsinglekmc(self, tmpdir, p3ht_chromo_list_energies, p3ht_snap):
         from morphct.mobility_kmc import run_single_kmc
 
         jobs = [[0, 1e-12, 'hole']]
         chromo_list = p3ht_chromo_list_energies
         box = np.array([85.18963, 85.18963, 85.18963])
 
-        carriers = run_single_kmc(jobs, tmpdir, chromo_list, box, 300, seed=42)
+        carrier = run_single_kmc(
+                jobs, tmpdir, chromo_list, p3ht_snap, 300, seed=42
+                )[0]
 
-        assert carriers[0].n_hops == 212
-        assert carriers[0].current_chromo.id == 14
+        assert carriers.n_hops == 212
+        assert carriers.current_chromo.id == 14
 
+        c_kwargs = {
+            "use_avg_hoprates": True,
+            "avg_intra_rate":2.243e+14,
+            "avg_inter_rate":1.681e+11,
+        }
+        carrier = run_single_kmc(
+                jobs,
+                tmpdir,
+                chromo_list,
+                p3ht_snap,
+                300,
+                seed=42,
+                carrier_kwargs=c_kwargs
+                )[0]
 
+        assert carriers.n_hops == 1553
+        assert carriers.current_chromo.id == 19
