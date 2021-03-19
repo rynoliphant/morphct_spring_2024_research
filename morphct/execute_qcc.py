@@ -33,9 +33,9 @@ def get_homolumo(molstr, verbose=0, tol=1e-6):
     mol = pyscf.M(atom=molstr)
     mf = MINDO3(mol).run(verbose=verbose, conv_tol=tol)
     occ = mf.get_occ()
-    i_lumo = np.argmax(occ<1)
-    energies = mf.mo_energy[i_lumo-2:i_lumo+2]
-    energies *= 27.2114 # convert Eh to eV
+    i_lumo = np.argmax(occ < 1)
+    energies = mf.mo_energy[i_lumo - 2 : i_lumo + 2]
+    energies *= 27.2114  # convert Eh to eV
     return energies
 
 
@@ -103,14 +103,14 @@ def dimer_homolumo(qcc_pairs, filename=None, nprocs=None):
         nprocs = mp.cpu_count()
 
     with get_context("spawn").Pool(processes=nprocs) as p:
-        data = p.map(get_homolumo, [qcc_input for pair,qcc_input in qcc_pairs])
+        data = p.map(get_homolumo, [qcc_input for pair, qcc_input in qcc_pairs])
 
-    dimer_data = [i for i in zip([pair for pair,qcc_input in qcc_pairs],data)]
+    dimer_data = [i for i in zip([pair for pair, qcc_input in qcc_pairs], data)]
     if filename is not None:
         with open(filename, "w") as f:
             f.writelines(
                 f"{pair[0]} {pair[1]} {en[0]} {en[1]} {en[2]} {en[3]}\n"
-                for pair,en in dimer_data
+                for pair, en in dimer_data
             )
     return dimer_data
 
@@ -133,9 +133,9 @@ def get_dimerdata(filename):
     dimer_data = []
     with open(filename, "r") as f:
         for i in f.readlines():
-            a,b,c,d,e,f = i.split()
+            a, b, c, d, e, f = i.split()
             dimer_data.append(
-                ((int(a),int(b)),(float(c),float(d),float(e),float(f)))
+                ((int(a), int(b)), (float(c), float(d), float(e), float(f)))
             )
     return dimer_data
 
@@ -177,15 +177,15 @@ def set_energyvalues(chromo_list, s_filename, d_filename):
     s_data = get_singlesdata(s_filename)
     d_data = get_dimerdata(d_filename)
 
-    for i,chromo in enumerate(chromo_list):
+    for i, chromo in enumerate(chromo_list):
         chromo.homo_1, chromo.homo, chromo.lumo, chromo.lumo_1 = s_data[i]
 
-    for (i,j), (homo_1, homo, lumo, lumo_1) in d_data:
+    for (i, j), (homo_1, homo, lumo, lumo_1) in d_data:
         ichromo = chromo_list[i]
         jchromo = chromo_list[j]
-        ineighborind = [i for i,img in ichromo.neighbors].index(j)
-        jneighborind = [i for i,img in jchromo.neighbors].index(i)
-        deltaE = ti.calculate_delta_E(ichromo,jchromo)
+        ineighborind = [i for i, img in ichromo.neighbors].index(j)
+        jneighborind = [i for i, img in jchromo.neighbors].index(i)
+        deltaE = ti.calculate_delta_E(ichromo, jchromo)
         ichromo.neighbors_delta_e[ineighborind] = deltaE
         jchromo.neighbors_delta_e[jneighborind] = -deltaE
 
@@ -216,18 +216,18 @@ def write_qcc_inp(snap, atom_ids, conversion_dict):
 
     for i in atom_ids:
         element = conversion_dict[
-                snap.particles.types[snap.particles.typeid[i]]
-                ]
+            snap.particles.types[snap.particles.typeid[i]]
+        ]
         atoms.append(element.symbol)
         positions.append(unwrapped_pos[i])
 
     # To determine where to add hydrogens, check the bonds that go to
     # particles outside of the ids provided
-    for i,j in snap.bonds.group:
+    for i, j in snap.bonds.group:
         if i in atom_ids and j not in atom_ids:
             element = conversion_dict[
-                    snap.particles.types[snap.particles.typeid[j]]
-                    ]
+                snap.particles.types[snap.particles.typeid[j]]
+            ]
             # If it's already a Hydrogen, just add it
             if element.atomic_number == 1:
                 atoms.append(element.symbol)
@@ -237,8 +237,8 @@ def write_qcc_inp(snap, atom_ids, conversion_dict):
             # length for C-H bond
             else:
                 # Average sp3 C-H bond is 1.094 Angstrom
-                v = unwrapped_pos[j]-unwrapped_pos[i]
-                unit_vec = v/np.linalg.norm(v)
+                v = unwrapped_pos[j] - unwrapped_pos[i]
+                unit_vec = v / np.linalg.norm(v)
                 new_pos = unit_vec * 1.094 + unwrapped_pos[i]
                 atoms.append("H")
                 positions.append(new_pos)
@@ -246,25 +246,25 @@ def write_qcc_inp(snap, atom_ids, conversion_dict):
         # Same as above but j->i instead of i->j
         elif j in atom_ids and i not in atom_ids:
             element = conversion_dict[
-                    snap.particles.types[snap.particles.typeid[i]]
-                    ]
+                snap.particles.types[snap.particles.typeid[i]]
+            ]
             if element.atomic_number == 1:
                 atoms.append(element.symbol)
                 positions.append(unwrapped_pos[i])
 
             else:
-                v = unwrapped_pos[i]-unwrapped_pos[j]
-                unit_vec = v/np.linalg.norm(v)
+                v = unwrapped_pos[i] - unwrapped_pos[j]
+                unit_vec = v / np.linalg.norm(v)
                 new_pos = unit_vec * 1.094 + unwrapped_pos[j]
                 atoms.append("H")
                 positions.append(new_pos)
 
     # Shift center to origin
     positions = np.stack(positions)
-    positions -= np.mean(positions,axis=0)
+    positions -= np.mean(positions, axis=0)
     qcc_input = " ".join(
-            [f"{atom} {x} {y} {z};" for atom,(x,y,z) in zip(atoms,positions)]
-            )
+        [f"{atom} {x} {y} {z};" for atom, (x, y, z) in zip(atoms, positions)]
+    )
     return qcc_input
 
 
@@ -286,8 +286,8 @@ def write_qcc_pair_input(snap, chromo_i, chromo_j, j_shift, conversion_dict):
 
     # chromophore i is shifted into 0,0,0 image
     positions = [
-            i+chromo_i.image*box for i in unwrapped_pos[chromo_i.atom_ids]
-            ]
+        i + chromo_i.image * box for i in unwrapped_pos[chromo_i.atom_ids]
+    ]
     # shift chromophore j's unwrapped positions
     positions += [i for i in unwrapped_pos[chromo_j.atom_ids] + j_shift]
 
@@ -297,16 +297,16 @@ def write_qcc_pair_input(snap, chromo_i, chromo_j, j_shift, conversion_dict):
 
     # To determine where to add hydrogens, check the bonds that go to
     # particles outside of the ids provided
-    for i,j in snap.bonds.group:
+    for i, j in snap.bonds.group:
         if i in atom_ids and j not in atom_ids:
             # If bond is to chromophore j, additional shifting might be needed
             if i in chromo_j.atom_ids:
                 shift = j_shift
             else:
-                shift = chromo_i.image*box
+                shift = chromo_i.image * box
             element = conversion_dict[
-                    snap.particles.types[snap.particles.typeid[j]]
-                    ]
+                snap.particles.types[snap.particles.typeid[j]]
+            ]
             # If it's already a Hydrogen, just add it
             if element.atomic_number == 1:
                 atoms.append(element.symbol)
@@ -317,7 +317,7 @@ def write_qcc_pair_input(snap, chromo_i, chromo_j, j_shift, conversion_dict):
             else:
                 # Average sp3 C-H bond is 1.094 Angstrom
                 v = unwrapped_pos[j] - unwrapped_pos[i]
-                unit_vec = v/np.linalg.norm(v)
+                unit_vec = v / np.linalg.norm(v)
                 new_pos = unit_vec * 1.094 + unwrapped_pos[i] + shift
                 atoms.append("H")
                 positions.append(new_pos)
@@ -327,26 +327,26 @@ def write_qcc_pair_input(snap, chromo_i, chromo_j, j_shift, conversion_dict):
             if j in chromo_j.atom_ids:
                 shift = j_shift
             else:
-                shift = chromo_i.image*box
+                shift = chromo_i.image * box
             element = conversion_dict[
-                    snap.particles.types[snap.particles.typeid[i]]
-                    ]
+                snap.particles.types[snap.particles.typeid[i]]
+            ]
 
             if element.atomic_number == 1:
                 atoms.append(element.symbol)
                 positions.append(unwrapped_pos[i] + shift)
             else:
                 v = unwrapped_pos[i] - unwrapped_pos[j]
-                unit_vec = v/np.linalg.norm(v)
+                unit_vec = v / np.linalg.norm(v)
                 new_pos = unit_vec * 1.094 + unwrapped_pos[j] + shift
                 atoms.append("H")
                 positions.append(new_pos)
 
     # Shift center to origin
     positions = np.stack(positions)
-    positions -= np.mean(positions,axis=0)
+    positions -= np.mean(positions, axis=0)
 
     qcc_input = " ".join(
-            [f"{atom} {x} {y} {z};" for atom,(x,y,z) in zip(atoms,positions)]
-            )
+        [f"{atom} {x} {y} {z};" for atom, (x, y, z) in zip(atoms, positions)]
+    )
     return qcc_input

@@ -4,14 +4,14 @@ import pytest
 
 test_dir = os.path.dirname(__file__)
 
-class BaseTest:
 
+class BaseTest:
     @pytest.fixture
     def p3ht_snap(self):
         import gsd.hoomd
 
         filepath = os.path.join(test_dir, "assets/p3ht_2_15mers.gsd")
-        with gsd.hoomd.open(name=filepath, mode='rb') as f:
+        with gsd.hoomd.open(name=filepath, mode="rb") as f:
             snap = f[0]
 
         return snap
@@ -21,7 +21,7 @@ class BaseTest:
         import pickle
 
         filepath = os.path.join(test_dir, "assets/chromo_list.pkl")
-        with open(filepath, mode='rb') as f:
+        with open(filepath, mode="rb") as f:
             chromo_list = pickle.load(f)
         return chromo_list
 
@@ -30,7 +30,7 @@ class BaseTest:
         import pickle
 
         filepath = os.path.join(test_dir, "assets/chromo_list_neighbors.pkl")
-        with open(filepath, mode='rb') as f:
+        with open(filepath, mode="rb") as f:
             chromo_list = pickle.load(f)
         return chromo_list
 
@@ -39,7 +39,7 @@ class BaseTest:
         import pickle
 
         filepath = os.path.join(test_dir, "assets/qcc_pairs.pkl")
-        with open(filepath, mode='rb') as f:
+        with open(filepath, mode="rb") as f:
             qcc_pairs = pickle.load(f)
         return qcc_pairs
 
@@ -58,6 +58,6 @@ class BaseTest:
         import pickle
 
         filepath = os.path.join(test_dir, "assets/chromo_list_energies.pkl")
-        with open(filepath, mode='rb') as f:
+        with open(filepath, mode="rb") as f:
             chromo_list = pickle.load(f)
         return chromo_list

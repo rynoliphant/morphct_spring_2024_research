@@ -24,6 +24,7 @@ class Chromophore:
     Methods
     -------
     """
+
     def __init__(
         self,
         chromo_id,
@@ -31,8 +32,8 @@ class Chromophore:
         atom_ids,
         species,
         conversion_dict,
-        reorganization_energy = 0.3064,
-        vrh_delocalization = 2e-10
+        reorganization_energy=0.3064,
+        vrh_delocalization=2e-10,
     ):
         """
         Parameters
@@ -77,20 +78,19 @@ class Chromophore:
 
     def __repr__(self):
         return "Chromophore {} ({}): {} atoms at {:.3f} {:.3f} {:.3f}".format(
-                self.id,
-                self.species,
-                self.n_atoms,
-                *self.center
-                )
+            self.id, self.species, self.n_atoms, *self.center
+        )
 
     def _set_center(self, snap, atom_ids):
         box = snap.configuration.box[:3]
         unwrapped_pos = snap.particles.position + snap.particles.image * box
         center = np.mean(unwrapped_pos[atom_ids], axis=0)
         img = np.zeros(3)
-        while (center+img*box < -box/2).any() or (center+img*box > box/2).any():
-            img[np.where(center < -box/2)] += 1
-            img[np.where(center > box/2)] -= 1
+        while (center + img * box < -box / 2).any() or (
+            center + img * box > box / 2
+        ).any():
+            img[np.where(center < -box / 2)] += 1
+            img[np.where(center > box / 2)] -= 1
         self.unwrapped_center = center
         self.center = center + img * box
         self.image = img
@@ -130,10 +130,10 @@ def get_chromo_ids_smiles(snap, smarts_str, conv_dict, ff=None, steps=100):
         a.SetAtomicNum(element.atomic_number)
         a.SetVector(*[float(x) for x in unwrapped_positions[i]])
 
-    for i,j in snap.bonds.group:
+    for i, j in snap.bonds.group:
         # openbabel indexes atoms from 1
         # AddBond(i_index, j_index, bond_order)
-        mol.AddBond(int(i+1), int(j+1), 1)
+        mol.AddBond(int(i + 1), int(j + 1), 1)
 
     # This will correctly set the bond order
     # (necessary for smarts matching)
@@ -151,12 +151,12 @@ def get_chromo_ids_smiles(snap, smarts_str, conv_dict, ff=None, steps=100):
 
     smarts = pybel.Smarts(smarts_str)
     # shift indices by 1
-    atom_ids = [np.array(i)-1 for i in smarts.findall(pybelmol)]
+    atom_ids = [np.array(i) - 1 for i in smarts.findall(pybelmol)]
     if not atom_ids:
         warn(
-            f"No matches found for smarts string {smarts_str}. " +
-            "Please check the returned pybel.Molecule for errors.\n",
-            )
+            f"No matches found for smarts string {smarts_str}. "
+            + "Please check the returned pybel.Molecule for errors.\n"
+        )
         return pybelmol
     print(f"Found {len(atom_ids)} chromophores.")
     return atom_ids
@@ -179,8 +179,8 @@ def set_neighbors_voronoi(chromo_list, snap, conversion_dict, d_cut=10):
     box = snap.configuration.box[:3]
     qcc_pairs = []
     neighbors = []
-    for (i,j) in voronoi.nlist:
-        if (i,j) not in neighbors and (j,i) not in neighbors:
+    for (i, j) in voronoi.nlist:
+        if (i, j) not in neighbors and (j, i) not in neighbors:
             chromo_i = chromo_list[i]
             chromo_j = chromo_list[j]
             centers = []
@@ -188,7 +188,7 @@ def set_neighbors_voronoi(chromo_list, snap, conversion_dict, d_cut=10):
             images = []
             # calculate which of the periodic image is closest
             # shift chromophore j, hold chromophore i in place
-            for xyz_image in itertools.product(range(-1,2), repeat=3):
+            for xyz_image in itertools.product(range(-1, 2), repeat=3):
                 xyz_image = np.array(xyz_image)
                 sc_center = chromo_j.center + xyz_image * box
                 images.append(xyz_image)
@@ -206,11 +206,11 @@ def set_neighbors_voronoi(chromo_list, snap, conversion_dict, d_cut=10):
             chromo_j.neighbors.append([i, -rel_image])
             chromo_j.neighbors_delta_e.append(None)
             chromo_j.neighbors_ti.append(None)
-            neighbors.append((i,j))
+            neighbors.append((i, j))
             qcc_input = eqcc.write_qcc_pair_input(
                 snap, chromo_i, chromo_j, j_shift, conversion_dict
-                )
-            qcc_pairs.append(((i,j), qcc_input))
+            )
+            qcc_pairs.append(((i, j), qcc_input))
     return qcc_pairs
 
 
@@ -231,7 +231,7 @@ conversion_dict = {
 
 
 amber_dict = {
-    "c":  ele.element_from_symbol("C"),
+    "c": ele.element_from_symbol("C"),
     "c1": ele.element_from_symbol("C"),
     "c2": ele.element_from_symbol("C"),
     "c3": ele.element_from_symbol("C"),
@@ -261,11 +261,11 @@ amber_dict = {
     "hs": ele.element_from_symbol("H"),
     "hw": ele.element_from_symbol("H"),
     "hx": ele.element_from_symbol("H"),
-    "f":  ele.element_from_symbol("F"),
+    "f": ele.element_from_symbol("F"),
     "cl": ele.element_from_symbol("Cl"),
     "br": ele.element_from_symbol("Br"),
-    "i":  ele.element_from_symbol("I"),
-    "n":  ele.element_from_symbol("N"),
+    "i": ele.element_from_symbol("I"),
+    "n": ele.element_from_symbol("N"),
     "n1": ele.element_from_symbol("N"),
     "n2": ele.element_from_symbol("N"),
     "n3": ele.element_from_symbol("N"),
@@ -278,7 +278,7 @@ amber_dict = {
     "nf": ele.element_from_symbol("N"),
     "nh": ele.element_from_symbol("N"),
     "no": ele.element_from_symbol("N"),
-    "o":  ele.element_from_symbol("O"),
+    "o": ele.element_from_symbol("O"),
     "oh": ele.element_from_symbol("O"),
     "os": ele.element_from_symbol("O"),
     "ow": ele.element_from_symbol("O"),
@@ -293,7 +293,7 @@ amber_dict = {
     "pf": ele.element_from_symbol("P"),
     "px": ele.element_from_symbol("P"),
     "py": ele.element_from_symbol("P"),
-    "s":  ele.element_from_symbol("S"),
+    "s": ele.element_from_symbol("S"),
     "s2": ele.element_from_symbol("S"),
     "s4": ele.element_from_symbol("S"),
     "s6": ele.element_from_symbol("S"),

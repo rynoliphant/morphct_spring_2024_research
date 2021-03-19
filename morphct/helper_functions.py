@@ -11,22 +11,22 @@ hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 
 
 def box_points(box):
-    dims = np.array([(-i/2, i/2) for i in box/10])
+    dims = np.array([(-i / 2, i / 2) for i in box / 10])
     corners = [
-            (dims[0,i], dims[1,j], dims[2,k])
-            for i,j,k in itertools.product(range(2), repeat=3)
-            ]
-    corner_ids = [0,1,3,1,5,4,0,2,3,7,5,4,6,2,6,7]
+        (dims[0, i], dims[1, j], dims[2, k])
+        for i, j, k in itertools.product(range(2), repeat=3)
+    ]
+    corner_ids = [0, 1, 3, 1, 5, 4, 0, 2, 3, 7, 5, 4, 6, 2, 6, 7]
     box_pts = np.array([corners[i] for i in corner_ids])
     return box_pts
 
 
-def v_print(string, verbosity, v_level=0, filename=None): # pragma: no cover
+def v_print(string, verbosity, v_level=0, filename=None):  # pragma: no cover
     if verbosity > v_level:
         if filename is None:
             print(string)
         else:
-            with open(filename, 'a') as f:
+            with open(filename, "a") as f:
                 f.write(f"{string}\n")
 
 
@@ -51,18 +51,18 @@ def parallel_sort(list1, list2):
     (e.g., given mass and position, it will sort by mass and return lists
     such that mass[i] still corresponds to position[i])
     """
-    types = [None,None]
+    types = [None, None]
 
-    for i,l in enumerate([list1,list2]):
+    for i, l in enumerate([list1, list2]):
         if isinstance(l, np.ndarray):
             types[i] = "array"
         elif isinstance(l, list):
             types[i] = "list"
 
-    list1,list2 = zip(*sorted(zip(list1,list2)))
-    lists = [list1,list2]
+    list1, list2 = zip(*sorted(zip(list1, list2)))
+    lists = [list1, list2]
 
-    for i,t in enumerate(types):
+    for i, t in enumerate(types):
         if t == "array":
             lists[i] = np.array(lists[i])
         elif t == "list":
@@ -137,7 +137,7 @@ def get_event_tau(
             continue
         tau = -np.log(x) / rate
         if (fastest is not None) and (slowest is not None):
-            if (fastest < tau < slowest):
+            if fastest < tau < slowest:
                 return tau
             counter += 1
 
@@ -154,6 +154,7 @@ def get_event_tau(
 # TODO delete?
 # functions below here do not seem to be used
 
+
 def find_axis(atom1, atom2, normalize=True):
     """
     This function determines the normalized vector from the location of
@@ -168,24 +169,26 @@ def find_axis(atom1, atom2, normalize=True):
     return sep
 
 
-def get_coords_normvec(coords): # pragma: no cover
+def get_coords_normvec(coords):  # pragma: no cover
     AB = coords[1] - coords[0]
     AC = coords[2] - coords[0]
     return np.cross(AB, AC) / np.linalg.norm(normal)
 
 
-def get_rotation_matrix(vector1, vector2): # pragma: no cover
+def get_rotation_matrix(vector1, vector2):  # pragma: no cover
     """
     This function returns the rotation matrix around the origin that maps
     vector1 to vector 2
     """
     cross_product = np.cross(vector1, vector2)
-    sin_angle = np.sqrt(np.sum(cross_product** 2))
+    sin_angle = np.sqrt(np.sum(cross_product ** 2))
     cos_angle = np.dot(vector1, vector2)
     skew_matrix = np.array(
-        [[0, -cross_product[2], cross_product[1]],
-         [cross_product[2], 0, -cross_product[0]],
-         [-cross_product[1], cross_product[0], 0],]
+        [
+            [0, -cross_product[2], cross_product[1]],
+            [cross_product[2], 0, -cross_product[0]],
+            [-cross_product[1], cross_product[0], 0],
+        ]
     )
     skew_matrix_squared = skew_matrix @ skew_matrix
     rot_matrix = (
@@ -196,7 +199,7 @@ def get_rotation_matrix(vector1, vector2): # pragma: no cover
     return rot_matrix
 
 
-def get_nprocs(): # pragma: no cover
+def get_nprocs():  # pragma: no cover
     # Determine the number of available processors, either by querying the
     # SLURM_NPROCS environment variable, or by using multiprocessing to count
     # the number of visible CPUs.
@@ -209,8 +212,8 @@ def get_nprocs(): # pragma: no cover
 
 
 def get_FRET_hop_rate(
-        prefactor, lifetime, r_F, rij, delta_e, temp
-        ): # pragma: no cover
+    prefactor, lifetime, r_F, rij, delta_e, temp
+):  # pragma: no cover
     # Foerster Transport Hopping Rate Equation
     # The prefactor included here is a bit of a bodge to try and get the
     # mean-free paths of the excitons more in line with the 5nm of experiment.
@@ -226,8 +229,8 @@ def get_FRET_hop_rate(
 
 
 def get_miller_abrahams_hop_rate(
-        prefactor, separation, radius, delta_e, temp
-        ): # pragma: no cover
+    prefactor, separation, radius, delta_e, temp
+):  # pragma: no cover
     k = prefactor * np.exp(-2 * separation / radius)
     if delta_e > 0:
         k *= np.exp(-delta_e / (k_B * temp))

@@ -31,13 +31,13 @@ class Carrier:
         hop_limit=None,
         record_history=True,
         mol_id_dict=None,
-        use_average_hop_rates = False,
-        average_intra_hop_rate = None,
-        average_inter_hop_rate = None,
-        use_koopmans = False,
-        boltz = False,
-        use_vrh = False,
-        hopping_prefactor = 1.0
+        use_average_hop_rates=False,
+        average_intra_hop_rate=None,
+        average_inter_hop_rate=None,
+        use_koopmans=False,
+        boltz=False,
+        use_vrh=False,
+        hopping_prefactor=1.0,
     ):
         self.id = carrier_no
         self.image = np.array([0, 0, 0])
@@ -77,7 +77,7 @@ class Carrier:
         # Are we applying a distance penalty beyond the transfer integral?
         self.use_vrh = use_vrh
         if self.use_vrh:
-            self.vrh_delocalization = (self.current_chromo.vrh_delocalization)
+            self.vrh_delocalization = self.current_chromo.vrh_delocalization
 
         self.hopping_prefactor = hopping_prefactor
 
@@ -97,7 +97,7 @@ class Carrier:
         if self.use_average_hop_rates:
             # Use the average hop values given in the parameter dict to pick a
             # hop
-            for i,img in self.current_chromo.neighbors:
+            for i, img in self.current_chromo.neighbors:
                 neighbor = chromo_list[i]
                 assert neighbor.id == i
 
@@ -130,9 +130,12 @@ class Carrier:
                     neighbor_pos = neighbor_chromo.center + rel_img * self.box
 
                     # Chromophore separation needs converting to m
-                    sep = np.linalg.norm(
+                    sep = (
+                        np.linalg.norm(
                             self.current_chromo.center - neighbor_pos
-                            ) * 1e-10
+                        )
+                        * 1e-10
+                    )
 
                     hop_rate = hf.get_hop_rate(
                         self.lambda_ij,
@@ -175,7 +178,7 @@ class Carrier:
         n_ind, hop_time, rel_img = hop_times[0]
 
         v_print("\thop_times:", verbose, v_level=1)
-        hop_str = "\n".join([f"\t\t{i} {j:.2e} {k}" for (i,j,k) in hop_times])
+        hop_str = "\n".join([f"\t\t{i} {j:.2e} {k}" for (i, j, k) in hop_times])
         v_print(hop_str, verbose, v_level=1)
         v_print(f"\tHopping to {n_ind}", verbose, v_level=1)
 
@@ -200,17 +203,17 @@ class Carrier:
 
 
 def run_single_kmc(
-        jobs,
-        KMC_directory,
-        chromo_list,
-        box,
-        temp,
-        carrier_kwargs={},
-        cpu_rank=None,
-        seed=None,
-        send_end=None,
-        verbose=0
-        ):
+    jobs,
+    KMC_directory,
+    chromo_list,
+    box,
+    temp,
+    carrier_kwargs={},
+    cpu_rank=None,
+    seed=None,
+    send_end=None,
+    verbose=0,
+):
     if seed is not None:
         np.random.seed(seed)
 
@@ -274,13 +277,13 @@ def run_single_kmc(
         time_str = hf.time_units(elapsed_time)
 
         v_print(
-            f"\t{i_carrier.c_type} hopped {i_carrier.n_hops} times over " +
-            f"{i_carrier.current_time:.2e} seconds " +
-            f"into image {i_carrier.image} for a displacement of" +
-            f"\n\t{i_carrier.displacement:.2f} (took walltime {time_str})",
+            f"\t{i_carrier.c_type} hopped {i_carrier.n_hops} times over "
+            + f"{i_carrier.current_time:.2e} seconds "
+            + f"into image {i_carrier.image} for a displacement of"
+            + f"\n\t{i_carrier.displacement:.2f} (took walltime {time_str})",
             verbose,
-            filename=filename
-            )
+            filename=filename,
+        )
         carrier_list.append(i_carrier)
     t3 = time.perf_counter()
     elapsed_time = float(t3) - float(t0)
@@ -311,20 +314,20 @@ def get_jobslist(sim_times, n_holes=0, n_elec=0, nprocs=None, seed=None):
             carriers.append([carrier_no, lifetime, "electron"])
     np.random.shuffle(carriers)
     step = math.ceil(len(carriers) / nprocs)
-    jobs_list = [carriers[i : i+step] for i in range(0, len(carriers), step)]
+    jobs_list = [carriers[i : i + step] for i in range(0, len(carriers), step)]
     return jobs_list
 
 
 def run_kmc(
-        jobs_list,
-        KMC_directory,
-        chromo_list,
-        snap,
-        temp,
-        combine_KMC_results=True,
-        carrier_kwargs={},
-        verbose=0
-        ):
+    jobs_list,
+    KMC_directory,
+    chromo_list,
+    snap,
+    temp,
+    combine_KMC_results=True,
+    carrier_kwargs={},
+    verbose=0,
+):
     running_jobs = []
     pipes = []
     box = snap.configuration.box[:3]
@@ -334,22 +337,16 @@ def run_kmc(
 
         recv_end, send_end = mp.Pipe(False)
         p = mp.Process(
-                target=run_single_kmc,
-                args=(
-                    jobs,
-                    KMC_directory,
-                    chromo_list,
-                    box,
-                    temp
-                    ),
-                kwargs={
-                    "carrier_kwargs": carrier_kwargs,
-                    "seed": child_seed,
-                    "send_end": send_end,
-                    "verbose": verbose,
-                    "cpu_rank": cpu_rank
-                    }
-                )
+            target=run_single_kmc,
+            args=(jobs, KMC_directory, chromo_list, box, temp),
+            kwargs={
+                "carrier_kwargs": carrier_kwargs,
+                "seed": child_seed,
+                "send_end": send_end,
+                "verbose": verbose,
+                "cpu_rank": cpu_rank,
+            },
+        )
         running_jobs.append(p)
         pipes.append(recv_end)
         p.start()

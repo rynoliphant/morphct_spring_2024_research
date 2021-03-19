@@ -41,11 +41,9 @@ def get_times_msds(carrier_data):
     for i, displacement in enumerate(carrier_data["displacement"]):
         if (
             carrier_data["current_time"][i] > carrier_data["lifetime"][i] * 2
-            or
-            carrier_data["current_time"][i] < carrier_data["lifetime"][i] / 2
-            or
-            carrier_data["n_hops"][i] == 1
-            ):
+            or carrier_data["current_time"][i] < carrier_data["lifetime"][i] / 2
+            or carrier_data["n_hops"][i] == 1
+        ):
             total += 1
             continue
         key = carrier_data["lifetime"][i]
@@ -72,7 +70,7 @@ def get_times_msds(carrier_data):
     return times, msds, time_stderr, msd_stderr
 
 
-def plot_displacement_dist(carrier_data, c_type, path): # pragma: no cover
+def plot_displacement_dist(carrier_data, c_type, path):  # pragma: no cover
     plt.figure()
     plt.hist(np.array(carrier_data["displacement"]) * 0.1, bins=60, color="b")
     plt.xlabel(f"{c_type.capitalize()} Displacement (nm)")
@@ -84,7 +82,7 @@ def plot_displacement_dist(carrier_data, c_type, path): # pragma: no cover
     plt.close()
 
 
-def plot_cluster_size_dist(clusters, path): # pragma: no cover
+def plot_cluster_size_dist(clusters, path):  # pragma: no cover
     species = ["donor", "acceptor"]
     for i, cl in enumerate(clusters):
         if cl is not None:
@@ -129,7 +127,7 @@ def get_connections(chromo_list, carrier_history, box):
             if i < j:
                 chromoj = chromo_list[j]
                 # Get the vector between the two chromophores.
-                if np.array_equal(image, [0,0,0]):
+                if np.array_equal(image, [0, 0, 0]):
                     vector = chromoj.center - chromo.center
                 # Account for pbc if not in same relative image.
                 else:
@@ -150,7 +148,9 @@ def get_connections(chromo_list, carrier_history, box):
     return connections[1:]
 
 
-def plot_connections(chromo_list, carrier_history, c_type, path): # pragma: no cover
+def plot_connections(
+    chromo_list, carrier_history, c_type, path
+):  # pragma: no cover
     # A complicated function that shows connections between carriers in 3D
     # that carriers prefer to hop between.
     # Connections that are frequently used are highlighted in black, whereas
@@ -198,7 +198,7 @@ def plot_connections(chromo_list, carrier_history, c_type, path): # pragma: no c
 
     # Draw boxlines
     box_pts = hf.box_points(box)
-    ax.plot(box_pts[:,0], box_pts[:,1], box_pts[:,2], c="k", linewidth=1)
+    ax.plot(box_pts[:, 0], box_pts[:, 1], box_pts[:, 2], c="k", linewidth=1)
 
     # Make the color bar
     scalar_map.set_array(connections[:, 6])
@@ -215,7 +215,7 @@ def plot_connections(chromo_list, carrier_history, c_type, path): # pragma: no c
     fig.title = f"{species} ({c_type.capitalize()}) Network"
 
     filename = f"3d_{c_type}_network.png"
-    filepath = os.path.join(path, filename),
+    filepath = (os.path.join(path, filename),)
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
     print(f"\tFigure saved as {filename}")
 
@@ -235,12 +235,12 @@ def calc_mobility(lin_fit_X, lin_fit_Y, time_err, msd_err, temp):
     # The error in the mobility is proportionally the same as the error in the
     # diffusion coefficient as the other variables are constants without error
     diff_err = diff_coeff * np.sqrt(
-            (msd_err / numerator) ** 2 + (time_err / denominator) ** 2
+        (msd_err / numerator) ** 2 + (time_err / denominator) ** 2
     )
 
     # Use Einstein-Smoluchowski relation
     # This is in m^{2} / Vs
-    mobility = (hf.elem_chrg * diff_coeff / (hf.k_B * temp))
+    mobility = hf.elem_chrg * diff_coeff / (hf.k_B * temp)
 
     # Convert to cm^{2}/ Vs
     mobility *= 100 ** 2
@@ -248,18 +248,16 @@ def calc_mobility(lin_fit_X, lin_fit_Y, time_err, msd_err, temp):
     return mobility, mob_err
 
 
-def plot_msd(times, msds, time_stderr, msd_stderr, c_type, temp, path): # pragma: no cover
+def plot_msd(
+    times, msds, time_stderr, msd_stderr, c_type, temp, path
+):  # pragma: no cover
     fit_X = np.linspace(np.min(times), np.max(times), 100)
     gradient, intercept, r_val, p_val, std_err = linregress(times, msds)
     print(f"Standard Error {std_err}")
     print(f"Fitting r_val = {r_val}")
     fit_Y = (fit_X * gradient) + intercept
     mobility, mob_error = calc_mobility(
-        fit_X,
-        fit_Y,
-        np.average(time_stderr),
-        np.average(msd_stderr),
-        temp
+        fit_X, fit_Y, np.average(time_stderr), np.average(msd_stderr), temp
     )
     plt.plot(times, msds)
     plt.errorbar(times, msds, xerr=time_stderr, yerr=msd_stderr)
@@ -308,24 +306,24 @@ def get_anisotropy(xyzs):
     sxx = sxy = sxz = syy = syz = szz = 0
 
     shift_xyzs = xyzs - center
-    sxx = np.sum(shift_xyzs[:,0]**2)
-    sxy = np.sum(shift_xyzs[:,0] * shift_xyzs[:,1])
-    sxz = np.sum(shift_xyzs[:,0] * shift_xyzs[:,2])
-    syy = np.sum(shift_xyzs[:,1]**2)
-    syz = np.sum(shift_xyzs[:,1] * shift_xyzs[:,2])
-    szz = np.sum(shift_xyzs[:,2]**2)
+    sxx = np.sum(shift_xyzs[:, 0] ** 2)
+    sxy = np.sum(shift_xyzs[:, 0] * shift_xyzs[:, 1])
+    sxz = np.sum(shift_xyzs[:, 0] * shift_xyzs[:, 2])
+    syy = np.sum(shift_xyzs[:, 1] ** 2)
+    syz = np.sum(shift_xyzs[:, 1] * shift_xyzs[:, 2])
+    szz = np.sum(shift_xyzs[:, 2] ** 2)
 
-    S = np.array([[sxx, sxy, sxz],
-                  [sxy, syy, syz],
-                  [sxz, syz, szz]])
+    S = np.array([[sxx, sxy, sxz], [sxy, syy, syz], [sxz, syz, szz]])
 
     eigenvals, eigenvecs = np.linalg.eig(S)
     # We only need the eigenvalues though, no more matrix multiplication
     # Then calculate the relative shape anisotropy (kappa**2)
-    return 3 / 2 * np.sum(eigenvals**2) / np.sum(eigenvals)**2 - 1 / 2
+    return 3 / 2 * np.sum(eigenvals ** 2) / np.sum(eigenvals) ** 2 - 1 / 2
 
 
-def plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path,): # pragma: no cover
+def plot_hop_vectors(
+    carrier_data, chromo_list, snap, c_type, path
+):  # pragma: no cover
     from matplotlib import colors
     import matplotlib.cm as cmx
 
@@ -338,7 +336,7 @@ def plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path,): # pragma: 
     nonzero = list(zip(*carrier_history.nonzero()))
     hop_vectors = []
     intensities = []
-    for i,j in nonzero:
+    for i, j in nonzero:
         # Find the normal of chromo1 plane (first three atoms)
         ichromo_i = chromo_list[i]
         jchromo_j = chromo_list[j]
@@ -348,7 +346,7 @@ def plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path,): # pragma: 
         rotation_matrix = hf.get_rotation_matrix(normal, np.array([0, 0, 1]))
 
         # Find the vector from chromoi to chromoj (using correct relative image)
-        relative_image = [img for ind,img in ichromo.neighbors if ind == j][0]
+        relative_image = [img for ind, img in ichromo.neighbors if ind == j][0]
         jchromo_center = jchromo.center + relative_image * box
 
         unrotated_hop_vector = jchromo_center - ichromo_center
@@ -387,9 +385,15 @@ def plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path,): # pragma: 
     # Y-vecs for direction of each arrow
     # Z-vecs for direction of each arrow
     ax.quiver(
-        np.zeros(n), np.zeros(n), np.zeros(n),
-        hop_vectors[:, 0], hop_vectors[:, 1], hop_vectors[:, 2],
-        color=hop_colors, arrow_length_ratio=0, linewidth=0.7,
+        np.zeros(n),
+        np.zeros(n),
+        np.zeros(n),
+        hop_vectors[:, 0],
+        hop_vectors[:, 1],
+        hop_vectors[:, 2],
+        color=hop_colors,
+        arrow_length_ratio=0,
+        linewidth=0.7,
     )
     ax.set_xlim([-np.max(hop_vectors[:, 0]), np.max(hop_vectors[:, 0])])
     ax.set_ylim([-np.max(hop_vectors[:, 1]), np.max(hop_vectors[:, 1])])
@@ -411,23 +415,23 @@ def plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path,): # pragma: 
     figure_title = f"{species.capitalize()} ({c_type.capitalize()}) Network"
 
     filename = f"hop_vec_{c_type}.png"
-    filepath = os.path.join(path, filename),
+    filepath = (os.path.join(path, filename),)
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
     print(f"\tFigure saved as {filename}")
     plt.clf()
 
 
-def plot_anisotropy(carrier_data, c_type, three_d, path): # pragma: no cover
+def plot_anisotropy(carrier_data, c_type, three_d, path):  # pragma: no cover
     box = carrier_data["box"][0]
     xyzs = []
     # Get the indices of the carriers that travelled the furthest
     # only do the first 1000, in case there's a lot
-    for i,pos in enumerate(carrier_data["current_position"][:1000]):
+    for i, pos in enumerate(carrier_data["current_position"][:1000]):
         image = carrier_data["image"][i]
         position = image * box + pos
         xyzs.append(position / 10.0)
 
-    colors = ['b'] * len(xyzs)
+    colors = ["b"] * len(xyzs)
     xyzs = np.array(xyzs)
 
     anisotropy = get_anisotropy(xyzs)
@@ -439,12 +443,12 @@ def plot_anisotropy(carrier_data, c_type, three_d, path): # pragma: no cover
         # Reduce number of plot markers
         fig = plt.gcf()
         ax = p3.Axes3D(fig)
-        plt.scatter(xyzs[:,0], xyzs[:,1], zs=xyzs[:,2], c=colors, s=20)
+        plt.scatter(xyzs[:, 0], xyzs[:, 1], zs=xyzs[:, 2], c=colors, s=20)
         plt.scatter(0, 0, zs=0, c="r", s=50)
 
         # Draw boxlines
         box_pts = hf.box_points(box)
-        ax.plot(box_pts[:,0], box_pts[:,1], box_pts[:,2], c="k", linewidth=1)
+        ax.plot(box_pts[:, 0], box_pts[:, 1], box_pts[:, 2], c="k", linewidth=1)
 
         ax.set_xlabel("X (nm)", fontsize=20, labelpad=40)
         ax.set_ylabel("Y (nm)", fontsize=20, labelpad=40)
@@ -454,9 +458,9 @@ def plot_anisotropy(carrier_data, c_type, three_d, path): # pragma: no cover
         ax.set_ylim([-maximum, maximum])
         ax.set_zlim([-maximum, maximum])
         ticks = [
-                getattr(ax, f"{xyz}axis").get_major_ticks()
-                for xyz in ["x","y","z"]
-                ]
+            getattr(ax, f"{xyz}axis").get_major_ticks()
+            for xyz in ["x", "y", "z"]
+        ]
         ticks = [i for l in ticks for i in l]
         for tick in ticks:
             tick.label.set_fontsize(16)
@@ -478,7 +482,9 @@ def get_frame_val(string):
     return string.split("-")[0][1:]
 
 
-def plot_temp_progression(temp, mobility, mob_err, anisotropy, c_type, path): # pragma: no cover
+def plot_temp_progression(
+    temp, mobility, mob_err, anisotropy, c_type, path
+):  # pragma: no cover
     plt.gcf()
     plt.clf()
     xvals = temp
@@ -530,14 +536,16 @@ def gauss_fit(data):
     hist, bin_edges = np.histogram(data, bins=100)
     try:
         fit_args, fit_conv = curve_fit(
-                gaussian, bin_edges[:-1], hist, p0=[1, mean, std]
+            gaussian, bin_edges[:-1], hist, p0=[1, mean, std]
         )
     except RuntimeError:
         fit_args = None
     return bin_edges, fit_args, mean, std
 
 
-def plot_neighbor_hist(chromo_list, chromo_mol_id, box, sepcut, path): # pragma: no cover
+def plot_neighbor_hist(
+    chromo_list, chromo_mol_id, box, sepcut, path
+):  # pragma: no cover
     seps_donor = []
     seps_acceptor = []
     for i, ichromo in enumerate(chromo_list):
@@ -567,10 +575,7 @@ def plot_neighbor_hist(chromo_list, chromo_mol_id, box, sepcut, path): # pragma:
         plt.plot(bin_centers, smooth_n, color="r")
         if sepcut[sp_i] is None:
             sepcut[sp_i] = get_dist_cutoff(
-                bin_centers,
-                smooth_n,
-                min_i=0,
-                at_least=100,
+                bin_centers, smooth_n, min_i=0, at_least=100
             )
         if sepcut[sp_i] is not None:
             print(f"{sp} separation cluster cut-off set to {sepcut[sp_i]}")
@@ -585,7 +590,9 @@ def plot_neighbor_hist(chromo_list, chromo_mol_id, box, sepcut, path): # pragma:
         plt.close()
 
 
-def plot_orientation_hist(chromo_list, chromo_mol_id, orientations, ocut, path): # pragma: no cover
+def plot_orientation_hist(
+    chromo_list, chromo_mol_id, orientations, ocut, path
+):  # pragma: no cover
     orientations_donor = []
     orientations_acceptor = []
     for i, ichromo in enumerate(chromo_list):
@@ -605,7 +612,7 @@ def plot_orientation_hist(chromo_list, chromo_mol_id, orientations, ocut, path):
                 orientations_acceptor.append(angle)
     species = ["donor", "acceptor"]
     orients = [orientations_donor, orientations_acceptor]
-    for sp_i, sp, in enumerate(species):
+    for sp_i, sp in enumerate(species):
         orient = orients[sp_i]
         if len(orient) == 0:
             continue
@@ -619,10 +626,7 @@ def plot_orientation_hist(chromo_list, chromo_mol_id, orientations, ocut, path):
         plt.plot(bin_centers, smooth_n, color="r")
         if ocut[sp_i] is None:
             ocut[sp_i] = get_dist_cutoff(
-                bin_centers,
-                smooth_n,
-                max_i=0,
-                at_least=100,
+                bin_centers, smooth_n, max_i=0, at_least=100
             )
         if ocut[sp_i] is not None:
             print(f"{sp} orientation cluster cut-off set to {ocut[sp_i]}")
@@ -662,12 +666,12 @@ def get_clusters(chromo_list, snap, rmax=None):
             continue
         print("Calculating clusters...")
         if rmax is None:
-            rmax = max(box)/4
+            rmax = max(box) / 4
             print(f"No cutoff provided: cluster cutoff set to {rmax:.3f}")
 
         cl = freud.cluster.Cluster()
 
-        cl.compute((box,positions), neighbors={'r_max': rmax})
+        cl.compute((box, positions), neighbors={"r_max": rmax})
 
         large = sum([1 for c in cl.cluster_keys if len(c) > 6])
         biggest = max([len(c) for c in cl.cluster_keys])
@@ -741,7 +745,7 @@ def cluster_tcl_script(clusters, large_cluster, path):
     # Obtain the IDs of the cluster sizes, sorted by largest first
     print("Sorting the clusters by size...")
     species = ["donor", "acceptor"]
-    for i,cl in enumerate(clusters):
+    for i, cl in enumerate(clusters):
         sp = species[i]
 
         if cl is None:
@@ -802,7 +806,7 @@ def cluster_tcl_script(clusters, large_cluster, path):
 def get_lists_for_3d_clusters(clusters, chromo_list, colors, large_cluster):
     data = []
     species = ["donor", "acceptor"]
-    for i,cl in enumerate(clusters):
+    for i, cl in enumerate(clusters):
         sp = species[i]
 
         if cl is None:
@@ -813,17 +817,15 @@ def get_lists_for_3d_clusters(clusters, chromo_list, colors, large_cluster):
                 if len(chromo_ids) > large_cluster:
                     for c_id in chromo_ids:
                         chromo = chromo_list[c_id]
-                        data.append(
-                                [*chromo.center, "w", colors[clust_id % 7]]
-                                )
+                        data.append([*chromo.center, "w", colors[clust_id % 7]])
         else:
             for clust_id, chromo_ids in enumerate(cl.cluster_keys):
                 if len(chromo_ids) > large_cluster:
                     for c_id in chromo_ids:
                         chromo = chromo_list[c_id]
                         data.append(
-                                [*chromo.center, colors[clust_id % 7], "none"]
-                                )
+                            [*chromo.center, colors[clust_id % 7], "none"]
+                        )
 
     # Needs a sort so that final image is layered properly
     data = list(sorted(data, key=lambda x: x[0]))
@@ -835,7 +837,9 @@ def get_lists_for_3d_clusters(clusters, chromo_list, colors, large_cluster):
     return xyzs, face_colors, edge_colors
 
 
-def plot_clusters_3D(chromo_list, clusters, box, generate_tcl, path): # pragma: no cover
+def plot_clusters_3D(
+    chromo_list, clusters, box, generate_tcl, path
+):  # pragma: no cover
     fig = plt.figure()
     ax = p3.Axes3D(fig)
     colors = ["r", "g", "b", "c", "m", "y", "k"]
@@ -845,24 +849,24 @@ def plot_clusters_3D(chromo_list, clusters, box, generate_tcl, path): # pragma: 
 
     xyzs, face_colors, edge_colors = get_lists_for_3d_clusters(
         clusters, chromo_list, colors, large_cluster
-        )
+    )
     ax.scatter(
-            xyzs[:,0],
-            xyzs[:,1],
-            xyzs[:,2],
-            facecolors=face_colors,
-            edgecolors=edge_colors,
-            alpha=0.6,
-            s=40,
-            )
+        xyzs[:, 0],
+        xyzs[:, 1],
+        xyzs[:, 2],
+        facecolors=face_colors,
+        edgecolors=edge_colors,
+        alpha=0.6,
+        s=40,
+    )
 
     # Draw boxlines
     box_pts = hf.box_points(box)
-    ax.plot(box_pts[:,0], box_pts[:,1], box_pts[:,2], c="k", linewidth=1)
+    ax.plot(box_pts[:, 0], box_pts[:, 1], box_pts[:, 2], c="k", linewidth=1)
 
-    ax.set_xlim([-box[0]/2, box[0]/2])
-    ax.set_ylim([-box[1]/2, box[1]/2])
-    ax.set_zlim([-box[2]/2, box[2]/2])
+    ax.set_xlim([-box[0] / 2, box[0] / 2])
+    ax.set_ylim([-box[1] / 2, box[1] / 2])
+    ax.set_zlim([-box[2] / 2, box[2] / 2])
 
     filename = "clusters.png"
     filepath = os.path.join(path, "figures", filename)
@@ -907,12 +911,12 @@ def get_molecule_ids(snap, chromo_list):
     molecules = snap_molecule_indices(snap)
     # Convert to chromo_mol_id
     chromo_mol_id = {}
-    for i,chromo in enumerate(chromo_list):
+    for i, chromo in enumerate(chromo_list):
         chromo_mol_id[i] = molecules[chromo.atom_ids[0]]
     return chromo_mol_id
 
 
-def plot_energy_levels(chromo_list, data_dict, path,): # pragma: no cover
+def plot_energy_levels(chromo_list, data_dict, path):  # pragma: no cover
     homo_levels = []
     lumo_levels = []
     donor_delta_eij = []
@@ -935,10 +939,9 @@ def plot_energy_levels(chromo_list, data_dict, path,): # pragma: no cover
                     acceptor_delta_eij.append(delta_eij)
                 acceptor_lambda_ij = chromo.reorganization_energy
     if donor_delta_eij:
-        (donor_bin_edges,
-         donor_fit_args,
-         donor_mean,
-         donor_std) = gauss_fit(donor_delta_eij)
+        (donor_bin_edges, donor_fit_args, donor_mean, donor_std) = gauss_fit(
+            donor_delta_eij
+        )
         donor_err = donor_std / np.sqrt(len(donor_delta_eij))
 
         data_dict["donor_delta_eij_mean"] = donor_mean
@@ -962,10 +965,12 @@ def plot_energy_levels(chromo_list, data_dict, path,): # pragma: no cover
             path,
         )
     if acceptor_delta_eij:
-        (acceptor_bin_edges,
-         acceptor_fit_args,
-         acceptor_mean,
-         acceptor_std) = gauss_fit(acceptor_delta_eij)
+        (
+            acceptor_bin_edges,
+            acceptor_fit_args,
+            acceptor_mean,
+            acceptor_std,
+        ) = gauss_fit(acceptor_delta_eij)
         acceptor_err = acceptor_std / np.sqrt(len(acceptor_delta_eij))
 
         data_dict["acceptor_delta_eij_mean"] = acceptor_mean
@@ -979,8 +984,8 @@ def plot_energy_levels(chromo_list, data_dict, path,): # pragma: no cover
         data_dict["acceptor_lumo_err"] = LUMO_err
         print(
             f"Acceptor LUMO Level = {lumo_av} +/- {lumo_err}\n",
-            f"Acceptor Delta E_ij mean = {acceptor_mean} +/-{acceptor_err}"
-            )
+            f"Acceptor Delta E_ij mean = {acceptor_mean} +/-{acceptor_err}",
+        )
         plot_delta_eij(
             acceptor_delta_eij,
             acceptor_bin_edges,
@@ -991,7 +996,9 @@ def plot_energy_levels(chromo_list, data_dict, path,): # pragma: no cover
         )
 
 
-def plot_delta_eij(delta_eij, gauss_bins, fit_args, species, lambda_ij, path): # pragma: no cover
+def plot_delta_eij(
+    delta_eij, gauss_bins, fit_args, species, lambda_ij, path
+):  # pragma: no cover
     plt.figure()
     n, bins, patches = plt.hist(
         delta_eij,
@@ -1027,7 +1034,7 @@ def plot_mixed_hopping_rates(
     use_vrh=False,
     koopmans=None,
     boltz=False,
-): # pragma: no cover
+):  # pragma: no cover
     # Create all the empty lists we need
     hop_types = ["intra", "inter"]
     hop_targets = ["c", "m"]
@@ -1047,8 +1054,8 @@ def plot_mixed_hopping_rates(
                 lambda_ij = ichromo.reorganization_energy
             else:
                 lambda_ij = (
-                    ichromo.reorganization_energy +
-                    jchromo.reorganization_energy
+                    ichromo.reorganization_energy
+                    + jchromo.reorganization_energy
                 ) / 2
             # Now take into account the various behaviours we can have from
             # the parameter file
@@ -1075,12 +1082,7 @@ def plot_mixed_hopping_rates(
                 )
             else:
                 rate = hf.get_hop_rate(
-                    lambda_ij,
-                    ti,
-                    delta_e,
-                    prefactor,
-                    temp,
-                    boltz=boltz,
+                    lambda_ij, ti, delta_e, prefactor, temp, boltz=boltz
                 )
             if j < i:
                 continue
@@ -1140,7 +1142,7 @@ def plot_mixed_hopping_rates(
             ["Intra-cluster", "Inter-cluster"],
             "donor",
             path,
-            )
+        )
         plot_stacked_hist_tis(
             prop_lists["intra_cTd"],
             prop_lists["inter_cTd"],
@@ -1171,12 +1173,12 @@ def plot_mixed_hopping_rates(
             path,
         )
         plot_stacked_hist_tis(
-           ["intra_cTa"],
+            ["intra_cTa"],
             prop_lists["inter_cTa"],
             ["Intra-cluster", "Inter-cluster"],
             "acceptor",
             cutoff_dict["ti"][1],
-            path
+            path,
         )
     # Donor Mol Plots:
     if prop_lists["intra_mrd"]:
@@ -1197,7 +1199,7 @@ def plot_mixed_hopping_rates(
             prop_lists["inter_mrd"],
             ["Intra-mol", "Inter-mol"],
             "donor",
-            path
+            path,
         )
     # Acceptor Mol Plots:
     if prop_lists["intra_mra"]:
@@ -1221,7 +1223,9 @@ def plot_mixed_hopping_rates(
             path,
         )
     # Update the dataDict
-    for hop_type,target,sp in itertools.product(hop_types,hop_targets,species):
+    for hop_type, target, sp in itertools.product(
+        hop_types, hop_targets, species
+    ):
         hop_name = f"{hop_type}_{target}r{sp}"
         n_hops = len(prop_lists[hop_name])
         if n_hops == 0:
@@ -1235,13 +1239,15 @@ def plot_mixed_hopping_rates(
 
         mean_rate = np.mean(prop_lists[hop_name])
         stdev_rate = np.std(prop_lists[hop_name])
-        data_dict[f"{hop_name}_hops"]= n_hops
+        data_dict[f"{hop_name}_hops"] = n_hops
         data_dict[f"{hop_name}_proportion"] = proportion
         data_dict[f"{hop_name}_rate_mean"] = mean_rate
         data_dict[f"{hop_name}_rate_std"] = stdev_rate
 
 
-def plot_stacked_hist_rates(data1, data2, labels, species, path): # pragma: no cover
+def plot_stacked_hist_rates(
+    data1, data2, labels, species, path
+):  # pragma: no cover
     plt.figure()
     n, bins, patches = plt.hist(
         [data1, data2],
@@ -1264,7 +1270,9 @@ def plot_stacked_hist_rates(data1, data2, labels, species, path): # pragma: no c
     print(f"\tFigure saved as {filename}")
 
 
-def plot_stacked_hist_tis(data1, data2, labels, species, cutoff, path): # pragma: no cover
+def plot_stacked_hist_tis(
+    data1, data2, labels, species, cutoff, path
+):  # pragma: no cover
     plt.figure()
     n, bins, patches = plt.hist(
         [data1, data2],
@@ -1296,14 +1304,9 @@ def write_csv(data_dict, path):
     print(f"\tCSV file written to {filepath}")
 
 
-#TODO
+# TODO
 def get_dist_cutoff(
-    bin_centers,
-    dist,
-    min_i=None,
-    max_i=None,
-    at_least=100,
-    log=False,
+    bin_centers, dist, min_i=None, max_i=None, at_least=100, log=False
 ):
     try:
         if min_i is not None:
@@ -1356,7 +1359,7 @@ def get_dist_cutoff(
         return None
 
 
-def plot_ti_hist(chromo_list, chromo_mol_id, ticut, path): # pragma: no cover
+def plot_ti_hist(chromo_list, chromo_mol_id, ticut, path):  # pragma: no cover
     # ti_dist [[DONOR], [ACCEPTOR]]
     ti_intra = [[], []]
     ti_inter = [[], []]
@@ -1376,7 +1379,7 @@ def plot_ti_hist(chromo_list, chromo_mol_id, ticut, path): # pragma: no cover
                     ti_intra[sp_i].append(ichromo.neighbors_ti[i_neighbor])
                 else:
                     ti_inter[sp_i].append(ichromo.neighbors_ti[i_neighbor])
-        if not(ti_intra[sp_i] and ti_inter[sp_i]):
+        if not (ti_intra[sp_i] and ti_inter[sp_i]):
             continue
         plt.figure()
         maxti = np.max(ti_intra[sp_i] + ti_inter[sp_i])
@@ -1409,15 +1412,17 @@ def plot_ti_hist(chromo_list, chromo_mol_id, ticut, path): # pragma: no cover
         print(f"\tFigure saved as {filename}")
 
 
-def plot_frequency_dist(c_type, carrier_history, freqcut, path): # pragma: no cover
-    c_ind = ["hole","electron"].index(c_type)
+def plot_frequency_dist(
+    c_type, carrier_history, freqcut, path
+):  # pragma: no cover
+    c_ind = ["hole", "electron"].index(c_type)
     nonzero = list(zip(*carrier_history.nonzero()))
     frequencies = []
-    for i,j in nonzero:
+    for i, j in nonzero:
         if i < j:
             # Only consider hops in one direction
             continue
-        frequency = carrier_history[i,j]
+        frequency = carrier_history[i, j]
         frequencies.append(np.log10(frequency))
     plt.figure()
     n, bin_edges, _ = plt.hist(frequencies, bins=60, color="b")
@@ -1427,7 +1432,7 @@ def plot_frequency_dist(c_type, carrier_history, freqcut, path): # pragma: no co
     if freqcut[c_ind] is None:
         print("DYNAMIC CUT")
         freqcut[c_ind] = get_dist_cutoff(
-            bin_centers, smooth_n, min_i=-1, at_least=100, log=True,
+            bin_centers, smooth_n, min_i=-1, at_least=100, log=True
         )
         print(f"Cluster cut-off based on hop frequency set to {freqcut[c_ind]}")
     if freqcut[c_ind] is not None:
@@ -1446,14 +1451,14 @@ def plot_frequency_dist(c_type, carrier_history, freqcut, path): # pragma: no co
     print(f"\tFigure saved as {filename}")
 
 
-def plot_net_frequency_dist(c_type, carrier_history, path): # pragma: no cover
+def plot_net_frequency_dist(c_type, carrier_history, path):  # pragma: no cover
     nonzero = list(zip(*carrier_history.nonzero()))
     frequencies = []
-    for i,j in nonzero:
+    for i, j in nonzero:
         if i < j:
             # Only consider hops in one direction
             continue
-        frequency = np.abs(carrier_history[i,j] - carrier_history[j,i])
+        frequency = np.abs(carrier_history[i, j] - carrier_history[j, i])
         if frequency > 0:
             frequencies.append(np.log10(frequency))
     plt.figure()
@@ -1471,17 +1476,19 @@ def plot_net_frequency_dist(c_type, carrier_history, path): # pragma: no cover
     print(f"\tFigure saved as {filename}")
 
 
-def plot_discrepancy_frequency_dist(c_type, carrier_history, path): # pragma: no cover
+def plot_discrepancy_frequency_dist(
+    c_type, carrier_history, path
+):  # pragma: no cover
     nonzero = list(zip(*carrier_history.nonzero()))
     frequencies = []
     net_equals_total = 0
     net_near_total = 0
-    for i,j in nonzero:
+    for i, j in nonzero:
         if i < j:
             # Only consider hops in one direction
             continue
-        total_hops = carrier_history[i,j] + carrier_history[j,i]
-        net_hops = np.abs(carrier_history[i,j] - carrier_history[j,i])
+        total_hops = carrier_history[i, j] + carrier_history[j, i]
+        net_hops = np.abs(carrier_history[i, j] - carrier_history[j, i])
         frequency = total_hops - net_hops
         if frequency == 0:
             net_equals_total += 1
@@ -1508,31 +1515,19 @@ def plot_discrepancy_frequency_dist(c_type, carrier_history, path): # pragma: no
 
 
 def plot_mobility_msd(
-    c_type,
-    times,
-    msds,
-    time_stderr,
-    msd_stderr,
-    temp,
-    path,
-): # pragma: no cover
+    c_type, times, msds, time_stderr, msd_stderr, temp, path
+):  # pragma: no cover
     # Create the first figure that will be replotted each time
     plt.figure()
     times, msds = hf.parallel_sort(times, msds)
     mobility, mob_error, r_squared = plot_msd(
-        times,
-        msds,
-        time_stderr,
-        msd_stderr,
-        c_type,
-        temp,
-        path,
+        times, msds, time_stderr, msd_stderr, c_type, temp, path
     )
     print("----------------------------------------")
     print(
-          f"{c_type.capitalize()} mobility = {mobility:.2E} ",
-          f"+/- {mob_error:.2E} cm^2 V^-1 s^-1",
-          )
+        f"{c_type.capitalize()} mobility = {mobility:.2E} ",
+        f"+/- {mob_error:.2E} cm^2 V^-1 s^-1",
+    )
     print("----------------------------------------")
     plt.close()
     return mobility, mob_error, r_squared
@@ -1555,8 +1550,8 @@ def carrier_plots(
 
     print("Calculating mobility...")
     mobility, mob_error, r_squared = plot_mobility_msd(
-            c_type, times, msds, time_stderr, msd_stderr, temp, path
-            )
+        c_type, times, msds, time_stderr, msd_stderr, temp, path
+    )
 
     print(f"Calculating {c_type} trajectory anisotropy...")
     anisotropy = plot_anisotropy(carrier_data, c_type, three_d, path)
@@ -1567,12 +1562,7 @@ def carrier_plots(
 
         if carrier_history is not None:
             print("Determining carrier hopping connections...")
-            plot_connections(
-                chromo_list,
-                carrier_history,
-                c_type,
-                path,
-            )
+            plot_connections(chromo_list, carrier_history, c_type, path)
 
     print(f"Plotting {c_type} hop frequency distribution...")
     plot_frequency_dist(c_type, carrier_history, freqcut, path)
@@ -1587,24 +1577,24 @@ def carrier_plots(
 
 
 def main(
-        combined_data,
-        temp,
-        chromo_list,
-        snap,
-        path,
-        three_d=False,
-        freqcut=[None,None],
-        sepcut=[None,None],
-        ocut=[None,None],
-        ticut=[None,None],
-        generate_tcl=False,
-        sequence_donor=None,
-        sequence_acceptor=None,
-        backend=None,
-        use_vrh=False,
-        koopmans=None,
-        boltz=False,
-        ): # pragma: no cover
+    combined_data,
+    temp,
+    chromo_list,
+    snap,
+    path,
+    three_d=False,
+    freqcut=[None, None],
+    sepcut=[None, None],
+    ocut=[None, None],
+    ticut=[None, None],
+    generate_tcl=False,
+    sequence_donor=None,
+    sequence_acceptor=None,
+    backend=None,
+    use_vrh=False,
+    koopmans=None,
+    boltz=False,
+):  # pragma: no cover
     # Load the matplotlib backend and the plotting subroutines
     global plt
     global p3
@@ -1637,15 +1627,15 @@ def main(
         carrier_data = hole_data
 
         anisotropy, mobility, mob_error, r_squared = carrier_plots(
-                c_type,
-                carrier_data,
-                chromo_list,
-                snap,
-                freqcut,
-                three_d,
-                temp,
-                fig_dir
-                )
+            c_type,
+            carrier_data,
+            chromo_list,
+            snap,
+            freqcut,
+            three_d,
+            temp,
+            fig_dir,
+        )
 
         data_dict[f"{c_type}_anisotropy"] = anisotropy
         data_dict[f"{c_type}_mobility"] = mobility
@@ -1657,15 +1647,15 @@ def main(
         carrier_data = elec_data
 
         anisotropy, mobility, mob_error, r_squared = carrier_plots(
-                c_type,
-                carrier_data,
-                chromo_list,
-                snap,
-                freqcut,
-                three_d,
-                temp,
-                fig_dir
-                )
+            c_type,
+            carrier_data,
+            chromo_list,
+            snap,
+            freqcut,
+            three_d,
+            temp,
+            fig_dir,
+        )
 
         data_dict[f"{c_type}_anisotropy"] = anisotropy
         data_dict[f"{c_type}_mobility"] = mobility
@@ -1681,7 +1671,7 @@ def main(
 
     plot_neighbor_hist(chromo_list, chromo_mol_id, box, sepcut, fig_dir)
     plot_orientation_hist(
-        chromo_list, chromo_mol_id, orientations, ocut, fig_dir,
+        chromo_list, chromo_mol_id, orientations, ocut, fig_dir
     )
     plot_ti_hist(chromo_list, chromo_mol_id, ticut, fig_dir)
     cutoff_dict = create_cutoff_dict(sepcut, ocut, ticut, freqcut)

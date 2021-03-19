@@ -3,8 +3,8 @@ import pytest
 
 from base_test import BaseTest
 
-class TestKMC(BaseTest):
 
+class TestKMC(BaseTest):
     def test_init_carrier(self, p3ht_chromo_list_energies):
         from morphct.mobility_kmc import Carrier
 
@@ -26,4 +26,3 @@ class TestKMC(BaseTest):
         carrier.update_displacement()
 
         assert carrier.displacement == 9.193875570863462
-
