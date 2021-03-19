@@ -26,3 +26,27 @@ class TestKMC(BaseTest):
         carrier.update_displacement()
 
         assert carrier.displacement == 9.193875570863462
+
+    def test_getjobslist(self):
+        from morphct.mobility_kmc import get_jobslist
+
+        n = 4
+        lts = [1.0e-13, 1.0e-12]
+        jobs = get_jobslist(lts, n_holes=10, n_elec=10, nprocs=n, seed=42)
+
+        assert len(jobs) == n
+        assert jobs[0][0] == [9, 1e-13, 'electron']
+
+    def test_runsinglekmc(self, tmpdir, p3ht_chromo_list_energies):
+        from morphct.mobility_kmc import run_single_kmc
+
+        jobs = [[0, 1e-12, 'hole']]
+        chromo_list = p3ht_chromo_list_energies
+        box = np.array([85.18963, 85.18963, 85.18963])
+
+        carriers = run_single_kmc(jobs, tmpdir, chromo_list, box, 300, seed=42)
+
+        assert carriers[0].n_hops == 212
+        assert carriers[0].current_chromo.id == 14
+
+

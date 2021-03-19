@@ -294,6 +294,47 @@ def run_single_kmc(
         return carrier_list
 
 
+def snap_molecule_indices(snap):
+    """Find molecule index for each particle.
+
+    Given a snapshot from a trajectory, compute clusters of bonded molecules
+    and return an array of the molecule index of each particle.
+
+    Parameters
+    ----------
+    snap : gsd.hoomd.Snapshot
+        Trajectory snapshot.
+
+    Returns
+    -------
+    numpy array (N_particles,)
+    """
+    system = freud.AABBQuery.from_system(snap)
+    n_query_pts = n_pts = snap.bonds.N
+    query_pt_inds = snap.bonds.group[:, 0]
+    pt_inds = snap.bonds.group[:, 1]
+    distances = system.box.compute_distances(
+        system.points[query_pt_inds], system.points[pt_inds]
+    )
+    nlist = freud.NeighborList.from_arrays(
+        n_query_pts, n_pts, query_pt_inds, pt_inds, distances
+    )
+    cluster = freud.cluster.Cluster()
+    cluster.compute(system=system, neighbors=nlist)
+    return cluster.cluster_idx
+
+
+def get_molecule_ids(snap, chromo_list):
+    print("Determining molecule IDs...")
+    # Determine molecules based on bonds
+    molecules = snap_molecule_indices(snap)
+    # Convert to chromo_mol_id
+    chromo_mol_id = {}
+    for i, chromo in enumerate(chromo_list):
+        chromo_mol_id[i] = molecules[chromo.atom_ids[0]]
+    return chromo_mol_id
+
+
 def get_jobslist(sim_times, n_holes=0, n_elec=0, nprocs=None, seed=None):
     # Get the random seed now for all the child processes
     if seed is not None:

@@ -12,6 +12,7 @@ from scipy.sparse import lil_matrix
 from scipy.stats import linregress
 
 from morphct import helper_functions as hf
+from morphct.mobility_kmc import get_molecule_ids
 
 
 plt = None
@@ -878,47 +879,6 @@ def plot_clusters_3D(
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
     print(f"3D cluster figure saved as {filename}")
     plt.close()
-
-
-def snap_molecule_indices(snap):
-    """Find molecule index for each particle.
-
-    Given a snapshot from a trajectory, compute clusters of bonded molecules
-    and return an array of the molecule index of each particle.
-
-    Parameters
-    ----------
-    snap : gsd.hoomd.Snapshot
-        Trajectory snapshot.
-
-    Returns
-    -------
-    numpy array (N_particles,)
-    """
-    system = freud.AABBQuery.from_system(snap)
-    n_query_pts = n_pts = snap.bonds.N
-    query_pt_inds = snap.bonds.group[:, 0]
-    pt_inds = snap.bonds.group[:, 1]
-    distances = system.box.compute_distances(
-        system.points[query_pt_inds], system.points[pt_inds]
-    )
-    nlist = freud.NeighborList.from_arrays(
-        n_query_pts, n_pts, query_pt_inds, pt_inds, distances
-    )
-    cluster = freud.cluster.Cluster()
-    cluster.compute(system=system, neighbors=nlist)
-    return cluster.cluster_idx
-
-
-def get_molecule_ids(snap, chromo_list):
-    print("Determining molecule IDs...")
-    # Determine molecules based on bonds
-    molecules = snap_molecule_indices(snap)
-    # Convert to chromo_mol_id
-    chromo_mol_id = {}
-    for i, chromo in enumerate(chromo_list):
-        chromo_mol_id[i] = molecules[chromo.atom_ids[0]]
-    return chromo_mol_id
 
 
 def plot_energy_levels(chromo_list, data_dict, path):  # pragma: no cover
