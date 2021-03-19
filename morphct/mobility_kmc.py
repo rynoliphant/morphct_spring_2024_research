@@ -4,6 +4,7 @@ import os
 from sys import platform
 import time
 
+import freud
 import numpy as np
 from scipy.sparse import lil_matrix
 
@@ -31,14 +32,32 @@ class Carrier:
         hop_limit=None,
         record_history=True,
         mol_id_dict=None,
-        use_average_hop_rates=False,
-        average_intra_hop_rate=None,
-        average_inter_hop_rate=None,
+        use_avg_hoprates=False,
+        avg_intra_rate=None,
+        avg_inter_rate=None,
         use_koopmans=False,
         boltz=False,
         use_vrh=False,
         hopping_prefactor=1.0,
     ):
+        both_rates = avg_inter_rate is None and avg_intra_rate is None
+        any_rate = avg_inter_rate is None or avg_intra_rate is None
+        if use_avg_hoprates and any_rate:
+            raise ValueError(
+                "If use_avg_hoprates is True, avg_inter_rate and ",
+                "avg_intra_rate must also be provided"
+                )
+        elif not use_avg_hoprates and not both_rates:
+            warnings.warn(
+                    "You provided an average hop rate (avg_inter_rate or ",
+                    "avg_intra_rate) but use_avg_hoprates is False. ",
+                    "The provided hop rate will not be used"
+                    )
+        elif use_avg_hoprates and mol_id_dict is None:
+            raise ValueError(
+                "If use_avg_hoprates is True, a molecule dictionary ",
+                "(mol_id_dict) must also be provided"
+                )
         self.id = carrier_no
         self.image = np.array([0, 0, 0])
         self.initial_chromo = chromo
@@ -65,9 +84,9 @@ class Carrier:
         self.displacement = 0
         self.mol_id_dict = mol_id_dict
 
-        self.use_average_hop_rates = use_average_hop_rates
-        self.average_intra_hop_rate = average_intra_hop_rate
-        self.average_inter_hop_rate = average_inter_hop_rate
+        self.use_avg_hoprates = use_avg_hoprates
+        self.avg_intra_rate = avg_intra_rate
+        self.avg_inter_rate = avg_inter_rate
 
         # Set the use of Koopmans' approximation to false if the key does not
         # exist in the parameter dict
@@ -94,7 +113,7 @@ class Carrier:
                 return False
         # Determine the hop times to all possible neighbors
         hop_times = []
-        if self.use_average_hop_rates:
+        if self.use_avg_hoprates:
             # Use the average hop values given in the parameter dict to pick a
             # hop
             for i, img in self.current_chromo.neighbors:
@@ -104,9 +123,9 @@ class Carrier:
                 current_mol = self.mol_id_dict[self.current_chromo.id]
                 neighbor_mol = self.mol_id_dict[neighbor.id]
                 if current_mol == neighbor_mol:
-                    hop_rate = self.average_intra_hop_rate
+                    hop_rate = self.avg_intra_rate
                 else:
-                    hop_rate = self.average_inter_hop_rate
+                    hop_rate = self.avg_inter_rate
                 hop_time = hf.get_event_tau(hop_rate)
                 # Keep track of the chromophoreid and the corresponding tau
                 hop_times.append([neighbor.id, hop_time, img])
@@ -229,11 +248,11 @@ def run_single_kmc(
     v_print(f"Found {len(jobs):d} jobs to run", verbose, filename=filename)
 
     try:
-        use_avg_hop_rates = carrier_kwargs["use_avg_hop_rates"]
+        use_avg_hoprates = carrier_kwargs["use_avg_hoprates"]
     except KeyError:
-        use_avg_hop_rates = False
+        use_avg_hoprates = False
 
-    if use_avg_hop_rates:
+    if use_avg_hoprates:
         # Chosen to split hopping by inter-intra molecular hops, so get
         # molecule data
         mol_id_dict = get_molecule_ids(snap, chromo_list)
@@ -264,8 +283,8 @@ def run_single_kmc(
             box,
             temp,
             len(chromo_list),
-            **carrier_kwargs,
             mol_id_dict=mol_id_dict,
+            **carrier_kwargs,
         )
         continue_sim = True
         while continue_sim:
