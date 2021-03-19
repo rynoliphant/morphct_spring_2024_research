@@ -72,7 +72,7 @@ def get_times_msds(carrier_data):
     return times, msds, time_stderr, msd_stderr
 
 
-def plot_displacement_dist(carrier_data, c_type, path):
+def plot_displacement_dist(carrier_data, c_type, path): # pragma: no cover
     plt.figure()
     plt.hist(np.array(carrier_data["displacement"]) * 0.1, bins=60, color="b")
     plt.xlabel(f"{c_type.capitalize()} Displacement (nm)")
@@ -84,7 +84,7 @@ def plot_displacement_dist(carrier_data, c_type, path):
     plt.close()
 
 
-def plot_cluster_size_dist(clusters, path):
+def plot_cluster_size_dist(clusters, path): # pragma: no cover
     species = ["donor", "acceptor"]
     for i, cl in enumerate(clusters):
         if cl is not None:
@@ -150,7 +150,7 @@ def get_connections(chromo_list, carrier_history, box):
     return connections[1:]
 
 
-def plot_connections(chromo_list, carrier_history, c_type, path):
+def plot_connections(chromo_list, carrier_history, c_type, path): # pragma: no cover
     # A complicated function that shows connections between carriers in 3D
     # that carriers prefer to hop between.
     # Connections that are frequently used are highlighted in black, whereas
@@ -248,7 +248,7 @@ def calc_mobility(lin_fit_X, lin_fit_Y, time_err, msd_err, temp):
     return mobility, mob_err
 
 
-def plot_msd(times, msds, time_stderr, msd_stderr, c_type, temp, path):
+def plot_msd(times, msds, time_stderr, msd_stderr, c_type, temp, path): # pragma: no cover
     fit_X = np.linspace(np.min(times), np.max(times), 100)
     gradient, intercept, r_val, p_val, std_err = linregress(times, msds)
     print(f"Standard Error {std_err}")
@@ -325,7 +325,7 @@ def get_anisotropy(xyzs):
     return 3 / 2 * np.sum(eigenvals**2) / np.sum(eigenvals)**2 - 1 / 2
 
 
-def plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path,):
+def plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path,): # pragma: no cover
     from matplotlib import colors
     import matplotlib.cm as cmx
 
@@ -417,7 +417,7 @@ def plot_hop_vectors(carrier_data, chromo_list, snap, c_type, path,):
     plt.clf()
 
 
-def plot_anisotropy(carrier_data, c_type, three_d, path):
+def plot_anisotropy(carrier_data, c_type, three_d, path): # pragma: no cover
     box = carrier_data["box"][0]
     xyzs = []
     # Get the indices of the carriers that travelled the furthest
@@ -478,7 +478,7 @@ def get_frame_val(string):
     return string.split("-")[0][1:]
 
 
-def plot_temp_progression(temp, mobility, mob_err, anisotropy, c_type, path):
+def plot_temp_progression(temp, mobility, mob_err, anisotropy, c_type, path): # pragma: no cover
     plt.gcf()
     plt.clf()
     xvals = temp
@@ -537,7 +537,7 @@ def gauss_fit(data):
     return bin_edges, fit_args, mean, std
 
 
-def plot_neighbor_hist(chromo_list, chromo_mol_id, box, sepcut, path):
+def plot_neighbor_hist(chromo_list, chromo_mol_id, box, sepcut, path): # pragma: no cover
     seps_donor = []
     seps_acceptor = []
     for i, ichromo in enumerate(chromo_list):
@@ -585,7 +585,7 @@ def plot_neighbor_hist(chromo_list, chromo_mol_id, box, sepcut, path):
         plt.close()
 
 
-def plot_orientation_hist(chromo_list, chromo_mol_id, orientations, ocut, path):
+def plot_orientation_hist(chromo_list, chromo_mol_id, orientations, ocut, path): # pragma: no cover
     orientations_donor = []
     orientations_acceptor = []
     for i, ichromo in enumerate(chromo_list):
@@ -835,7 +835,7 @@ def get_lists_for_3d_clusters(clusters, chromo_list, colors, large_cluster):
     return xyzs, face_colors, edge_colors
 
 
-def plot_clusters_3D(chromo_list, clusters, box, generate_tcl, path):
+def plot_clusters_3D(chromo_list, clusters, box, generate_tcl, path): # pragma: no cover
     fig = plt.figure()
     ax = p3.Axes3D(fig)
     colors = ["r", "g", "b", "c", "m", "y", "k"]
@@ -912,7 +912,7 @@ def get_molecule_ids(snap, chromo_list):
     return chromo_mol_id
 
 
-def plot_energy_levels(chromo_list, data_dict, path,):
+def plot_energy_levels(chromo_list, data_dict, path,): # pragma: no cover
     homo_levels = []
     lumo_levels = []
     donor_delta_eij = []
@@ -991,7 +991,7 @@ def plot_energy_levels(chromo_list, data_dict, path,):
         )
 
 
-def plot_delta_eij(delta_eij, gauss_bins, fit_args, species, lambda_ij, path):
+def plot_delta_eij(delta_eij, gauss_bins, fit_args, species, lambda_ij, path): # pragma: no cover
     plt.figure()
     n, bins, patches = plt.hist(
         delta_eij,
@@ -1027,7 +1027,7 @@ def plot_mixed_hopping_rates(
     use_vrh=False,
     koopmans=None,
     boltz=False,
-):
+): # pragma: no cover
     # Create all the empty lists we need
     hop_types = ["intra", "inter"]
     hop_targets = ["c", "m"]
@@ -1241,7 +1241,7 @@ def plot_mixed_hopping_rates(
         data_dict[f"{hop_name}_rate_std"] = stdev_rate
 
 
-def plot_stacked_hist_rates(data1, data2, labels, species, path):
+def plot_stacked_hist_rates(data1, data2, labels, species, path): # pragma: no cover
     plt.figure()
     n, bins, patches = plt.hist(
         [data1, data2],
@@ -1264,7 +1264,7 @@ def plot_stacked_hist_rates(data1, data2, labels, species, path):
     print(f"\tFigure saved as {filename}")
 
 
-def plot_stacked_hist_tis(data1, data2, labels, species, cutoff, path):
+def plot_stacked_hist_tis(data1, data2, labels, species, cutoff, path): # pragma: no cover
     plt.figure()
     n, bins, patches = plt.hist(
         [data1, data2],
@@ -1356,7 +1356,7 @@ def get_dist_cutoff(
         return None
 
 
-def plot_ti_hist(chromo_list, chromo_mol_id, ticut, path):
+def plot_ti_hist(chromo_list, chromo_mol_id, ticut, path): # pragma: no cover
     # ti_dist [[DONOR], [ACCEPTOR]]
     ti_intra = [[], []]
     ti_inter = [[], []]
@@ -1409,7 +1409,7 @@ def plot_ti_hist(chromo_list, chromo_mol_id, ticut, path):
         print(f"\tFigure saved as {filename}")
 
 
-def plot_frequency_dist(c_type, carrier_history, freqcut, path):
+def plot_frequency_dist(c_type, carrier_history, freqcut, path): # pragma: no cover
     c_ind = ["hole","electron"].index(c_type)
     nonzero = list(zip(*carrier_history.nonzero()))
     frequencies = []
@@ -1446,7 +1446,7 @@ def plot_frequency_dist(c_type, carrier_history, freqcut, path):
     print(f"\tFigure saved as {filename}")
 
 
-def plot_net_frequency_dist(c_type, carrier_history, path):
+def plot_net_frequency_dist(c_type, carrier_history, path): # pragma: no cover
     nonzero = list(zip(*carrier_history.nonzero()))
     frequencies = []
     for i,j in nonzero:
@@ -1471,7 +1471,7 @@ def plot_net_frequency_dist(c_type, carrier_history, path):
     print(f"\tFigure saved as {filename}")
 
 
-def plot_discrepancy_frequency_dist(c_type, carrier_history, path):
+def plot_discrepancy_frequency_dist(c_type, carrier_history, path): # pragma: no cover
     nonzero = list(zip(*carrier_history.nonzero()))
     frequencies = []
     net_equals_total = 0
@@ -1515,7 +1515,7 @@ def plot_mobility_msd(
     msd_stderr,
     temp,
     path,
-):
+): # pragma: no cover
     # Create the first figure that will be replotted each time
     plt.figure()
     times, msds = hf.parallel_sort(times, msds)
@@ -1604,7 +1604,7 @@ def main(
         use_vrh=False,
         koopmans=None,
         boltz=False,
-        ):
+        ): # pragma: no cover
     # Load the matplotlib backend and the plotting subroutines
     global plt
     global p3
