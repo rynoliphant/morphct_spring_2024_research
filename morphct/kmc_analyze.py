@@ -738,7 +738,7 @@ def update_cluster(atom_ID, cluster_list, neighbor_dict):
     return cluster_list
 
 
-def cluster_tcl_script(clusters, large_cluster, path):
+def cluster_tcl_script(clusters, large_cluster, path): # pragma: no cover
     """
     Create a tcl script for each identified cluster.
     """
@@ -803,7 +803,12 @@ def cluster_tcl_script(clusters, large_cluster, path):
     print(f"\nClusters coloring written to {tcl_file_path}")
 
 
-def get_lists_for_3d_clusters(clusters, chromo_list, colors, large_cluster):
+def get_lists_for_3d_clusters(
+        clusters,
+        chromo_list,
+        colors,
+        large_cluster
+): # pragma: no cover
     data = []
     species = ["donor", "acceptor"]
     for i, cl in enumerate(clusters):
@@ -1295,7 +1300,7 @@ def plot_stacked_hist_tis(
     print(f"\tFigure saved as {filename}")
 
 
-def write_csv(data_dict, path):
+def write_csv(data_dict, path): # pragma: no cover
     filepath = os.path.join(path, "results.csv")
     with open(filepath, "w") as f:
         w = csv.writer(f)
@@ -1535,7 +1540,7 @@ def plot_mobility_msd(
 
 def carrier_plots(
     c_type, carrier_data, chromo_list, snap, freqcut, three_d, temp, path
-):
+): # pragma: no cover
     print(f"Considering the transport of {c_type}...")
     if c_type == "hole":
         carrier_history = carrier_data["hole_history"]
