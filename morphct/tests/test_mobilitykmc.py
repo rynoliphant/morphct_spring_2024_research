@@ -48,8 +48,8 @@ class TestKMC(BaseTest):
                 jobs, tmpdir, chromo_list, p3ht_snap, 300, seed=42
                 )[0]
 
-        assert carriers.n_hops == 212
-        assert carriers.current_chromo.id == 14
+        assert carrier.n_hops == 212
+        assert carrier.current_chromo.id == 14
 
         c_kwargs = {
             "use_avg_hoprates": True,
@@ -66,5 +66,5 @@ class TestKMC(BaseTest):
                 carrier_kwargs=c_kwargs
                 )[0]
 
-        assert carriers.n_hops == 1553
-        assert carriers.current_chromo.id == 19
+        assert carrier.n_hops == 1553
+        assert carrier.current_chromo.id == 19
