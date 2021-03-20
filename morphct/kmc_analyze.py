@@ -475,14 +475,6 @@ def plot_anisotropy(carrier_data, c_type, three_d, path):  # pragma: no cover
     return anisotropy
 
 
-def get_temp_val(string):
-    return string.split("-")[-2][2:]
-
-
-def get_frame_val(string):
-    return string.split("-")[0][1:]
-
-
 def plot_temp_progression(
     temp, mobility, mob_err, anisotropy, c_type, path
 ):  # pragma: no cover
@@ -707,21 +699,7 @@ def get_plane(positions):
     return np.cross(vec1, vec2)
 
 
-def get_separations(chromo_list, snap):
-    box = snap.configuration.box[:3]
-    n = len(chromo_list)
-    separations = lil_matrix((n, n), dtype=float)
-    for i, ichromo in enumerate(chromo_list):
-        for j, img in chromo.neighbors:
-            if i > j:
-                continue
-            jcenter = chromo_list[j].center
-            jpos = jcenter + img * box
-            separations[i, j] = np.linalg.norm(jpos, ichromo.center)
-    return separations
-
-
-def update_cluster(atom_ID, cluster_list, neighbor_dict):
+def update_cluster(atom_ID, cluster_list, neighbor_dict): # pragma: no cover
     try:
         for neighbor in neighbor_dict[atom_ID]:
             if cluster_list[neighbor] > cluster_list[atom_ID]:
