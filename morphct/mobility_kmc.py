@@ -3,6 +3,7 @@ import multiprocessing as mp
 import os
 from sys import platform
 import time
+import warnings
 
 import freud
 import numpy as np
@@ -43,21 +44,27 @@ class Carrier:
         both_rates = avg_inter_rate is None and avg_intra_rate is None
         any_rate = avg_inter_rate is None or avg_intra_rate is None
         if use_avg_hoprates and any_rate:
-            raise ValueError(
-                "If use_avg_hoprates is True, avg_inter_rate and ",
-                "avg_intra_rate must also be provided"
-                )
+            err_msg = (
+                    "If use_avg_hoprates is True, avg_inter_rate and "+
+                    "avg_intra_rate must also be provided"
+                    )
+            raise ValueError(err_msg)
+
         elif not use_avg_hoprates and not both_rates:
-            warnings.warn(
-                    "You provided an average hop rate (avg_inter_rate or ",
-                    "avg_intra_rate) but use_avg_hoprates is False. ",
+            warn_msg = (
+                    "You provided an average hop rate (avg_inter_rate or "+
+                    "avg_intra_rate) but use_avg_hoprates is False. "+
                     "The provided hop rate will not be used"
                     )
+            warnings.warn(warn_msg)
+
         elif use_avg_hoprates and mol_id_dict is None:
-            raise ValueError(
-                "If use_avg_hoprates is True, a molecule dictionary ",
-                "(mol_id_dict) must also be provided"
-                )
+            err_msg = (
+                    "If use_avg_hoprates is True, a molecule dictionary "+
+                    "(mol_id_dict) must also be provided"
+                    )
+            raise ValueError(err_msg)
+
         self.id = carrier_no
         self.image = np.array([0, 0, 0])
         self.initial_chromo = chromo
