@@ -2,9 +2,6 @@ import multiprocessing as mp
 from multiprocessing import get_context
 import numpy as np
 
-import pyscf
-from pyscf.semiempirical import MINDO3
-
 from morphct import helper_functions as hf
 from morphct import transfer_integrals as ti
 
@@ -30,6 +27,9 @@ def get_homolumo(molstr, verbose=0, tol=1e-6):
     numpy.array
         Array containing HOMO-1, HOMO, LUMO, LUMO+1 energies in eV
     """
+    import pyscf
+    from pyscf.semiempirical import MINDO3
+
     mol = pyscf.M(atom=molstr)
     mf = MINDO3(mol).run(verbose=verbose, conv_tol=tol)
     occ = mf.get_occ()
