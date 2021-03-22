@@ -61,3 +61,12 @@ class BaseTest:
         with open(filepath, mode="rb") as f:
             chromo_list = pickle.load(f)
         return chromo_list
+
+    @pytest.fixture
+    def p3ht_combined_carriers(self):
+        import pickle
+
+        filepath = os.path.join(test_dir, "assets/combined_carriers.pkl")
+        with open(filepath, mode="rb") as f:
+            carriers = pickle.load(f)
+        return carriers
