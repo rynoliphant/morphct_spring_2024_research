@@ -1318,10 +1318,12 @@ def plot_ti_hist(chromo_list, chromo_mol_id, ticut, path):  # pragma: no cover
                     continue
                 if i >= j:
                     continue
-                if chromo_mol_id[i] == chromo_mol_id[j]:
-                    ti_intra[sp_i].append(ichromo.neighbors_ti[i_neighbor])
-                else:
-                    ti_inter[sp_i].append(ichromo.neighbors_ti[i_neighbor])
+                ti = ichromo.neighbors_ti[i_neighbor]
+                if ti is not None:
+                    if chromo_mol_id[i] == chromo_mol_id[j]:
+                        ti_intra[sp_i].append(ti)
+                    else:
+                        ti_inter[sp_i].append(ti)
         if not (ti_intra[sp_i] and ti_inter[sp_i]):
             continue
         plt.figure()
