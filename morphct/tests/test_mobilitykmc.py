@@ -27,6 +27,33 @@ class TestKMC(BaseTest):
 
         assert carrier.displacement == 9.193875570863462
 
+    def test_carrier_errors(self, p3ht_chromo_list_energies):
+        from morphct.mobility_kmc import Carrier
+
+        chromo_list = p3ht_chromo_list_energies
+        n = len(chromo_list)
+        chromo = chromo_list[0]
+        box = np.array([85.18963, 85.18963, 85.18963])
+
+        with pytest.raises(ValueError):
+            Carrier(chromo, 1e-12, 0, box, 300, n, use_avg_hoprates=True)
+
+        with pytest.warns(UserWarning):
+            Carrier(chromo, 1e-12, 0, box, 300, n, avg_inter_rate=0)
+
+        with pytest.raises(ValueError):
+            Carrier(
+                    chromo,
+                    1e-12,
+                    0,
+                    box,
+                    300,
+                    n,
+                    avg_inter_rate=0,
+                    avg_intra_rate=0,
+                    use_avg_hoprates=True
+                    )
+
     def test_getjobslist(self):
         from morphct.mobility_kmc import get_jobslist
 
@@ -68,3 +95,23 @@ class TestKMC(BaseTest):
 
         assert carrier.n_hops == 1553
         assert carrier.current_chromo.id == 19
+
+        jobs = [[0, 1e-11, 'hole']]
+        c_kwargs = {
+                "use_koopmans" : True,
+                "boltz": True,
+                "use_vrh": True
+                }
+
+        carrier = run_single_kmc(
+                jobs,
+                tmpdir,
+                chromo_list,
+                p3ht_snap,
+                300,
+                seed=42,
+                carrier_kwargs=c_kwargs
+                )[0]
+
+        assert carrier.n_hops == 975
+        assert carrier.current_chromo.id == 11
