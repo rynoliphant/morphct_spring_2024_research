@@ -13,7 +13,7 @@ from morphct import helper_functions as hf
 from morphct.helper_functions import v_print
 
 
-try: # pragma : no cover
+try: # pragma: no cover
     if platform == "darwin":
         # OS X
         mp.set_start_method("fork")
@@ -395,7 +395,7 @@ def run_kmc(
     combine_KMC_results=True,
     carrier_kwargs={},
     verbose=0,
-    ): # pragma : no cover
+    ): # pragma: no cover
     running_jobs = []
     pipes = []
 
