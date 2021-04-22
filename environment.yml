@@ -1,6 +1,7 @@
 name: morphct
 channels:
 - conda-forge
+- pyscf
 dependencies:
 - blas=*=openblas
 - cython=0.29
@@ -15,8 +16,8 @@ dependencies:
 - pip=21.0.1
 - python=3.7
 - scipy=1.5
+- pyscf=1.7.6
 - pytest
 - pytest-cov
 - pip:
-  - pyscf==1.7.6a1
   - git+https://github.com/cmelab/morphct@v4.0.0

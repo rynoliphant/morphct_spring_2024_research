@@ -4,11 +4,11 @@ on:
   push:
     branches: [ master ]
     paths:
-      - 'morphct/*'
+      - 'morphct/**'
   pull_request:
     branches: [ master ]
     paths:
-      - 'morphct/*'
+      - 'morphct/**'
   # Allows workflow to be manually triggered
   workflow_dispatch:
 
