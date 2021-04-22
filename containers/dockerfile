@@ -6,6 +6,9 @@ WORKDIR /opt/app
 # https://pythonspeed.com/articles/activate-conda-dockerfile/
 SHELL ["/bin/bash", "--login", "-c"]
 
+# Install curl for Codecov and libgomp for pyscf
+RUN apt-get update && apt-get upgrade -y && apt-get install -y curl libgomp1
+
 # Create the environment
 COPY environment.yml .
 
@@ -13,10 +16,6 @@ COPY environment.yml .
 RUN conda env update -n base -f environment.yml && \
     conda clean --all --yes -f 
 
-# Install curl for Codecov and libgomp for pyscf
-RUN apt-get update && apt-get upgrade -y && apt-get install -y curl libgomp1
-
 # Prevent python from loading packages from outside the container
 # default empty pythonpath
 ENV PYTHONPATH /ignore/pythonpath
-
