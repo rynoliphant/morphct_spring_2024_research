@@ -4,13 +4,11 @@ on:
   push:
     branches: [ master ]
     paths:
-      - 'morphct/*'
-      - 'tests/*'
+      - 'morphct/**'
   pull_request:
     branches: [ master ]
     paths:
-      - 'morphct/*'
-      - 'tests/*'
+      - 'morphct/**'
 
 jobs:
   pytest:
