@@ -22,6 +22,18 @@ except RuntimeError:
 
 
 class Carrier:
+    """
+
+    Parameters
+    ----------
+
+    Attributes
+    ----------
+
+    Methods
+    -------
+
+    """
     def __init__(
         self,
         chromo,
@@ -44,26 +56,23 @@ class Carrier:
         both_rates = avg_inter_rate is None and avg_intra_rate is None
         any_rate = avg_inter_rate is None or avg_intra_rate is None
         if use_avg_hoprates and any_rate:
-            err_msg = (
-                    "If use_avg_hoprates is True, avg_inter_rate and "+
-                    "avg_intra_rate must also be provided"
-                    )
-            raise ValueError(err_msg)
+            raise ValueError(
+                "If use_avg_hoprates is True, avg_inter_rate and "
+                "avg_intra_rate must also be provided"
+            )
 
         elif not use_avg_hoprates and not both_rates:
-            warn_msg = (
-                    "You provided an average hop rate (avg_inter_rate or "+
-                    "avg_intra_rate) but use_avg_hoprates is False. "+
-                    "The provided hop rate will not be used"
-                    )
-            warnings.warn(warn_msg)
+            warnings.warn(
+                "You provided an average hop rate (avg_inter_rate or "
+                "avg_intra_rate) but use_avg_hoprates is False. "
+                "The provided hop rate will not be used"
+            )
 
         elif use_avg_hoprates and mol_id_dict is None:
-            err_msg = (
-                    "If use_avg_hoprates is True, a molecule dictionary "+
-                    "(mol_id_dict) must also be provided"
-                    )
-            raise ValueError(err_msg)
+            raise ValueError(
+                "If use_avg_hoprates is True, a molecule dictionary "
+                "(mol_id_dict) must also be provided"
+            )
 
         self.id = carrier_no
         self.image = np.array([0, 0, 0])
@@ -108,12 +117,30 @@ class Carrier:
         self.hopping_prefactor = hopping_prefactor
 
     def update_displacement(self):
+        """
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        """
         init_pos = self.initial_chromo.center
         final_pos = self.current_chromo.center
         displacement = final_pos - init_pos + self.image * self.box
         self.displacement = np.linalg.norm(displacement)
 
     def calculate_hop(self, chromo_list, verbose=0):
+        """
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        """
         # Terminate if the next hop would be more than the termination limit
         if self.hop_limit is not None:
             if self.n_hops + 1 > self.hop_limit:
@@ -212,6 +239,15 @@ class Carrier:
         return True
 
     def perform_hop(self, destination_chromo, hop_time, rel_image):
+        """
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        """
         init_id = self.current_chromo.id
         dest_id = destination_chromo.id
         self.image += rel_image
@@ -240,6 +276,15 @@ def run_single_kmc(
     send_end=None,
     verbose=0,
 ):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     if seed is not None:
         np.random.seed(seed)
 
@@ -334,7 +379,7 @@ def snap_molecule_indices(snap):
 
     Returns
     -------
-    numpy array (N_particles,)
+    numpy.ndarray (N_particles,)
     """
     system = freud.AABBQuery.from_system(snap)
     n_query_pts = n_pts = snap.bonds.N
@@ -352,6 +397,15 @@ def snap_molecule_indices(snap):
 
 
 def get_molecule_ids(snap, chromo_list):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     print("Determining molecule IDs...")
     # Determine molecules based on bonds
     molecules = snap_molecule_indices(snap)
@@ -363,6 +417,15 @@ def get_molecule_ids(snap, chromo_list):
 
 
 def get_jobslist(sim_times, n_holes=0, n_elec=0, nprocs=None, seed=None):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     # Get the random seed now for all the child processes
     if seed is not None:
         np.random.seed(seed)
@@ -396,6 +459,15 @@ def run_kmc(
     carrier_kwargs={},
     verbose=0,
     ): # pragma: no cover
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     running_jobs = []
     pipes = []
 

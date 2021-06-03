@@ -7,10 +7,28 @@ import numpy as np
 
 
 def calculate_delta_E(chromo1, chromo2):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     return chromo2.get_MO_energy() - chromo1.get_MO_energy()
 
 
 def calculate_ti(orbital_splitting, delta_e):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     # Use the energy splitting in dimer method to calculate the electronic
     # transfer integral in eV
     if delta_e ** 2 > orbital_splitting ** 2:

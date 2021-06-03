@@ -11,6 +11,15 @@ hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 
 
 def box_points(box):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     dims = np.array([(-i / 2, i / 2) for i in box / 10])
     corners = [
         (dims[0, i], dims[1, j], dims[2, k])
@@ -22,6 +31,15 @@ def box_points(box):
 
 
 def v_print(string, verbosity, v_level=0, filename=None):  # pragma: no cover
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     if verbosity > v_level:
         if filename is None:
             print(string)
@@ -31,6 +49,15 @@ def v_print(string, verbosity, v_level=0, filename=None):  # pragma: no cover
 
 
 def time_units(elapsed_time, precision=2):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     if elapsed_time < 60:
         time_units = "seconds"
     elif elapsed_time < 3600:
@@ -82,6 +109,15 @@ def get_hop_rate(
     vrh=1.0,
     boltz=False,
 ):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     # Based on the input parameters, can make this the semiclassical Marcus
     # Hopping Rate Equation, or a more generic Miller Abrahams-based hop
     # Firstly, to prevent divide-by-zero errors:
@@ -117,6 +153,15 @@ def get_event_tau(
     log_file=None,
     verbose=0,
 ):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
     if rate == 0:
         # If rate == 0, then make the hopping time extremely long
         return 1e99
