@@ -11,14 +11,18 @@ hbar = 1.05457173e-34  # m^{2} kg s^{-1}
 
 
 def box_points(box):
-    """
+    """Arrange the corner coordinates such that following them draws a cube.
 
     Parameters
     ----------
+    box : numpy.ndarray
+        Box array containing [Lx, Ly, Lz]
 
     Returns
     -------
-
+    numpy.ndarray (16,3)
+        xyz coordinates of the box corners in order such that if a line is drawn
+        between each point in order it draws a cube.
     """
     dims = np.array([(-i / 2, i / 2) for i in box / 10])
     corners = [
@@ -31,14 +35,21 @@ def box_points(box):
 
 
 def v_print(string, verbosity, v_level=0, filename=None):  # pragma: no cover
-    """
+    """Print based on verbosity level.
+
+    If verbosity is greater than v_level, v_print will print.
 
     Parameters
     ----------
-
-    Returns
-    -------
-
+    string : str
+        The string to print.
+    verbosity : int
+        The current verbosity level
+    v_level : int, default 0
+        The level above which string should print
+    filename : path, default None
+        Path to a file where the vprint will be written instad of printed to
+        stdout. If None is given, v_print prints to stdout.
     """
     if verbosity > v_level:
         if filename is None:
@@ -49,14 +60,24 @@ def v_print(string, verbosity, v_level=0, filename=None):  # pragma: no cover
 
 
 def time_units(elapsed_time, precision=2):
-    """
+    """Convert elapsed time in seconds to its largest unit.
+
+    Example
+    -------
+    >>> time_units(12345)
+    '3.43 hours'
 
     Parameters
     ----------
+    elapsed_time : float
+        Elapsed time in seconds
+    precision : int, default 2
+        Number of values after decimal place to display.
 
     Returns
     -------
-
+    str
+        Elapsed time formatted as a string
     """
     if elapsed_time < 60:
         time_units = "seconds"
@@ -75,8 +96,19 @@ def time_units(elapsed_time, precision=2):
 def parallel_sort(list1, list2):
     """Sort a pair of lists by the first list in ascending order.
 
-    (e.g., given lists of mass and position, it will sort by mass and return
-    lists such that mass[i] still corresponds to position[i])
+    For example, given lists of mass and position, it will sort by mass and
+    return lists such that mass[i] still corresponds to position[i]
+
+    Parameters
+    ----------
+    list1 : list
+        The list to be sorted by
+    list2 : list
+        Another list which will be rearranged to maintain order with list1
+
+    Returns
+    -------
+    list of lists
     """
     types = [None, None]
 
@@ -109,14 +141,34 @@ def get_hop_rate(
     vrh=1.0,
     boltz=False,
 ):
-    """
+    """Get the hopping rate.
 
     Parameters
     ----------
+    lambd : float
+        The reorganization energy in eV.
+    ti : float
+        The transfer integral between the chromophores in eV.
+    delta_e : float
+        The energy difference between the frontier orbitals of the chromophores
+        in eV.
+    prefactor : float
+        A prefactor to the rate equation.
+    temp : float
+        The temperature in Kelvin.
+    use_vrh : bool, default False
+        Whether to use variable-range hopping.
+    rij : float, default 0.0
+        The distance between the chromophores in Angstroms. (only used with VRH)
+    vrh : float, default 1.0
+        A cutoff distance in Angstroms. (only used with VRH)
+    boltz : bool, default False
+        Whether to apply a simple Boltzmann energy penalty.
 
     Returns
     -------
-
+    float
+        The hopping rate in inverse seconds.
     """
     # Based on the input parameters, can make this the semiclassical Marcus
     # Hopping Rate Equation, or a more generic Miller Abrahams-based hop
@@ -153,14 +205,28 @@ def get_event_tau(
     log_file=None,
     verbose=0,
 ):
-    """
+    """Get the time an event would take.
 
     Parameters
     ----------
+    rate : float
+        The rate in inverse seconds
+    slowest : float, default None
+        The slowest allowed time. (Only used if max_attempts is not None.)
+    fastest : float, default None
+        The fastest allowed time. (Only used if max_attempts is not None.)
+    max_attempts : int, default None
+        Number of attempts allowed to obtain a time between slowest and fastest.
+    log_file : path, default None
+        Path to a file to which to log output. If None is given, output is
+        printed to stdout.
+    verbose : int, default 0
+        The verbosity level.
 
     Returns
     -------
-
+    float
+        The time in seconds the event would take given its rate.
     """
     if rate == 0:
         # If rate == 0, then make the hopping time extremely long
