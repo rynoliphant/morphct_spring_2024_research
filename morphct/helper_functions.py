@@ -46,10 +46,10 @@ def time_units(elapsed_time, precision=2):
 
 
 def parallel_sort(list1, list2):
-    """
-    Sort a pair of lists by the first list in ascending order.
-    (e.g., given mass and position, it will sort by mass and return lists
-    such that mass[i] still corresponds to position[i])
+    """Sort a pair of lists by the first list in ascending order.
+
+    (e.g., given lists of mass and position, it will sort by mass and return
+    lists such that mass[i] still corresponds to position[i])
     """
     types = [None, None]
 
