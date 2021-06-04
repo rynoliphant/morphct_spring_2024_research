@@ -260,3 +260,14 @@ def get_event_tau(
     """
     v_print(err_msg, verbose, filename=log_file)
     return tau
+
+
+def find_axis(atom1, atom2, normalize=True):
+    """Find normalized vector from atom1 to atom2."""
+    sep = atom2 - atom1
+    if normalize is True:
+        norm = np.linalg.norm(sep)
+        if norm == 0:
+            return sep
+        return sep / norm
+    return sep
