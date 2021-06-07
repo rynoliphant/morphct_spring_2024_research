@@ -26,9 +26,54 @@ class Carrier:
 
     Parameters
     ----------
+    chromo,
+    lifetime,
+    carrier_no,
+    box,
+    temp,
+    n,
+    hop_limit=None,
+    record_history=True,
+    mol_id_dict=None,
+    use_avg_hoprates=False,
+    avg_intra_rate=None,
+    avg_inter_rate=None,
+    use_koopmans=False,
+    boltz=False,
+    use_vrh=False,
+    hopping_prefactor=1.0,
 
     Attributes
     ----------
+    self.id = carrier_no
+    self.image = np.array([0, 0, 0])
+    self.initial_chromo = chromo
+    self.current_chromo = chromo
+    self.lambda_ij = self.current_chromo.reorganization_energy
+    self.hop_limit = hop_limit
+    self.temp = temp
+    self.lifetime = lifetime
+    self.current_time = 0.0
+    self.hole_history = None
+    self.hole_history = lil_matrix((n, n), dtype=int)
+    self.electron_history = None
+    self.c_type = "hole"
+    self.n_hops = 0
+    self.box = box
+    self.displacement = 0
+    self.mol_id_dict = mol_id_dict
+    self.use_avg_hoprates = use_avg_hoprates
+    self.avg_intra_rate = avg_intra_rate
+    self.avg_inter_rate = avg_inter_rate
+    # Set the use of Koopmans' approximation to false if the key does not
+    # exist in the parameter dict
+    self.use_koopmans = use_koopmans
+    # Are we using a simple Boltzmann penalty?
+    self.boltz = boltz
+    self.use_vrh = use_vrh
+    if self.use_vrh:
+    self.vrh_delocalization = self.current_chromo.vrh_delocalization
+    self.hopping_prefactor = hopping_prefactor
 
     Methods
     -------
@@ -450,12 +495,15 @@ def get_jobslist(sim_times, n_holes=0, n_elec=0, nprocs=None, seed=None):
 
 
 def run_kmc(
-    jobs_list,
+    lifetimes,
     KMC_directory,
     chromo_list,
     snap,
     temp,
-    combine_KMC_results=True,
+    n_holes=0,
+    n_elec=0,
+    seed=42,
+    combine=True,
     carrier_kwargs={},
     verbose=0,
     ): # pragma: no cover
@@ -466,8 +514,17 @@ def run_kmc(
 
     Returns
     -------
-
+    dict or list of Carriers
+        if combine is True, returns dict. Dict keys are Carrier attributes:
+        'id', 'image', 'initial_position', 'current_position', 'lambda_ij',
+        'hop_limit', 'temp', 'lifetime', 'current_time', 'hole_history',
+        'electron_history', 'c_type', 'n_hops', 'box', 'displacement',
+        'mol_id_dict', 'use_avg_hoprates', 'avg_intra_rate', 'avg_inter_rate',
+        'use_koopmans', 'boltz', 'use_vrh', 'hopping_prefactor'
     """
+    jobs_list = get_jobslist(
+        lifetimes, n_holes=n_holes, n_elec=n_elec, seed=seed
+    )
     running_jobs = []
     pipes = []
 
@@ -499,7 +556,7 @@ def run_kmc(
     carriers = [item for sublist in carriers_lists for item in sublist]
     # Now combine the carrier data
     v_print("All KMC jobs completed!", verbose)
-    if combine_KMC_results:
+    if combine:
         v_print("Combining outputs...", verbose)
 
         combined_data = {}

@@ -24,6 +24,8 @@ def split_carriers(combined_data):
 
     Parameters
     ----------
+    combined_data : dict
+
 
     Returns
     -------
