@@ -20,16 +20,18 @@ p3 = None
 
 
 def split_carriers(combined_data):
-    """
+    """Split dictionary based on carrier type.
 
     Parameters
     ----------
     combined_data : dict
-
+        The data for both carrier types.
 
     Returns
     -------
-
+    dict, dict
+        combined_data split into two dicts based on carrier type:
+        hole_data and elec_data
     """
     hole_inds = np.where(np.array(combined_data["c_type"]) == "hole")[0]
     elec_inds = np.where(np.array(combined_data["c_type"]) == "electron")[0]
@@ -46,14 +48,18 @@ def split_carriers(combined_data):
 
 
 def get_times_msds(carrier_data):
-    """
+    """Get the lifetimes and mean squared displacements of the carriers.
 
     Parameters
     ----------
+    carrier_data : dict
+        The data for one carrier type.
 
     Returns
     -------
-
+    list, list, list, list
+        The carrier lifetimes in seconds, the mean squared displacement in
+        meters, and the standard errors of these values, respectively.
     """
     total = 0
     total_averaged = 0
@@ -92,14 +98,16 @@ def get_times_msds(carrier_data):
 
 
 def plot_displacement_dist(carrier_data, c_type, path):  # pragma: no cover
-    """
+    """Plot the displacement distribution of a carrier type.
 
     Parameters
     ----------
-
-    Returns
-    -------
-
+    carrier_data : dict
+        The data for one carrier type.
+    c_type : str
+        The carrier type, "electron" or "hole".
+    path : path
+        Path to directory where to save the plot.
     """
     plt.figure()
     plt.hist(np.array(carrier_data["displacement"]) * 0.1, bins=60, color="b")
@@ -113,14 +121,14 @@ def plot_displacement_dist(carrier_data, c_type, path):  # pragma: no cover
 
 
 def plot_cluster_size_dist(clusters, path):  # pragma: no cover
-    """
+    """Plot the size distribution of the clusters.
 
     Parameters
     ----------
-
-    Returns
-    -------
-
+    clusters : list of freud.cluster.Cluster
+        The clusters in the simulation.
+    path : path
+        Path to directory where to save the plot.
     """
     species = ["donor", "acceptor"]
     for i, cl in enumerate(clusters):
@@ -151,12 +159,16 @@ def get_connections(chromo_list, carrier_history, box):
 
     Parameters
     ----------
-    chromo_list,
-    carrier_history
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+    carrier_history : scipy.sparse.lil_matrix
+        The carrier history.
 
     Returns
     -------
-        7xN array
+    numpy.ndarray (7,N)
+        Array (chromo center, image vector, number of times x number of
+        chromophores) of connections.
     """
     # Create an "empty" array to store data.
     connections = np.zeros(7)
@@ -192,13 +204,20 @@ def get_connections(chromo_list, carrier_history, box):
 def plot_connections(
     chromo_list, carrier_history, c_type, path
 ):  # pragma: no cover
-    """
+    """Plot the paths of the carriers.
 
     Parameters
     ----------
-
-    Returns
-    -------
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+    carrier_history : scipy.sparse.lil_matrix
+        The carrier history.
+    c_type : str
+        Carrier species, "electron" or "hole".
+    path : path
+        Path to directory where to save the plot.
+    path : path
+        Path to directory where to save the plot.
     """
     # A complicated function that shows connections between carriers in 3D
     # that carriers prefer to hop between.
@@ -264,10 +283,9 @@ def plot_connections(
     fig.title = f"{species} ({c_type.capitalize()}) Network"
 
     filename = f"3d_{c_type}_network.png"
-    filepath = (os.path.join(path, filename),)
+    filepath = os.path.join(path, filename)
     plt.savefig(filepath, bbox_inches="tight", dpi=300)
     print(f"\tFigure saved as {filename}")
-
     plt.clf()
 
 
@@ -276,6 +294,12 @@ def calc_mobility(lin_fit_X, lin_fit_Y, time_err, msd_err, temp):
 
     Parameters
     ----------
+    lin_fit_X :
+    lin_fit_Y,
+    time_err,
+    msd_err,
+    temp : float
+        Simulation temperature in Kelvin.
 
     Returns
     -------
@@ -312,6 +336,12 @@ def plot_msd(
 
     Parameters
     ----------
+    c_type : str
+        The carrier type, "electron" or "hole".
+    temp : float
+        Simulation temperature in Kelvin.
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -401,6 +431,16 @@ def plot_hop_vectors(
 
     Parameters
     ----------
+    carrier_data : dict
+        The data for one carrier type.
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+    snap : gsd.hoomd.Snapshot
+        The simulation snapshot.
+    c_type : str
+        The carrier type, "electron" or "hole".
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -507,6 +547,12 @@ def plot_anisotropy(carrier_data, c_type, three_d, path):  # pragma: no cover
 
     Parameters
     ----------
+    carrier_data : dict
+        The data for one carrier type.
+    c_type : str
+        The carrier type, "electron" or "hole".
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -570,6 +616,12 @@ def plot_temp_progression(
 
     Parameters
     ----------
+    temp : float
+        Simulation temperature in Kelvin.
+    c_type : str
+        The carrier type, "electron" or "hole".
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -663,6 +715,10 @@ def plot_neighbor_hist(
 
     Parameters
     ----------
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -718,6 +774,10 @@ def plot_orientation_hist(
 
     Parameters
     ----------
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -790,13 +850,21 @@ def create_cutoff_dict(sepcut, ocut, ticut, freqcut):
 
 
 def get_clusters(chromo_list, snap, rmax=None):
-    """
+    """Get the clusters in the snapshot based on a distance cutoff.
 
     Parameters
     ----------
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+    snap : gsd.hoomd.Snapshot
+        The simulation snapshot.
+    rmax : float, default None
+        The maximum distance in Angstroms at which to search for neighbors. If
+        None is provided, then the maximum box vector divided by 4 is used.
 
     Returns
     -------
+    list of freud.cluster.Cluster
     """
     clusters = []
     box = snap.configuration.box
@@ -836,6 +904,10 @@ def get_orientations(chromo_list, snap):
 
     Parameters
     ----------
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+    snap : gsd.hoomd.Snapshot
+        The simulation snapshot.
 
     Returns
     -------
@@ -867,15 +939,7 @@ def get_plane(positions):
     return np.cross(vec1, vec2)
 
 
-def update_cluster(atom_ID, cluster_list, neighbor_dict): # pragma: no cover
-    """
-
-    Parameters
-    ----------
-
-    Returns
-    -------
-    """
+def _update_cluster(atom_ID, cluster_list, neighbor_dict): # pragma: no cover
     try:
         for neighbor in neighbor_dict[atom_ID]:
             if cluster_list[neighbor] > cluster_list[atom_ID]:
@@ -893,16 +957,8 @@ def update_cluster(atom_ID, cluster_list, neighbor_dict): # pragma: no cover
     return cluster_list
 
 
-def cluster_tcl_script(clusters, large_cluster, path): # pragma: no cover
-    """
-    Create a tcl script for each identified cluster.
-
-    Parameters
-    ----------
-
-    Returns
-    -------
-    """
+def _cluster_tcl_script(clusters, large_cluster, path): # pragma: no cover
+    """Create a tcl script for each identified cluster."""
     # Obtain the IDs of the cluster sizes, sorted by largest first
     print("Sorting the clusters by size...")
     species = ["donor", "acceptor"]
@@ -964,20 +1020,12 @@ def cluster_tcl_script(clusters, large_cluster, path): # pragma: no cover
     print(f"\nClusters coloring written to {tcl_file_path}")
 
 
-def get_lists_for_3d_clusters(
+def _get_lists_for_3d_clusters(
         clusters,
         chromo_list,
         colors,
         large_cluster
 ): # pragma: no cover
-    """
-
-    Parameters
-    ----------
-
-    Returns
-    -------
-    """
     data = []
     species = ["donor", "acceptor"]
     for i, cl in enumerate(clusters):
@@ -1018,6 +1066,10 @@ def plot_clusters_3D(
 
     Parameters
     ----------
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -1062,6 +1114,10 @@ def plot_energy_levels(chromo_list, data_dict, path):  # pragma: no cover
 
     Parameters
     ----------
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -1152,6 +1208,8 @@ def plot_delta_eij(
 
     Parameters
     ----------
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -1196,6 +1254,12 @@ def plot_mixed_hopping_rates(
 
     Parameters
     ----------
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+    temp : float
+        Simulation temperature in Kelvin.
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -1417,6 +1481,8 @@ def plot_stacked_hist_rates(
 
     Parameters
     ----------
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -1450,6 +1516,8 @@ def plot_stacked_hist_tis(
 
     Parameters
     ----------
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -1481,6 +1549,8 @@ def write_csv(data_dict, path): # pragma: no cover
 
     Parameters
     ----------
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -1493,7 +1563,9 @@ def write_csv(data_dict, path): # pragma: no cover
     print(f"\tCSV file written to {filepath}")
 
 
-# TODO
+# TODO EJ
+# this function always seems to get caught with the IndexError...
+# what is this function intended for?
 def get_dist_cutoff(
     bin_centers, dist, min_i=None, max_i=None, at_least=100, log=False
 ):
@@ -1561,6 +1633,10 @@ def plot_ti_hist(chromo_list, chromo_mol_id, ticut, path):  # pragma: no cover
 
     Parameters
     ----------
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -1626,6 +1702,10 @@ def plot_frequency_dist(
 
     Parameters
     ----------
+    c_type : str
+        The carrier type, "electron" or "hole".
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -1671,6 +1751,10 @@ def plot_net_frequency_dist(c_type, carrier_history, path):  # pragma: no cover
 
     Parameters
     ----------
+    c_type : str
+        The carrier type, "electron" or "hole".
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -1706,6 +1790,10 @@ def plot_discrepancy_frequency_dist(
 
     Parameters
     ----------
+    c_type : str
+        The carrier type, "electron" or "hole".
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -1752,6 +1840,12 @@ def plot_mobility_msd(
 
     Parameters
     ----------
+    c_type : str
+        The carrier type, "electron" or "hole".
+    temp : float
+        Simulation temperature in Kelvin.
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -1779,6 +1873,18 @@ def carrier_plots(
 
     Parameters
     ----------
+    c_type : str
+        The carrier type, "electron" or "hole".
+    carrier_data : dict
+        The data for one carrier type.
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+    snap : gsd.hoomd.Snapshot
+        The simulation snapshot.
+    temp : float
+        Simulation temperature in Kelvin.
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
@@ -1842,10 +1948,20 @@ def main(
     koopmans=None,
     boltz=False,
 ):  # pragma: no cover
-    """
+    """Wrapper function to handle all plotting.
 
     Parameters
     ----------
+    combined_data : dict
+        The data for both carrier types.
+    temp : float
+        Simulation temperature in Kelvin.
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+    snap : gsd.hoomd.Snapshot
+        The simulation snapshot.
+    path : path
+        Path to directory where to save the plot.
 
     Returns
     -------
