@@ -163,6 +163,9 @@ def get_connections(chromo_list, carrier_history, box):
         The chromophores in the simulation.
     carrier_history : scipy.sparse.lil_matrix
         The carrier history.
+    box : numpy.ndarray, shape (3,)
+        The lengths of the box vectors in Angstroms. Box is assumed to be
+        orthogonal.
 
     Returns
     -------
@@ -289,20 +292,26 @@ def plot_connections(
     plt.clf()
 
 
-def calc_mobility(lin_fit_X, lin_fit_Y, time_err, msd_err, temp):
-    """
+def calc_mobility(fit_time, fit_msd, time_err, msd_err, temp):
+    """Calculate the mobility of the simulation.
 
     Parameters
     ----------
-    lin_fit_X :
-    lin_fit_Y,
-    time_err,
-    msd_err,
+    fit_time : numpy.ndarray
+        Time values in seconds from linear fit of msds vs. times.
+    fit_msd : numpy.ndarray
+        MSD values in meters from linear fit of msds vs. times.
+    time_err : float
+        The error of the lifetime values.
+    msd_err : float
+        The error of the MSD values.
     temp : float
         Simulation temperature in Kelvin.
 
     Returns
     -------
+    mobility, mob_error : float, float
+        The mobility and its standard error in centimeters^2/(Volt second).
     """
     # YVals have a std error avmsdError associated with them
     # XVals have a std error avTimeError assosciated with them
@@ -332,10 +341,18 @@ def calc_mobility(lin_fit_X, lin_fit_Y, time_err, msd_err, temp):
 def plot_msd(
     times, msds, time_stderr, msd_stderr, c_type, temp, path
 ):  # pragma: no cover
-    """
+    """Plot the mean squared displacement and calculate the mobility.
 
     Parameters
     ----------
+    times : list of float
+        The carrier lifetimes in seconds.
+    msds : list of float
+        The carrier mean squared displacement in meters.
+    time_stderr : list of float
+        The standard error of the carrier lifetimes in seconds.
+    msd_stderr : list of float
+        The standard error of the carrier mean squared displacement in meters.
     c_type : str
         The carrier type, "electron" or "hole".
     temp : float
@@ -345,18 +362,21 @@ def plot_msd(
 
     Returns
     -------
+    mobility, mob_error, r_val ** 2 : float, float, float
+        The mobility in centimeters^2/(Volt second), the standard error of the
+        mobility, and the r-squared value of the linear fit.
     """
-    fit_X = np.linspace(np.min(times), np.max(times), 100)
+    fit_time = np.linspace(np.min(times), np.max(times), 100)
     gradient, intercept, r_val, p_val, std_err = linregress(times, msds)
     print(f"Standard Error {std_err}")
     print(f"Fitting r_val = {r_val}")
-    fit_Y = (fit_X * gradient) + intercept
+    fit_msd = (fit_time * gradient) + intercept
     mobility, mob_error = calc_mobility(
-        fit_X, fit_Y, np.average(time_stderr), np.average(msd_stderr), temp
+        fit_time, fit_msd, np.average(time_stderr), np.average(msd_stderr), temp
     )
     plt.plot(times, msds)
     plt.errorbar(times, msds, xerr=time_stderr, yerr=msd_stderr)
-    plt.plot(fit_X, fit_Y, "r")
+    plt.plot(fit_time, fit_msd, "r")
     plt.xlabel("Time (s)")
     plt.ylabel(r"MSD (m$^{2}$)")
     plt.title(rf"$\mu_{{0, {c_type[0]}}}$ = {mobility:.3e} cm$^{2}$/Vs", y=1.1)
@@ -368,7 +388,7 @@ def plot_msd(
 
     plt.semilogx(times, msds)
     plt.errorbar(times, msds, xerr=time_stderr, yerr=msd_stderr)
-    plt.semilogx(fit_X, fit_Y, "r")
+    plt.semilogx(fit_time, fit_msd, "r")
     plt.xlabel("Time (s)")
     plt.ylabel(r"MSD (m$^{2}$)")
     plt.title(rf"$\mu_{{0, {c_type[0]}}}$ = {mobility:.3e} cm$^{2}$/Vs", y=1.1)
@@ -380,7 +400,7 @@ def plot_msd(
 
     plt.plot(times, msds)
     plt.errorbar(times, msds, xerr=time_stderr, yerr=msd_stderr)
-    plt.plot(fit_X, fit_Y, "r")
+    plt.plot(fit_time, fit_msd, "r")
     plt.xlabel("Time (s)")
     plt.ylabel(r"MSD (m$^{2}$)")
     plt.xscale("log")
@@ -395,13 +415,18 @@ def plot_msd(
 
 
 def get_anisotropy(xyzs):
-    """
+    """Calculate the carrier anisotropy.
 
     Parameters
     ----------
+    xyzs : numpy.ndarray
+        Center coordinatess of the chromophores (unwrapped to account for the
+        periodic boundary) in nanometers.
 
     Returns
     -------
+    float
+        The anisotropy of the system.
     """
     # First calculate the `center of position' for the particles
     center = np.mean(xyzs, axis=0)
@@ -427,7 +452,7 @@ def get_anisotropy(xyzs):
 def plot_hop_vectors(
     carrier_data, chromo_list, snap, c_type, path
 ):  # pragma: no cover
-    """
+    """Plot in 3D vectors representing each hop.
 
     Parameters
     ----------
@@ -441,9 +466,6 @@ def plot_hop_vectors(
         The carrier type, "electron" or "hole".
     path : path
         Path to directory where to save the plot.
-
-    Returns
-    -------
     """
     from matplotlib import colors
     import matplotlib.cm as cmx
@@ -543,7 +565,7 @@ def plot_hop_vectors(
 
 
 def plot_anisotropy(carrier_data, c_type, three_d, path):  # pragma: no cover
-    """
+    """Plot the anisotropy of the system.
 
     Parameters
     ----------
@@ -551,11 +573,15 @@ def plot_anisotropy(carrier_data, c_type, three_d, path):  # pragma: no cover
         The data for one carrier type.
     c_type : str
         The carrier type, "electron" or "hole".
+    three_d : bool
+        Whether to create 3D plots.
     path : path
         Path to directory where to save the plot.
 
     Returns
     -------
+    float
+        The anisotropy of the system.
     """
     box = carrier_data["box"][0]
     xyzs = []
@@ -564,7 +590,7 @@ def plot_anisotropy(carrier_data, c_type, three_d, path):  # pragma: no cover
     for i, pos in enumerate(carrier_data["current_position"][:1000]):
         image = carrier_data["image"][i]
         position = image * box + pos
-        xyzs.append(position / 10.0)
+        xyzs.append(position / 10.0) # A -> nm
 
     colors = ["b"] * len(xyzs)
     xyzs = np.array(xyzs)
@@ -618,13 +644,16 @@ def plot_temp_progression(
     ----------
     temp : float
         Simulation temperature in Kelvin.
+    mobility : float
+        The calculated mobility in centimeters^2/(Volt second).
+    mob_error : float
+        The standard error of the mobility.
+    anisotropy : float
+        The anisotropy of the system.
     c_type : str
         The carrier type, "electron" or "hole".
     path : path
         Path to directory where to save the plot.
-
-    Returns
-    -------
     """
     plt.gcf()
     plt.clf()
@@ -651,21 +680,27 @@ def plot_temp_progression(
     print(f"\tFigure saved as {filename}")
 
 
+# This function isn't used
 def get_lambda_ij(chromo_length):
-    """
+    """Get the reorganization energy of a chromophore based on its length.
+
+    The equation for the internal reorganisation energy was obtained from
+    the data given in
+        Johansson, E.; Larsson, S.; 2004, Synthetic Metals 144: 183-191.
+    And the external reorganisation energy was obtained from
+        Liu, T.; Cheung, D. L.; Troisi, A.; 2011, Phys. Chem. Chem. Phys. 13:
+        21461-21470
 
     Parameters
     ----------
+    chromo_length : int
+        The length of the chromophore in monomer units.
 
     Returns
     -------
+    float
+        The reorganization energy in eV.
     """
-    # The equation for the internal reorganisation energy was obtained from
-    # the data given in
-    # Johansson, E and Larsson, S; 2004, Synthetic Metals 144: 183-191.
-    # External reorganisation energy obtained from
-    # Liu, T and Cheung, D. L. and Troisi, A; 2011, Phys. Chem. Chem. Phys.
-    # 13: 21461-21470
     lambda_external = 0.11  # eV
     if chromo_length < 12:
         lambda_internal = 0.20826 - (chromo_length * 0.01196)
@@ -676,25 +711,39 @@ def get_lambda_ij(chromo_length):
 
 
 def gaussian(x, a, x0, sigma):
-    """
+    """Evaluate a gaussian function.
 
     Parameters
     ----------
+    x : numpy.ndarray
+        The x values at which the function should be evaluated.
+    a : float
+        The height of the curve's peak.
+    x0 : float
+        The position of the center of the peak.
+    sigma : float
+        Parameter which controls the width of the bell curve.
 
     Returns
     -------
+    numpy.ndarray
     """
     return a * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
 
 
 def gauss_fit(data):
-    """
+    """Fit the histogram of data to a gaussian.
 
     Parameters
     ----------
+    data: numpy.ndarray
+        The data to be fit.
 
     Returns
     -------
+    bin_edges, fit_args, mean, std : numpy.ndarray, numpy.ndarray, float, float
+        The bin edges, the parameters for the gaussian function, the mean value,
+        and the standard deviation.
     """
     mean = np.mean(data)
     std = np.std(data)
@@ -717,6 +766,9 @@ def plot_neighbor_hist(
     ----------
     chromo_list : list of Chromophore
         The chromophores in the simulation.
+    box : numpy.ndarray, shape (3,)
+        The lengths of the box vectors in Angstroms. Box is assumed to be
+        orthogonal.
     path : path
         Path to directory where to save the plot.
 
@@ -1011,6 +1063,19 @@ def get_lists_for_3d_clusters(
         colors,
         large_cluster
 ): # pragma: no cover
+    """
+
+    Parameters
+    ----------
+    clusters : list of freud.cluster.Cluster
+        The clusters in the simulation.
+    chromo_list : list of Chromophore
+        The chromophores in the simulation.
+
+    Returns
+    -------
+    xyzs, face_colors, edge_colors
+    """
     data = []
     species = ["donor", "acceptor"]
     for i, cl in enumerate(clusters):
@@ -1053,6 +1118,11 @@ def plot_clusters_3D(
     ----------
     chromo_list : list of Chromophore
         The chromophores in the simulation.
+    clusters : list of freud.cluster.Cluster
+        The clusters in the simulation.
+    box : numpy.ndarray, shape (3,)
+        The lengths of the box vectors in Angstroms. Box is assumed to be
+        orthogonal.
     path : path
         Path to directory where to save the plot.
 
@@ -1827,6 +1897,14 @@ def plot_mobility_msd(
     ----------
     c_type : str
         The carrier type, "electron" or "hole".
+    times : list of float
+        The carrier lifetimes in seconds.
+    msds : list of float
+        The carrier mean squared displacement in meters.
+    time_stderr : list of float
+        The standard error of the carrier lifetimes in seconds.
+    msd_stderr : list of float
+        The standard error of the carrier mean squared displacement in meters.
     temp : float
         Simulation temperature in Kelvin.
     path : path
@@ -1834,6 +1912,7 @@ def plot_mobility_msd(
 
     Returns
     -------
+    mobility, mob_error, r_squared
     """
     # Create the first figure that will be replotted each time
     plt.figure()
