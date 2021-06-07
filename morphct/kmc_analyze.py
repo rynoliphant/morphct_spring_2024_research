@@ -939,26 +939,11 @@ def get_plane(positions):
     return np.cross(vec1, vec2)
 
 
-def _update_cluster(atom_ID, cluster_list, neighbor_dict): # pragma: no cover
-    try:
-        for neighbor in neighbor_dict[atom_ID]:
-            if cluster_list[neighbor] > cluster_list[atom_ID]:
-                cluster_list[neighbor] = cluster_list[atom_ID]
-                cluster_list = update_cluster(
-                    neighbor, cluster_list, neighbor_dict
-                )
-            elif cluster_list[neighbor] < cluster_list[atom_ID]:
-                cluster_list[atom_ID] = cluster_list[neighbor]
-                cluster_list = update_cluster(
-                    neighbor, cluster_list, neighbor_dict
-                )
-    except KeyError:
-        pass
-    return cluster_list
-
-
 def _cluster_tcl_script(clusters, large_cluster, path): # pragma: no cover
-    """Create a tcl script for each identified cluster."""
+    """Create a tcl script for each identified cluster.
+
+    For use with VMD--untested.
+    """
     # Obtain the IDs of the cluster sizes, sorted by largest first
     print("Sorting the clusters by size...")
     species = ["donor", "acceptor"]
@@ -1020,7 +1005,7 @@ def _cluster_tcl_script(clusters, large_cluster, path): # pragma: no cover
     print(f"\nClusters coloring written to {tcl_file_path}")
 
 
-def _get_lists_for_3d_clusters(
+def get_lists_for_3d_clusters(
         clusters,
         chromo_list,
         colors,
@@ -1079,7 +1064,7 @@ def plot_clusters_3D(
     colors = ["r", "g", "b", "c", "m", "y", "k"]
     large_cluster = 6
     if generate_tcl:
-        cluster_tcl_script(clusters, large_cluster, path)
+        _cluster_tcl_script(clusters, large_cluster, path)
 
     xyzs, face_colors, edge_colors = get_lists_for_3d_clusters(
         clusters, chromo_list, colors, large_cluster
