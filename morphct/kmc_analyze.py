@@ -902,9 +902,7 @@ def create_cutoff_dict(sepcut, ocut, ticut, freqcut):
     ticut : list of float
         The transfer intergral cutoff for the donor and acceptor species,
         respectively.
-    freqcut : list of int (TODO EJ
-        I am pretty sure these are int they seem to be the number of times a
-        chromophore is visited.)
+    freqcut : list of int
         The frequency cutoff for the donor and acceptor species, respectively.
 
     Returns
@@ -972,7 +970,9 @@ def get_clusters(chromo_list, snap, rmax=None):
 
 
 def get_orientations(chromo_list, snap):
-    """
+    """Get the orientation vectors for each chromophore.
+
+    The orientation is calculated as the plane normal vector.
 
     Parameters
     ----------
@@ -999,13 +999,17 @@ def get_orientations(chromo_list, snap):
 
 
 def get_plane(positions):
-    """
+    """Calculate the plane normal vector for a group of coordinates.
 
     Parameters
     ----------
+    positions : numpy.ndarray
+        The positions of the particles.
 
     Returns
     -------
+    numpy.ndarray
+        The plane normal vector.
     """
     ## See https://goo.gl/jxuhvJ for details on this methodology.
     vec1 = hf.find_axis(positions[0], positions[1])
@@ -1080,12 +1084,9 @@ def _cluster_tcl_script(clusters, large_cluster, path): # pragma: no cover
 
 
 def get_lists_for_3d_clusters(
-        clusters,
-        chromo_list,
-        colors,
-        large_cluster
+    clusters, chromo_list, colors, large_cluster
 ): # pragma: no cover
-    """
+    """Get lists of the data needed for 3D cluster plots.
 
     Parameters
     ----------
@@ -1093,10 +1094,15 @@ def get_lists_for_3d_clusters(
         The clusters in the simulation.
     chromo_list : list of Chromophore
         The chromophores in the simulation.
+    colors : list of str
+        List of the one letter abbreviations for colors in matplotlib.
+    large_cluster : int
+        The number of chromophores for a cluster to be considered "large".
 
     Returns
     -------
-    xyzs, face_colors, edge_colors
+    xyzs, face_colors, edge_colors: numpy.ndarray, list of str, list of str
+        positions, and colors for face and edge in 3D scatterplot (matplotlib).
     """
     data = []
     species = ["donor", "acceptor"]
@@ -1134,7 +1140,7 @@ def get_lists_for_3d_clusters(
 def plot_clusters_3D(
     chromo_list, clusters, box, generate_tcl, path
 ):  # pragma: no cover
-    """
+    """Plot the chromophore clusters in 3D.
 
     Parameters
     ----------
@@ -1145,11 +1151,10 @@ def plot_clusters_3D(
     box : numpy.ndarray, shape (3,)
         The lengths of the box vectors in Angstroms. Box is assumed to be
         orthogonal.
+    generate_tcl : bool
+        Whether to create a tcl file for VMD.
     path : path
         Path to directory where to save the plot.
-
-    Returns
-    -------
     """
     fig = plt.figure()
     ax = p3.Axes3D(fig)
@@ -1650,7 +1655,9 @@ def write_csv(data_dict, path): # pragma: no cover
 def get_dist_cutoff(
     bin_centers, dist, min_i=None, max_i=None, at_least=100, log=False
 ):
-    """
+    """Choose a reasonable cutoff value from a distribution.
+
+    This function is under review. Use with care.
 
     Parameters
     ----------
@@ -1793,9 +1800,6 @@ def plot_frequency_dist(
         The frequency cutoff for the donor and acceptor species, respectively.
     path : path
         Path to directory where to save the plot.
-
-    Returns
-    -------
     """
     c_ind = ["hole", "electron"].index(c_type)
     nonzero = list(zip(*carrier_history.nonzero()))
@@ -1834,7 +1838,7 @@ def plot_frequency_dist(
 
 
 def plot_net_frequency_dist(c_type, carrier_history, path):  # pragma: no cover
-    """
+    """Plot the frequency distribution.
 
     Parameters
     ----------
@@ -1844,9 +1848,6 @@ def plot_net_frequency_dist(c_type, carrier_history, path):  # pragma: no cover
         The carrier history.
     path : path
         Path to directory where to save the plot.
-
-    Returns
-    -------
     """
     nonzero = list(zip(*carrier_history.nonzero()))
     frequencies = []
@@ -1875,7 +1876,7 @@ def plot_net_frequency_dist(c_type, carrier_history, path):  # pragma: no cover
 def plot_discrepancy_frequency_dist(
     c_type, carrier_history, path
 ):  # pragma: no cover
-    """
+    """Plot the frequency discrepancy distribution.
 
     Parameters
     ----------
@@ -1885,9 +1886,6 @@ def plot_discrepancy_frequency_dist(
         The carrier history.
     path : path
         Path to directory where to save the plot.
-
-    Returns
-    -------
     """
     nonzero = list(zip(*carrier_history.nonzero()))
     frequencies = []
@@ -1927,7 +1925,7 @@ def plot_discrepancy_frequency_dist(
 def plot_mobility_msd(
     c_type, times, msds, time_stderr, msd_stderr, temp, path
 ):  # pragma: no cover
-    """
+    """Plot the mean-squared displacement and calculate the mobility.
 
     Parameters
     ----------
@@ -1948,7 +1946,9 @@ def plot_mobility_msd(
 
     Returns
     -------
-    mobility, mob_error, r_squared
+    mobility, mob_error, r_squared : float, float, float
+        The mobility in centimeters^2/(Volt second), the standard error of the
+        mobility, and the r-squared value of the linear fit.
     """
     # Create the first figure that will be replotted each time
     plt.figure()
@@ -1963,13 +1963,13 @@ def plot_mobility_msd(
     )
     print("----------------------------------------")
     plt.close()
-    return mobility, mob_error, r_squared
+    return mobility, mob_error, r_square
 
 
 def carrier_plots(
     c_type, carrier_data, chromo_list, snap, freqcut, three_d, temp, path
 ): # pragma: no cover
-    """
+    """Wrap the plotting functions for each carrier type.
 
     Parameters
     ----------
@@ -1981,6 +1981,8 @@ def carrier_plots(
         The chromophores in the simulation.
     snap : gsd.hoomd.Snapshot
         The simulation snapshot.
+    freqcut : list of int
+        The frequency cutoff for the donor and acceptor species, respectively.
     three_d : bool
         Whether to create 3D plots.
     temp : float
@@ -1990,6 +1992,10 @@ def carrier_plots(
 
     Returns
     -------
+    anisotropy, mobility, mob_error, r_squared : float, float, float, float
+        The anisotropy, the mobility in centimeters^2/(Volt second), the
+        standard error of the mobility, and the r-squared value of the linear
+        fit.
     """
     print(f"Considering the transport of {c_type}...")
     if c_type == "hole":
@@ -2050,7 +2056,7 @@ def main(
     koopmans=None,
     boltz=False,
 ):  # pragma: no cover
-    """Wrapper function to handle all plotting.
+    """Wrap all plotting functions.
 
     Parameters
     ----------
@@ -2064,19 +2070,33 @@ def main(
         The simulation snapshot.
     path : path
         Path to directory where to save the plot.
-    three_d : bool
+    three_d : bool, default False
         Whether to create 3D plots.
-    sepcut : list of float
+    freqcut : list of int, default [None, None]
+        The frequency cutoff for the donor and acceptor species, respectively.
+        If None is given, `get_dist_cutoff` will be used to choose a value.
+    sepcut : list of float, default [None, None]
         The cutoff distances for the donor and acceptor species, respectively.
-    ocut : list of float
+        If None is given, `get_dist_cutoff` will be used to choose a value.
+    ocut : list of float, default [None, None]
         The cutoff orientation angles for the donor and acceptor species,
-        respectively.
-    ticut : list of float
+        respectively. If None is given, `get_dist_cutoff` will be used to choose
+        a value.
+    ticut : list of float, default [None, None]
         The transfer intergral cutoff for the donor and acceptor species,
-        respectively.
-
-    Returns
-    -------
+        respectively. If None is given, `get_dist_cutoff` will be used to choose
+        a value.
+    generate_tcl : bool, False
+        Whether to create a tcl file for VMD.
+    sequence_donor=None,
+    sequence_acceptor=None,
+    backend : str, default None
+        The name of a matplotlib backend.
+    use_vrh : bool, default False
+    koopmans : float, default None
+        A scaling factor to apply to the rate.
+    boltz : bool, default False
+        Whether to use a Boltzmann energy penalty.
     """
     # Load the matplotlib backend and the plotting subroutines
     global plt
