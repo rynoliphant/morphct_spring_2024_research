@@ -170,8 +170,9 @@ def get_connections(chromo_list, carrier_history, box):
     Returns
     -------
     numpy.ndarray (7,N)
-        Array (chromo center, image vector, number of times x number of
-        chromophores) of connections.
+        Array consists of chromo center (x,y,z), hop vector (x,y,z), and the
+        number of times the carrier has travelled that path by number of
+        chromophores.
     """
     # Create an "empty" array to store data.
     connections = np.zeros(7)
@@ -420,7 +421,7 @@ def get_anisotropy(xyzs):
     Parameters
     ----------
     xyzs : numpy.ndarray
-        Center coordinatess of the chromophores (unwrapped to account for the
+        Center coordinates of the chromophores (unwrapped to account for the
         periodic boundary) in nanometers.
 
     Returns
@@ -452,7 +453,7 @@ def get_anisotropy(xyzs):
 def plot_hop_vectors(
     carrier_data, chromo_list, snap, c_type, path
 ):  # pragma: no cover
-    """Plot in 3D vectors representing each hop.
+    """Plot 3D vectors representing each hop.
 
     Parameters
     ----------
@@ -680,7 +681,7 @@ def plot_temp_progression(
     print(f"\tFigure saved as {filename}")
 
 
-# This function isn't used
+# TODO EJ This function isn't used. keep it?
 def get_lambda_ij(chromo_length):
     """Get the reorganization energy of a chromophore based on its length.
 
@@ -760,20 +761,21 @@ def gauss_fit(data):
 def plot_neighbor_hist(
     chromo_list, chromo_mol_id, box, sepcut, path
 ):  # pragma: no cover
-    """
+    """Plot the histogram of distances between neighbors.
 
     Parameters
     ----------
     chromo_list : list of Chromophore
         The chromophores in the simulation.
+    chromo_mol_id : dict
+        A dictionary that maps the chromophore index to the molecule index.
     box : numpy.ndarray, shape (3,)
         The lengths of the box vectors in Angstroms. Box is assumed to be
         orthogonal.
+    sepcut : list of float
+        The cutoff distances for the donor and acceptor species, respectively.
     path : path
         Path to directory where to save the plot.
-
-    Returns
-    -------
     """
     seps_donor = []
     seps_acceptor = []
@@ -822,17 +824,21 @@ def plot_neighbor_hist(
 def plot_orientation_hist(
     chromo_list, chromo_mol_id, orientations, ocut, path
 ):  # pragma: no cover
-    """
+    """Plot the histogram of the chromophore orientations.
 
     Parameters
     ----------
     chromo_list : list of Chromophore
         The chromophores in the simulation.
+    chromo_mol_id : dict
+        A dictionary that maps the chromophore index to the molecule index.
+    orientations : list of numpy.ndarray
+        The orientations of each chromophore.
+    ocut : list of float
+        The cutoff orientation angles for the donor and acceptor species,
+        respectively.
     path : path
         Path to directory where to save the plot.
-
-    Returns
-    -------
     """
     orientations_donor = []
     orientations_acceptor = []
@@ -884,13 +890,27 @@ def plot_orientation_hist(
 
 
 def create_cutoff_dict(sepcut, ocut, ticut, freqcut):
-    """
+    """Organize the various cutoffs into a dictionary.
 
     Parameters
     ----------
+    sepcut : list of float
+        The cutoff distances for the donor and acceptor species, respectively.
+    ocut : list of float
+        The cutoff orientation angles for the donor and acceptor species,
+        respectively.
+    ticut : list of float
+        The transfer intergral cutoff for the donor and acceptor species,
+        respectively.
+    freqcut : list of int (TODO EJ
+        I am pretty sure these are int they seem to be the number of times a
+        chromophore is visited.)
+        The frequency cutoff for the donor and acceptor species, respectively.
 
     Returns
     -------
+    dict
+        Dictionary of cutoff values.
     """
     cutoff_dict = {
         "separation": sepcut,
@@ -963,6 +983,8 @@ def get_orientations(chromo_list, snap):
 
     Returns
     -------
+    list of numpy.ndarray
+        The orientations of each chromophore.
     """
     orientations = []
     for chromo in chromo_list:
@@ -1311,6 +1333,10 @@ def plot_mixed_hopping_rates(
     ----------
     chromo_list : list of Chromophore
         The chromophores in the simulation.
+    clusters : list of freud.cluster.Cluster
+        The clusters in the simulation.
+    chromo_mol_id : dict
+        A dictionary that maps the chromophore index to the molecule index.
     temp : float
         Simulation temperature in Kelvin.
     path : path
@@ -1684,17 +1710,19 @@ def get_dist_cutoff(
 
 
 def plot_ti_hist(chromo_list, chromo_mol_id, ticut, path):  # pragma: no cover
-    """
+    """Plot the histogram of inter- and intra-molecular transfer interals.
 
     Parameters
     ----------
     chromo_list : list of Chromophore
         The chromophores in the simulation.
+    chromo_mol_id : dict
+        A dictionary that maps the chromophore index to the molecule index.
+    ticut : list of float
+        The transfer intergral cutoff for the donor and acceptor species,
+        respectively.
     path : path
         Path to directory where to save the plot.
-
-    Returns
-    -------
     """
     # ti_dist [[DONOR], [ACCEPTOR]]
     ti_intra = [[], []]
@@ -1753,12 +1781,16 @@ def plot_ti_hist(chromo_list, chromo_mol_id, ticut, path):  # pragma: no cover
 def plot_frequency_dist(
     c_type, carrier_history, freqcut, path
 ):  # pragma: no cover
-    """
+    """Plot the histogram of frequency distributions.
 
     Parameters
     ----------
     c_type : str
         The carrier type, "electron" or "hole".
+    carrier_history : scipy.sparse.lil_matrix
+        The carrier history.
+    freqcut : list of int
+        The frequency cutoff for the donor and acceptor species, respectively.
     path : path
         Path to directory where to save the plot.
 
@@ -1808,6 +1840,8 @@ def plot_net_frequency_dist(c_type, carrier_history, path):  # pragma: no cover
     ----------
     c_type : str
         The carrier type, "electron" or "hole".
+    carrier_history : scipy.sparse.lil_matrix
+        The carrier history.
     path : path
         Path to directory where to save the plot.
 
@@ -1847,6 +1881,8 @@ def plot_discrepancy_frequency_dist(
     ----------
     c_type : str
         The carrier type, "electron" or "hole".
+    carrier_history : scipy.sparse.lil_matrix
+        The carrier history.
     path : path
         Path to directory where to save the plot.
 
@@ -1945,6 +1981,8 @@ def carrier_plots(
         The chromophores in the simulation.
     snap : gsd.hoomd.Snapshot
         The simulation snapshot.
+    three_d : bool
+        Whether to create 3D plots.
     temp : float
         Simulation temperature in Kelvin.
     path : path
@@ -2026,6 +2064,16 @@ def main(
         The simulation snapshot.
     path : path
         Path to directory where to save the plot.
+    three_d : bool
+        Whether to create 3D plots.
+    sepcut : list of float
+        The cutoff distances for the donor and acceptor species, respectively.
+    ocut : list of float
+        The cutoff orientation angles for the donor and acceptor species,
+        respectively.
+    ticut : list of float
+        The transfer intergral cutoff for the donor and acceptor species,
+        respectively.
 
     Returns
     -------
