@@ -289,7 +289,9 @@ def set_neighbors_voronoi(chromo_list, snap, conversion_dict, d_cut=10):
     qcc_pairs = []
     neighbors = []
     for (i, j) in voronoi.nlist:
-        if (i, j) not in neighbors and (j, i) not in neighbors:
+        if i == j:
+            pass
+        elif (i, j) not in neighbors and (j, i) not in neighbors:
             chromo_i = chromo_list[i]
             chromo_j = chromo_list[j]
             centers = []
