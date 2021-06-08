@@ -41,8 +41,9 @@ class Chromophore:
         An instance that maps AMBER types to their element can be found in
         `amber_dict`.
     reorganization_energy : float, default 0.3064
-        Energy required to "reorganize" the system structure from the final to
-        initial coordinates. (what paper did this default come from? TODO EJ)
+        Energy (in eV) required to "reorganize" the system structure from the
+        final to initial coordinates. The default value is for P3HT and came
+        from DOI:10.1016/j.synthmet.2004.03.005
     vrh_delocalization : float, default 2e-10
         Variable-range hopping modifier in meters. Hopping rates are scaled by
         exp(r/vrh_delocalization) when `use_vrh` is True.
