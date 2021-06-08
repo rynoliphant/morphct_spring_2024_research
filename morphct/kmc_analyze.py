@@ -636,81 +636,6 @@ def plot_anisotropy(carrier_data, c_type, three_d, path):  # pragma: no cover
     return anisotropy
 
 
-def plot_temp_progression(
-    temp, mobility, mob_err, anisotropy, c_type, path
-):  # pragma: no cover
-    """
-
-    Parameters
-    ----------
-    temp : float
-        Simulation temperature in Kelvin.
-    mobility : float
-        The calculated mobility in centimeters^2/(Volt second).
-    mob_error : float
-        The standard error of the mobility.
-    anisotropy : float
-        The anisotropy of the system.
-    c_type : str
-        The carrier type, "electron" or "hole".
-    path : path
-        Path to directory where to save the plot.
-    """
-    plt.gcf()
-    plt.clf()
-    xvals = temp
-    yvals = mobility
-    yerrs = mob_err
-    plt.xlabel("Temperature (Arb. U)")
-    plt.ylabel(r"Mobility (cm$^{2}$ / Vs)")
-    plt.errorbar(xvals, yvals, xerr=0, yerr=yerrs)
-    plt.yscale("log")
-    filename = f"mobility_{c_type}.png"
-    filepath = os.path.join(path, filename)
-    plt.savefig(filepath, dpi=300)
-    plt.clf()
-    print(f"\tFigure saved as {filename}")
-
-    plt.plot(temp, anisotropy, c="r")
-    plt.xlabel("Temperature (Arb. U)")
-    plt.ylabel(r"$\kappa$ (Arb. U)")
-    filename = f"anisotropy_{c_type}.png"
-    filepath = os.path.join(path, filename)
-    plt.savefig(filepath, dpi=300)
-    plt.clf()
-    print(f"\tFigure saved as {filename}")
-
-
-# TODO EJ This function isn't used. keep it?
-def get_lambda_ij(chromo_length):
-    """Get the reorganization energy of a chromophore based on its length.
-
-    The equation for the internal reorganisation energy was obtained from
-    the data given in
-        Johansson, E.; Larsson, S.; 2004, Synthetic Metals 144: 183-191.
-    And the external reorganisation energy was obtained from
-        Liu, T.; Cheung, D. L.; Troisi, A.; 2011, Phys. Chem. Chem. Phys. 13:
-        21461-21470
-
-    Parameters
-    ----------
-    chromo_length : int
-        The length of the chromophore in monomer units.
-
-    Returns
-    -------
-    float
-        The reorganization energy in eV.
-    """
-    lambda_external = 0.11  # eV
-    if chromo_length < 12:
-        lambda_internal = 0.20826 - (chromo_length * 0.01196)
-    else:
-        lambda_internal = 0.06474
-    lambdae_V = lambda_external + lambda_internal
-    return lambdae_V
-
-
 def gaussian(x, a, x0, sigma):
     """Evaluate a gaussian function.
 
@@ -2049,8 +1974,6 @@ def main(
     ocut=[None, None],
     ticut=[None, None],
     generate_tcl=False,
-    sequence_donor=None,
-    sequence_acceptor=None,
     backend=None,
     use_vrh=False,
     koopmans=None,
@@ -2088,8 +2011,6 @@ def main(
         a value.
     generate_tcl : bool, False
         Whether to create a tcl file for VMD.
-    sequence_donor=None,
-    sequence_acceptor=None,
     backend : str, default None
         The name of a matplotlib backend.
     use_vrh : bool, default False
@@ -2205,29 +2126,3 @@ def main(
 
     print("Writing CSV Output File...")
     write_csv(data_dict, path)
-
-    print("Plotting Mobility and Anisotropy progressions...")
-    if sequence_donor is not None:
-        if data_dict["hole_anisotropy"]:
-            plot_temp_progression(
-                sequence_donor,
-                data_dict["hole_mobility"],
-                data_dict["hole_mobility_err"],
-                data_dict["hole_anisotropy"],
-                "hole",
-                fig_dir,
-            )
-    if sequence_acceptor is not None:
-        data_dict["electron_anisotropy"]
-        data_dict["electron_mobility"]
-        if data_dict["electron_anisotropy"]:
-            plot_temp_progression(
-                sequence_acceptor,
-                data_dict["electron_mobility"],
-                data_dict["electron_mobility_err"],
-                data_dict["electron_anisotropy"],
-                "electron",
-                fig_dir,
-            )
-    else:
-        print("Skipping plotting mobility evolution.")
