@@ -2,6 +2,7 @@
 ------------
 
 ## v0.4.0: (2021 June)
+(Version numbering system switched from two- to three-digits. All two-digit versions are older.)
 - Switch QCC engine from ORCA (closed source, academic license, difficult to install using command line) to pySCF (open source, pure python API, easy to install). This was done to facilitate containerization and ease of use in python.
 - Overhaul of code structure:
   - Pared down functionality: MorphCT is expected to only calculate mobility (no coarse graining/fine graining/ or device calculations).
