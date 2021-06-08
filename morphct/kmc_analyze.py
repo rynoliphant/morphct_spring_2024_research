@@ -636,6 +636,35 @@ def plot_anisotropy(carrier_data, c_type, three_d, path):  # pragma: no cover
     return anisotropy
 
 
+def get_lambda_ij(chromo_length):
+    """Get the reorganization energy of a chromophore based on its length.
+
+    The equation for the internal reorganisation energy was obtained from
+    the data given in
+        Johansson, E.; Larsson, S.; 2004, Synthetic Metals 144: 183-191.
+    And the external reorganisation energy was obtained from
+        Liu, T.; Cheung, D. L.; Troisi, A.; 2011, Phys. Chem. Chem. Phys. 13:
+        21461-21470
+
+    Parameters
+    ----------
+    chromo_length : int
+        The length of the chromophore in monomer units.
+
+    Returns
+    -------
+    float
+        The reorganization energy in eV.
+    """
+    lambda_external = 0.11  # eV
+    if chromo_length < 12:
+        lambda_internal = 0.20826 - (chromo_length * 0.01196)
+    else:
+        lambda_internal = 0.06474
+    lambdae_V = lambda_external + lambda_internal
+    return lambdae_V
+
+
 def gaussian(x, a, x0, sigma):
     """Evaluate a gaussian function.
 
