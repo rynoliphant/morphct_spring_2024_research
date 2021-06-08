@@ -778,7 +778,10 @@ def plot_neighbor_hist(
 def plot_orientation_hist(
     chromo_list, chromo_mol_id, orientations, ocut, path
 ):  # pragma: no cover
-    """Plot the histogram of the chromophore orientations.
+    """Plot histogram of the angle distributions between chromophore neighbors.
+
+    The angle between chromophores is calculated as the angle between their
+    orientation vectors.
 
     Parameters
     ----------
