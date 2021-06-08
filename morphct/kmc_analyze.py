@@ -315,8 +315,8 @@ def calc_mobility(fit_time, fit_msd, time_err, msd_err, temp):
     """
     # YVals have a std error avmsdError associated with them
     # XVals have a std error avTimeError assosciated with them
-    numerator = lin_fit_Y[-1] - lin_fit_Y[0]
-    denominator = lin_fit_X[-1] - lin_fit_X[0]
+    numerator = fit_msd[-1] - fit_msd[0]
+    denominator = fit_time[-1] - fit_time[0]
 
     # Diffusion coeff D = d(MSD)/dt * 1/2n (n = 3 = number of dimensions)
     # Ref: Carbone2014a (Carbone and Troisi)
