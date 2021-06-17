@@ -190,7 +190,7 @@ def set_energyvalues(chromo_list, s_filename, d_filename):
         jchromo.neighbors_ti[jneighborind] = transint
 
 
-def write_qcc_inp(snap, atom_ids, conversion_dict):
+def write_qcc_inp(snap, atom_ids, conversion_dict=None):
     """Write a quantum chemical input string.
 
     Input string for pySCF containing elements and positions in Angstroms
@@ -204,10 +204,11 @@ def write_qcc_inp(snap, atom_ids, conversion_dict):
         lengths in this file have been converted to Angstroms.
     atom_ids : numpy.ndarray of int
         Snapshot indices of the particles to include in the input string.
-    conversion_dict : dictionary
-        A dictionary that maps the atom type to its element. e.g., `{'c3': C}`
+    conversion_dict : dictionary, default None
+        A dictionary that maps the atom type to its element. e.g., `{'c3': C}`.
         An instance that maps AMBER types to their element can be found in
-        `amber_dict`.
+        `amber_dict`. If None is given, assume the particles already have
+        element names.
 
     Returns
     -------
@@ -221,9 +222,14 @@ def write_qcc_inp(snap, atom_ids, conversion_dict):
     unwrapped_pos = snap.particles.position + snap.particles.image * box
 
     for i in atom_ids:
-        element = conversion_dict[
-            snap.particles.types[snap.particles.typeid[i]]
-        ]
+        if conversion_dict is not None:
+            element = conversion_dict[
+                snap.particles.types[snap.particles.typeid[i]]
+            ]
+        else:
+            element = ele.element_from_symbol(
+                snap.particles.types[snap.particles.typeid[i]]
+            )
         atoms.append(element.symbol)
         positions.append(unwrapped_pos[i])
 
@@ -231,9 +237,14 @@ def write_qcc_inp(snap, atom_ids, conversion_dict):
     # particles outside of the ids provided
     for i, j in snap.bonds.group:
         if i in atom_ids and j not in atom_ids:
-            element = conversion_dict[
-                snap.particles.types[snap.particles.typeid[j]]
-            ]
+            if conversion_dict is not None:
+                element = conversion_dict[
+                    snap.particles.types[snap.particles.typeid[j]]
+                ]
+            else:
+                element = ele.element_from_symbol(
+                    snap.particles.types[snap.particles.typeid[j]]
+                )
             # If it's already a Hydrogen, just add it
             if element.atomic_number == 1:
                 atoms.append(element.symbol)
@@ -251,9 +262,14 @@ def write_qcc_inp(snap, atom_ids, conversion_dict):
 
         # Same as above but j->i instead of i->j
         elif j in atom_ids and i not in atom_ids:
-            element = conversion_dict[
-                snap.particles.types[snap.particles.typeid[i]]
-            ]
+            if conversion_dict is not None:
+                element = conversion_dict[
+                    snap.particles.types[snap.particles.typeid[i]]
+                ]
+            else:
+                element = ele.element_from_symbol(
+                    snap.particles.types[snap.particles.typeid[i]]
+                )
             if element.atomic_number == 1:
                 atoms.append(element.symbol)
                 positions.append(unwrapped_pos[i])
@@ -274,7 +290,9 @@ def write_qcc_inp(snap, atom_ids, conversion_dict):
     return qcc_input
 
 
-def write_qcc_pair_input(snap, chromo_i, chromo_j, j_shift, conversion_dict):
+def write_qcc_pair_input(
+    snap, chromo_i, chromo_j, j_shift, conversion_dict=None
+    ):
     """Write a quantum chemical input string for chromophore pairs.
 
     Pair input requires taking periodic images into account.
@@ -294,10 +312,11 @@ def write_qcc_pair_input(snap, chromo_i, chromo_j, j_shift, conversion_dict):
     j_shift : numpy.ndarray(3)
         Vector to shift chromo_j.
         (chromo_j minimum image center - unwrapped center)
-    conversion_dict : dictionary
-        A dictionary that maps the atom type to its element. e.g., `{'c3': C}`
+    conversion_dict : dictionary, default None
+        A dictionary that maps the atom type to its element. e.g., `{'c3': C}`.
         An instance that maps AMBER types to their element can be found in
-        `amber_dict`.
+        `amber_dict`. If None is given, assume the particles already have
+        element names.
 
     Returns
     -------
@@ -316,7 +335,14 @@ def write_qcc_pair_input(snap, chromo_i, chromo_j, j_shift, conversion_dict):
 
     atom_ids = np.concatenate((chromo_i.atom_ids, chromo_j.atom_ids))
     typeids = snap.particles.typeid[atom_ids]
-    atoms = [conversion_dict[snap.particles.types[i]].symbol for i in typeids]
+    if conversion_dict is not None:
+        atoms = [
+            conversion_dict[snap.particles.types[i]].symbol for i in typeids
+        ]
+    else:
+        atoms = [
+            ele.element_from_symbol(snap.particles.types[i]) for i in typeids
+        ]
 
     # To determine where to add hydrogens, check the bonds that go to
     # particles outside of the ids provided
@@ -327,9 +353,14 @@ def write_qcc_pair_input(snap, chromo_i, chromo_j, j_shift, conversion_dict):
                 shift = j_shift
             else:
                 shift = chromo_i.image * box
-            element = conversion_dict[
-                snap.particles.types[snap.particles.typeid[j]]
-            ]
+            if conversion_dict is not None:
+                element = conversion_dict[
+                    snap.particles.types[snap.particles.typeid[j]]
+                ]
+            else:
+                element = ele.element_from_symbol(
+                    snap.particles.types[snap.particles.typeid[j]]
+                )
             # If it's already a Hydrogen, just add it
             if element.atomic_number == 1:
                 atoms.append(element.symbol)
@@ -351,9 +382,14 @@ def write_qcc_pair_input(snap, chromo_i, chromo_j, j_shift, conversion_dict):
                 shift = j_shift
             else:
                 shift = chromo_i.image * box
-            element = conversion_dict[
-                snap.particles.types[snap.particles.typeid[i]]
-            ]
+            if conversion_dict is not None:
+                element = conversion_dict[
+                    snap.particles.types[snap.particles.typeid[i]]
+                ]
+            else:
+                element = ele.element_from_symbol(
+                    snap.particles.types[snap.particles.typeid[i]]
+                )
 
             if element.atomic_number == 1:
                 atoms.append(element.symbol)
