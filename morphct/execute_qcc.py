@@ -9,7 +9,7 @@ from morphct import helper_functions as hf
 from morphct import transfer_integrals as ti
 
 
-def get_homolumo(molstr, verbose=0, tol=1e-6):
+def get_homolumo(molstr, charge=0, verbose=0, tol=1e-6):
     """Get the HOMO-1, HOMO, LUMO, LUMO+1 energies in eV using MINDO3.
 
     See https://pyscf.org/quickstart.html for more information.
@@ -19,6 +19,9 @@ def get_homolumo(molstr, verbose=0, tol=1e-6):
     molstr : str
         Input string for pySCF containing elements and positions in Angstroms
         (e.g., "C 0.0 0.0 0.0; H 1.54 0.0 0.0")
+    charge : int, default 0
+        If the molecule which we are calculating the energies of has a charge,
+        it can be specified.
     verbose : int, default 0
         Verbosity level of the MINDO calculation output. 0 will silence output,
         4 will show convergence.
@@ -30,7 +33,7 @@ def get_homolumo(molstr, verbose=0, tol=1e-6):
     numpy.ndarray
         Array containing HOMO-1, HOMO, LUMO, LUMO+1 energies in eV
     """
-    mol = pyscf.M(atom=molstr)
+    mol = pyscf.M(atom=molstr, charge=charge)
     mf = MINDO3(mol).run(verbose=verbose, conv_tol=tol)
     occ = mf.get_occ()
     i_lumo = np.argmax(occ < 1)
