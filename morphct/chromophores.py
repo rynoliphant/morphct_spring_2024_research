@@ -48,6 +48,8 @@ class Chromophore:
     vrh_delocalization : float, default 2e-10
         Variable-range hopping modifier in meters. Hopping rates are scaled by
         exp(r/vrh_delocalization) when `use_vrh` is True.
+    charge : float, default 0.0
+        The charge associated with this chromophore.
 
     Attributes
     ----------
@@ -111,6 +113,7 @@ class Chromophore:
         conversion_dict=None,
         reorganization_energy=0.3064,
         vrh_delocalization=2e-10,
+        charge=0.0,
     ):
         self.id = chromo_id
         if species.lower() not in ["donor", "acceptor"]:
@@ -120,6 +123,7 @@ class Chromophore:
         self.vrh_delocalization = vrh_delocalization
         self.atom_ids = atom_ids
         self.n_atoms = len(atom_ids)
+        self.charge = charge
 
         # Sets unwrapped_center, center, and image attributes
         self._set_center(snap, atom_ids)
@@ -300,6 +304,8 @@ def set_neighbors_voronoi(chromo_list, snap, conversion_dict=None, d_cut=10):
         elif (i, j) not in neighbors and (j, i) not in neighbors:
             chromo_i = chromo_list[i]
             chromo_j = chromo_list[j]
+            if chromo_i.species != chromo_j.species:
+                continue
             centers = []
             distances = []
             images = []
