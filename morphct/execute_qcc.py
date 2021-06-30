@@ -66,7 +66,9 @@ def singles_homolumo(chromo_list, filename=None, nprocs=None):
     if nprocs is None:
         nprocs = mp.cpu_count()
     with get_context("spawn").Pool(processes=nprocs) as p:
-        data = p.map(_worker_wrapper, chromo_list)
+        data = p.map(
+            _worker_wrapper, [(i.qcc_input, i.charge) for i in chromo_list]
+        )
 
     data = np.stack(data)
     if filename is not None:
@@ -74,7 +76,7 @@ def singles_homolumo(chromo_list, filename=None, nprocs=None):
     return data
 
 
-def dimer_homolumo(qcc_pairs, filename=None, nprocs=None):
+def dimer_homolumo(qcc_pairs, chromo_list, filename=None, nprocs=None):
     """Get the HOMO-1, HOMO, LUMO, LUMO+1 energies for all chromophore pairs.
 
     Parameters
@@ -83,6 +85,8 @@ def dimer_homolumo(qcc_pairs, filename=None, nprocs=None):
         Each list item contains a tuple with the indices of the pair and the
         qcc input string.
         qcc_pairs is returned by `morphct.chromophores.set_neighbors_voronoi`
+    chromo_list : list of Chromophore
+        List of chromphores to calculate dimer energies.
     filename : str, default None
         Path to file where the pair energies will be saved. If None, energies
         will not be saved.
@@ -100,7 +104,11 @@ def dimer_homolumo(qcc_pairs, filename=None, nprocs=None):
         nprocs = mp.cpu_count()
 
     with get_context("spawn").Pool(processes=nprocs) as p:
-        data = p.map(get_homolumo, [qcc_input for pair, qcc_input in qcc_pairs])
+        args = [
+            (qcc_input, chromo_list[i].charge + chromo_list[j].charge)
+            for (i,j), qcc_input in qcc_pairs
+        ]
+        data = p.map(_worker_wrapper, args)
 
     dimer_data = [i for i in zip([pair for pair, qcc_input in qcc_pairs], data)]
     if filename is not None:
@@ -414,5 +422,6 @@ def write_qcc_pair_input(
     return qcc_input
 
 
-def _worker_wrapper(chromo):
-    return get_homolumo(chromo.qcc_input, charge=chromo.charge)
+def _worker_wrapper(arg):
+    qcc_input, charge = arg
+    return get_homolumo(qcc_input, charge=charge)
