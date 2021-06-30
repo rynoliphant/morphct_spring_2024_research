@@ -6,6 +6,9 @@ from morphct.chromophores import Chromophore, set_neighbors_voronoi
 from morphct.execute_qcc import (
     singles_homolumo, dimer_homolumo, set_energyvalues
 )
+from morphct.mobility_kmc import run_kmc
+from morphct import kmc_analyze
+
 
 class System():
     """An object for containing the system.
@@ -72,7 +75,7 @@ class System():
                 )
             )
 
-    def compute_energies(dcut=None):
+    def compute_energies(self, dcut=None):
         """
 
         Parameters
@@ -99,4 +102,40 @@ class System():
         )
         print(f"Finished. Output written to {d_filename}.")
 
+    def set_energies(self, s_filename, d_filename):
+        """
 
+        Parameters
+        ----------
+
+        """
+        set_energyvalues(self.chromophores, s_filename, d_filename)
+        print("Energies set.")
+
+    def run_kmc(
+        self,
+        lifetimes,
+        temp,
+        n_holes=0,
+        n_elec=0,
+        seed=42,
+        combine=True,
+        carrier_kwargs={}
+    ):
+        kmc_dir = os.path.join(self.outpath, "kmc")
+        if not os.path.exists(kmc_dir):
+            os.makedirs(kmc_dir)
+        data = run_kmc(
+            lifetimes,
+            kmc_dir,
+            self.chromophores,
+            self.snap,
+            temp,
+            n_holes=n_holes,
+            n_elec=n_elec,
+            seed=seed,
+            combine=combine,
+            carrier_kwargs=carrier_kwargs
+        )
+
+        kmc_analyze.main(data, temp, self.chromophores, self.snap, kmc_dir)
