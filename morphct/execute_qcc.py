@@ -66,7 +66,7 @@ def singles_homolumo(chromo_list, filename=None, nprocs=None):
     if nprocs is None:
         nprocs = mp.cpu_count()
     with get_context("spawn").Pool(processes=nprocs) as p:
-        data = p.map(get_homolumo, [i.qcc_input for i in chromo_list])
+        data = p.map(_worker_wrapper, chromo_list)
 
     data = np.stack(data)
     if filename is not None:
@@ -412,3 +412,7 @@ def write_qcc_pair_input(
         [f"{atom} {x} {y} {z};" for atom, (x, y, z) in zip(atoms, positions)]
     )
     return qcc_input
+
+
+def _worker_wrapper(chromo):
+    return get_homolumo(chromo.qcc_input, charge=chromo.charge)
