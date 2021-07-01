@@ -60,7 +60,7 @@ class System():
         """"""
         return self._chromophores
 
-    def add_chromophores(self, indices, species, charge=0):
+    def add_chromophores(self, indices, species, chromophore_kwargs={}):
         """
 
         Parameters
@@ -76,7 +76,7 @@ class System():
                     ind,
                     species,
                     self.conversion_dict,
-                    charge=charge
+                    **chromophore_kwargs
                 )
             )
         if species == "acceptor":
@@ -197,10 +197,12 @@ class System():
             self._comp = self._make_comp()
         ccomp = mb.clone(self._comp)
         for i,p in enumerate(ccomp):
-            if i in np.hstack(self._ainds):
-                p.name = "Br"
-            elif i in np.hstack(self._dinds):
-                p.name = "I"
+            if self._ainds:
+                if i in np.hstack(self._ainds):
+                    p.name = "Br"
+            if self._dinds:
+                if i in np.hstack(self._dinds):
+                    p.name = "I"
         ccomp.visualize().show()
 
     def _make_comp(self):
