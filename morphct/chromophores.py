@@ -48,8 +48,8 @@ class Chromophore:
     vrh_delocalization : float, default 2e-10
         Variable-range hopping modifier in meters. Hopping rates are scaled by
         exp(r/vrh_delocalization) when `use_vrh` is True.
-    charge : float, default 0.0
-        The charge associated with this chromophore.
+    charge : int, default 0
+        The charge (in units of electrons) associated with this chromophore.
 
     Attributes
     ----------
@@ -113,7 +113,7 @@ class Chromophore:
         conversion_dict=None,
         reorganization_energy=0.3064,
         vrh_delocalization=2e-10,
-        charge=0.0,
+        charge=0,
     ):
         self.id = chromo_id
         if species.lower() not in ["donor", "acceptor"]:
