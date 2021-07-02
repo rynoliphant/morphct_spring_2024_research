@@ -13,24 +13,55 @@ from morphct import kmc_analyze
 
 
 class System():  # pragma: no cover
-    """An object for containing the system.
+    """An object for managing all data for the KMC simulation.
 
     Parameters
     ----------
-    gsdfile
-    outpath
-    frame
-    scale
-    conversion_dict
+    gsdfile : path
+        The path to a gsd file containing the structure for the KMC simulation.
+    outpath : path
+        The path to a directory where output files will be saved. If the path
+        does not exist, it will be created.
+    frame : int
+        The frame number of the gsdfile to use.
+    scale : float
+        Scaling factor to convert the lengthscale in the gsdfile to Angstrom.
+    conversion_dict : dict
+        A dictionary to map atom types to an ele.element. An example for mapping
+        the General AMBER forcefield (GAFF) types to elements can be found in
+        `morphct.chromophores.amber_dict`.
 
     Attributes
     ----------
-    snap
-    conversion_dict
-    chromophores
+    snap : gsd.hoomd.Snapshot
+        The system snapshot with lengths scaled to Angstroms.
+    conversion_dict : dict
+        A dictionary to map atom types to an ele.element.
+    chromophores : list of Chromophore
+        List of chromphores in the simulation.
 
     Methods
     -------
+    add_chromophores
+        Add chromophore(s) to the system.
+    compute_energies
+        Compute the energies of the chromophores in the system.
+    set_energies
+        Set the computed energies.
+    run_kmc
+        Run the KMC simulation.
+    visualize_qcc_input
+        Visualize the input to QCC.
+    visualize_system
+        Visualize the entire system.
+    visualize_chromophores
+        Visualize the chromophores.
+
+    Note
+    ----
+    The visualize functions require mbuild, a visualization backend (py3Dmol or
+    nglview), and a jupyter notebook. They are designed only to help
+    troubleshoot.
     """
 
     def __init__(
@@ -57,15 +88,21 @@ class System():  # pragma: no cover
 
     @property
     def chromophores(self):
-        """"""
+        """Return the chromophores in the system."""
         return self._chromophores
 
     def add_chromophores(self, indices, species, chromophore_kwargs={}):
-        """
+        """Add chromophore(s) to the system.
 
         Parameters
         ----------
-
+        indices : list of numpy.ndarray,
+            Atom indices in the snapshot for this chromophore type. Each array
+            will be treated as a separate chromophore instance.
+        species : str
+            Chromophore species ("donor" or "acceptor").
+        chromophore_kwargs : dict, default {}
+            Additional keywrod arguments to be passed to the Chromophore class.
         """
         start = len(self.chromophores)
         for i, ind in enumerate(indices):
@@ -85,11 +122,14 @@ class System():  # pragma: no cover
             self._dinds += indices
 
     def compute_energies(self, dcut=None):
-        """
+        """Compute the energies of the chromophores in the system.
 
         Parameters
         ----------
-
+        dcut : float, default None
+            The distance cutoff for chromophore neighbors. If None is provided,
+            the cutoff will be set to half the smallest box length of the
+            snapshot.
         """
         if dcut is None:
             dcut = min(self.snap.configuration.box[:3]/2)
@@ -115,11 +155,18 @@ class System():  # pragma: no cover
         print(f"Finished in {t2-t1:.2f} s. Output written to {d_filename}.")
 
     def set_energies(self, s_filename, d_filename, dcut=None):
-        """
+        """Set the computed energies.
 
         Parameters
         ----------
-
+        s_filename : path
+            Path to file where singles energies were saved.
+        d_filename : path
+            Path to file where pair energies were saved.
+        dcut : float, default None
+            The distance cutoff for chromophore neighbors. If None is provided,
+            the cutoff will be set to half the smallest box length of the
+            snapshot.
         """
         if self.qcc_pairs is None:
             if dcut is None:
@@ -137,10 +184,29 @@ class System():  # pragma: no cover
         n_holes=0,
         n_elec=0,
         seed=42,
-        combine=True,
         carrier_kwargs={},
         verbose=0
     ):
+        """Run the KMC simulation.
+
+        Parameters
+        ----------
+        lifetimes : list of float
+            The potential lifetimes of the carriers. A value from these will be
+            randomly assigned to each run.
+        temp : float
+            The simulation temperature in Kelvin.
+        n_holes : int, default 0
+            The number of holes to simulate.
+        n_elec : int, default 0
+            The number of electrons to simulate.
+        seed : int, default 42
+            A seed for the random processes.
+        carrier_kwargs : dict, default {}
+            Additional keyword arguments to be passed to the carrier instances.
+        verbose : int, default 0
+            The verbosity level of output.
+        """
         kmc_dir = os.path.join(self.outpath, "kmc")
         if not os.path.exists(kmc_dir):
             os.makedirs(kmc_dir)
@@ -165,8 +231,16 @@ class System():  # pragma: no cover
 
         Parameters
         ----------
-        qcc_input : str
-            Input string to visualize
+        i : int
+            Index of the single or pair input to visualize.
+        single : bool, default True
+            Whether to visualize a single or pair input.
+
+        Note
+        ----
+        The visualize functions require mbuild, a visualization backend (py3Dmol
+        or nglview), and a jupyter notebook. They are designed only to help
+        troubleshoot.
         """
         import mbuild as mb
 
@@ -184,13 +258,27 @@ class System():  # pragma: no cover
         comp.visualize().show()
 
     def visualize_system(self):
-        """Visualize the system snapshot."""
+        """Visualize the system snapshot.
+
+        Note
+        ----
+        The visualize functions require mbuild, a visualization backend (py3Dmol
+        or nglview), and a jupyter notebook. They are designed only to help
+        troubleshoot.
+        """
         if self._comp is None:
             self._comp = self._make_comp()
         self._comp.visualize().show()
 
     def visualize_chromophores(self):
-        """Visualize the system snapshot."""
+        """Visualize the chromophores.
+
+        Note
+        ----
+        The visualize functions require mbuild, a visualization backend (py3Dmol
+        or nglview), and a jupyter notebook. They are designed only to help
+        troubleshoot.
+        """
         import mbuild as mb
 
         if self._comp is None:
