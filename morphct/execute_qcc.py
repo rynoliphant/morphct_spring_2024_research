@@ -9,7 +9,7 @@ from morphct import helper_functions as hf
 from morphct import transfer_integrals as ti
 
 
-def get_homolumo(molstr, verbose=0, tol=1e-6):
+def get_homolumo(molstr, charge=0, verbose=0, tol=1e-6):
     """Get the HOMO-1, HOMO, LUMO, LUMO+1 energies in eV using MINDO3.
 
     See https://pyscf.org/quickstart.html for more information.
@@ -19,6 +19,9 @@ def get_homolumo(molstr, verbose=0, tol=1e-6):
     molstr : str
         Input string for pySCF containing elements and positions in Angstroms
         (e.g., "C 0.0 0.0 0.0; H 1.54 0.0 0.0")
+    charge : int, default 0
+        If the molecule which we are calculating the energies of has a charge,
+        it can be specified.
     verbose : int, default 0
         Verbosity level of the MINDO calculation output. 0 will silence output,
         4 will show convergence.
@@ -30,7 +33,7 @@ def get_homolumo(molstr, verbose=0, tol=1e-6):
     numpy.ndarray
         Array containing HOMO-1, HOMO, LUMO, LUMO+1 energies in eV
     """
-    mol = pyscf.M(atom=molstr)
+    mol = pyscf.M(atom=molstr, charge=charge)
     mf = MINDO3(mol).run(verbose=verbose, conv_tol=tol)
     occ = mf.get_occ()
     i_lumo = np.argmax(occ < 1)
@@ -63,7 +66,9 @@ def singles_homolumo(chromo_list, filename=None, nprocs=None):
     if nprocs is None:
         nprocs = mp.cpu_count()
     with get_context("spawn").Pool(processes=nprocs) as p:
-        data = p.map(get_homolumo, [i.qcc_input for i in chromo_list])
+        data = p.map(
+            _worker_wrapper, [(i.qcc_input, i.charge) for i in chromo_list]
+        )
 
     data = np.stack(data)
     if filename is not None:
@@ -71,7 +76,7 @@ def singles_homolumo(chromo_list, filename=None, nprocs=None):
     return data
 
 
-def dimer_homolumo(qcc_pairs, filename=None, nprocs=None):
+def dimer_homolumo(qcc_pairs, chromo_list, filename=None, nprocs=None):
     """Get the HOMO-1, HOMO, LUMO, LUMO+1 energies for all chromophore pairs.
 
     Parameters
@@ -80,6 +85,8 @@ def dimer_homolumo(qcc_pairs, filename=None, nprocs=None):
         Each list item contains a tuple with the indices of the pair and the
         qcc input string.
         qcc_pairs is returned by `morphct.chromophores.set_neighbors_voronoi`
+    chromo_list : list of Chromophore
+        List of chromphores to calculate dimer energies.
     filename : str, default None
         Path to file where the pair energies will be saved. If None, energies
         will not be saved.
@@ -97,7 +104,11 @@ def dimer_homolumo(qcc_pairs, filename=None, nprocs=None):
         nprocs = mp.cpu_count()
 
     with get_context("spawn").Pool(processes=nprocs) as p:
-        data = p.map(get_homolumo, [qcc_input for pair, qcc_input in qcc_pairs])
+        args = [
+            (qcc_input, chromo_list[i].charge + chromo_list[j].charge)
+            for (i,j), qcc_input in qcc_pairs
+        ]
+        data = p.map(_worker_wrapper, args)
 
     dimer_data = [i for i in zip([pair for pair, qcc_input in qcc_pairs], data)]
     if filename is not None:
@@ -409,3 +420,8 @@ def write_qcc_pair_input(
         [f"{atom} {x} {y} {z};" for atom, (x, y, z) in zip(atoms, positions)]
     )
     return qcc_input
+
+
+def _worker_wrapper(arg):
+    qcc_input, charge = arg
+    return get_homolumo(qcc_input, charge=charge)

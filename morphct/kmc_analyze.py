@@ -1212,23 +1212,25 @@ def plot_energy_levels(chromo_list, data_dict, path):  # pragma: no cover
         (
             acceptor_bin_edges,
             acceptor_fit_args,
-            acceptor_mean,
+            acceptor_av,
             acceptor_std,
         ) = gauss_fit(acceptor_delta_eij)
         acceptor_err = acceptor_std / np.sqrt(len(acceptor_delta_eij))
 
-        data_dict["acceptor_delta_eij_mean"] = acceptor_mean
+        data_dict["acceptor_delta_eij_mean"] = acceptor_av
         data_dict["acceptor_delta_eij_std"] = acceptor_std
         data_dict["acceptor_delta_eij_err"] = acceptor_err
         lumo_av = np.average(lumo_levels)
         lumo_std = np.std(lumo_levels)
         lumo_err = lumo_std / np.sqrt(len(lumo_levels))
-        data_dict["acceptor_lumo_mean"] = LUMO_av
-        data_dict["acceptor_lumo_std"] = LUMO_std
-        data_dict["acceptor_lumo_err"] = LUMO_err
+        data_dict["acceptor_lumo_mean"] = lumo_av
+        data_dict["acceptor_lumo_std"] = lumo_std
+        data_dict["acceptor_lumo_err"] = lumo_err
         print(
-            f"Acceptor LUMO Level = {lumo_av} +/- {lumo_err}\n",
-            f"Acceptor Delta E_ij mean = {acceptor_mean} +/-{acceptor_err}",
+            f"Acceptor LUMO Level = {lumo_av:.3f} +/- {lumo_err:.3f}\n",
+            "Acceptor Delta E_ij mean = ",
+            f"{acceptor_av:.3f} +/- {acceptor_err:.3f}",
+            sep=""
         )
         plot_delta_eij(
             acceptor_delta_eij,
@@ -1920,7 +1922,7 @@ def plot_mobility_msd(
     )
     print("----------------------------------------")
     plt.close()
-    return mobility, mob_error, r_square
+    return mobility, mob_error, r_squared
 
 
 def carrier_plots(
@@ -1982,14 +1984,17 @@ def carrier_plots(
             print("Determining carrier hopping connections...")
             plot_connections(chromo_list, carrier_history, c_type, path)
 
-    print(f"Plotting {c_type} hop frequency distribution...")
-    plot_frequency_dist(c_type, carrier_history, freqcut, path)
+    if carrier_history is not None:
+        print(f"Plotting {c_type} hop frequency distribution...")
+        plot_frequency_dist(c_type, carrier_history, freqcut, path)
 
-    print(f"Plotting {c_type} net hop frequency distribution...")
-    plot_net_frequency_dist(c_type, carrier_history, path)
+        print(f"Plotting {c_type} net hop frequency distribution...")
+        plot_net_frequency_dist(c_type, carrier_history, path)
 
-    print("Plotting (total - net hops) discrepancy distribution...")
-    plot_discrepancy_frequency_dist(c_type, carrier_history, path)
+        print("Plotting (total - net hops) discrepancy distribution...")
+        plot_discrepancy_frequency_dist(c_type, carrier_history, path)
+    else:
+        print(f"No history for {c_type}. Skipping frequency analysis.")
 
     return anisotropy, mobility, mob_error, r_squared
 
@@ -2131,8 +2136,6 @@ def main(
     )
     plot_ti_hist(chromo_list, chromo_mol_id, ticut, fig_dir)
     cutoff_dict = create_cutoff_dict(sepcut, ocut, ticut, freqcut)
-    print("Cut-offs: ('value', [donor, acceptor])")
-    print(*[f"\t{i}" for i in cutoff_dict.items()], sep="\n")
 
     clusters = get_clusters(chromo_list, snap, rmax=None)
 
