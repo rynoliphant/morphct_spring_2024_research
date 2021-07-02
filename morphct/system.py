@@ -12,7 +12,7 @@ from morphct.mobility_kmc import run_kmc
 from morphct import kmc_analyze
 
 
-class System():
+class System():  # pragma: no cover
     """An object for containing the system.
 
     Parameters
