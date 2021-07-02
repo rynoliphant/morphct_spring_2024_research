@@ -159,15 +159,11 @@ class System():  # pragma: no cover
         t2 = time.perf_counter()
         print(f"Finished in {t2-t1:.2f} s. Output written to {d_filename}.")
 
-    def set_energies(self, s_filename, d_filename, dcut=None):
+    def set_energies(self, dcut=None):
         """Set the computed energies.
 
         Parameters
         ----------
-        s_filename : path
-            Path to file where singles energies were saved.
-        d_filename : path
-            Path to file where pair energies were saved.
         dcut : float, default None
             The distance cutoff for chromophore neighbors. If None is provided,
             the cutoff will be set to half the smallest box length of the
@@ -179,6 +175,15 @@ class System():  # pragma: no cover
             self.qcc_pairs = set_neighbors_voronoi(
                 self.chromophores, self.snap, self.conversion_dict, d_cut=dcut
             )
+
+        s_filename = os.path.join(self.outpath, "singles_energies.txt")
+        d_filename = os.path.join(self.outpath, "dimer_energies.txt")
+
+        if not (os.path.isfile(s_filename) and os.path.isfile(d_filename)):
+            raise FileNotFoundError(
+                f"Expected to find {s_filename} and {d_filename}, but didn't."
+            )
+
         set_energyvalues(self.chromophores, s_filename, d_filename)
         print("Energies set.")
 
