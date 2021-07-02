@@ -39,6 +39,11 @@ class System():  # pragma: no cover
         A dictionary to map atom types to an ele.element.
     chromophores : list of Chromophore
         List of chromphores in the simulation.
+    outpath : path
+        The path to a directory where output files will be saved.
+    qcc_pairs : list of ((int, int), str)
+        QCC input for the pairs. Each list item contains a tuple of the pair
+        indices and the QCC input string.
 
     Methods
     -------
