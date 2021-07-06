@@ -21,4 +21,4 @@ dependencies:
 - nodejs>=10
 - py3dmol=0.8.0
 - pip:
-  - pyscf=1.7
+  - pyscf==1.7
