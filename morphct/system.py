@@ -229,7 +229,6 @@ class System():  # pragma: no cover
             n_holes=n_holes,
             n_elec=n_elec,
             seed=seed,
-            combine=combine,
             carrier_kwargs=carrier_kwargs,
             verbose=verbose
         )
