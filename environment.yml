@@ -1,6 +1,7 @@
 name: morphct
 channels:
 - conda-forge
+- pyscf
 dependencies:
 - blas=*=openblas
 - cython=0.29
