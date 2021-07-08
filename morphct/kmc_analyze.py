@@ -66,17 +66,15 @@ def get_times_msds(carrier_data):
     squared_disps = defaultdict(list)
     actual_times = defaultdict(list)
     for i, displacement in enumerate(carrier_data["displacement"]):
-        if (
-            carrier_data["current_time"][i] > carrier_data["lifetime"][i] * 2
-            or carrier_data["current_time"][i] < carrier_data["lifetime"][i] / 2
-            or carrier_data["n_hops"][i] == 1
-        ):
+        current = carrier_data["current_time"][i]
+        lt = carrier_data["lifetime"][i]
+        n_hops = carrier_data["n_hops"][i]
+        if current > lt * 2 or current < lt / 2 or n_hops == 1:
             total += 1
             continue
-        key = carrier_data["lifetime"][i]
         # A -> m
-        squared_disps[key] += [(carrier_data["displacement"][i] * 1e-10) ** 2]
-        actual_times[key] += [carrier_data["current_time"][i]]
+        squared_disps[lt] += [(carrier_data["displacement"][i] * 1e-10) ** 2]
+        actual_times[lt] += [current]
 
         # Also keep track of whether each carrier is a hole or an electron
         total_averaged += 1
