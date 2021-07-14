@@ -17,6 +17,8 @@ dependencies:
 - pyscf=1.7.6
 - python=3.7
 - scipy=1.7
+- signac=1.6.0      
+- signac-flow=0.13.0
 - pytest
 - pytest-cov
 - pip:
