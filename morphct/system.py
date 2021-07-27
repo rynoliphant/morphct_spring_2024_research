@@ -86,7 +86,7 @@ class System():  # pragma: no cover
             os.makedirs(outpath)
         self.outpath = outpath
         self._chromophores = []
-        self.carrier_data
+        self.carrier_data = None
         self._comp = None
         self.qcc_pairs = None
         self._dinds = []
@@ -99,7 +99,7 @@ class System():  # pragma: no cover
 
     def carrier_data(self):
         """Return the carrier data for data inspecting purposes"""
-        return self.carrier_data
+        return self._carrier_data
 
     def add_chromophores(self, indices, species, chromophore_kwargs={}):
         """Add chromophore(s) to the system.
@@ -238,7 +238,7 @@ class System():  # pragma: no cover
             verbose=verbose
         )
 
-        self.carrier_data = data
+        self._carrier_data = data
         kmc_analyze.main(data, temp, self.chromophores, self.snap, kmc_dir)
 
     def visualize_qcc_input(self, i, single=True):
