@@ -2,6 +2,7 @@ import multiprocessing as mp
 from multiprocessing import get_context
 import numpy as np
 
+import ele
 import pyscf
 from pyscf.semiempirical import MINDO3
 
@@ -352,7 +353,7 @@ def write_qcc_pair_input(
         ]
     else:
         atoms = [
-            ele.element_from_symbol(snap.particles.types[i]) for i in typeids
+            ele.element_from_symbol(snap.particles.types[i]).symbol for i in typeids
         ]
 
     # To determine where to add hydrogens, check the bonds that go to
