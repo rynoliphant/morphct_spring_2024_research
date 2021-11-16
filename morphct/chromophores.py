@@ -160,10 +160,9 @@ class Chromophore:
 
     def _set_center(self, snap, atom_ids):
 
-        box_dims = snap.configuration.box[:3]
-        unwrapped_pos = snap.particles.position[atom_ids] + snap.particles.image[atom_ids] * box_dims
+        box = freud.Box.from_box(snap.configuration.box)
+        unwrapped_pos = box.unwrap(snap.particles.position[atom_ids], snap.particles.image[atom_ids])
         center = np.mean(unwrapped_pos, axis = 0)
-        box = freud.Box.from_box(box_dims)
         image = box.get_images(center)
         self.unwrapped_center = center
         self.image = image
