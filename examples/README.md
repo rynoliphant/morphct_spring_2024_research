@@ -1,6 +1,6 @@
 # Examples
 
-These example notebooks demonstrate the workflow employed in morphct
+These example notebooks demonstrate the workflow employed in morphct.
 To create the conda environment:
 ```bash
 conda env create -f environment-ex.yml
