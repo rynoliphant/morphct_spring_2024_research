@@ -97,6 +97,7 @@ class System():  # pragma: no cover
         """Return the chromophores in the system."""
         return self._chromophores
 
+    @property
     def carrier_data(self):
         """Return the carrier data for data inspecting purposes"""
         return self._carrier_data
