@@ -86,7 +86,7 @@ class System():  # pragma: no cover
             os.makedirs(outpath)
         self.outpath = outpath
         self._chromophores = []
-        self.carrier_data = None
+        self._carrier_data = None
         self._comp = None
         self.qcc_pairs = None
         self._dinds = []
