@@ -10,7 +10,7 @@ dependencies:
 - gsd=2.4.2
 - h5py=2.10
 - hdf5=1.10
-- libcint=3.0.12
+- libcint
 - matplotlib=3.4.2
 - numpy=1.21
 - openbabel=3.1.1
