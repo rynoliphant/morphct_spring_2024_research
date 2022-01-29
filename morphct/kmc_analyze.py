@@ -1730,7 +1730,7 @@ def plot_ti_hist(chromo_list, chromo_mol_id, ticut, path):  # pragma: no cover
                 bin_centers, smooth_n, min_i=-1, at_least=100
             )
         if ticut[sp_i] is not None:
-            print(f"{sp} TI cluster cut-off set to {ticuts[sp_i]}")
+            print(f"{sp} TI cluster cut-off set to {ticut[sp_i]}")
             plt.axvline(ticut[sp_i], c="k")
         plt.xlim([0, np.max(ti_intra[sp_i] + ti_inter[sp_i])])
         plt.ylim([0, np.max(n) * 1.02])
