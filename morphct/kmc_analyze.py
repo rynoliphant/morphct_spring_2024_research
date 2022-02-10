@@ -373,15 +373,15 @@ def plot_msd(
     mobility, mob_error = calc_mobility(
         fit_time, fit_msd, np.average(time_stderr), np.average(msd_stderr), temp
     )
-    plt.plot(times, msds)
-    plt.errorbar(times, msds, xerr=time_stderr, yerr=msd_stderr)
+    plt.plot(times, msds, color = 'blue',linewidth =1)
+    plt.errorbar(times, msds, xerr=time_stderr, yerr=msd_stderr,ecolor = "red", linewidth = 3)
     plt.plot(fit_time, fit_msd, "r")
     plt.xlabel("Time (s)")
     plt.ylabel(r"MSD (m$^{2}$)")
-    plt.title(rf"$\mu_{{0, {c_type[0]}}}$ = {mobility:.3e} cm$^{2}$/Vs", y=1.1)
+    plt.title(rf"$\mu_{{0, {c_type[0]}}}$ = {mobility:.3e} cm$^{2}$/Vs")
     filename = f"lin_MSD_{c_type}.png"
     filepath = os.path.join(path, filename)
-    plt.savefig(filepath, dpi=300)
+    plt.savefig(filepath, dpi=300,facecolor = "white")
     plt.clf()
     print(f"\tFigure saved as {filename}")
 
@@ -2142,7 +2142,7 @@ def main(
     plot_ti_hist(chromo_list, chromo_mol_id, ticut, fig_dir)
     cutoff_dict = create_cutoff_dict(sepcut, ocut, ticut, freqcut)
 
-    clusters = get_clusters(chromo_list, snap, rmax=None)
+    clusters = get_clusters(chromo_list, snap)
 
     if three_d:
         print("Plotting 3D cluster location plot...")
