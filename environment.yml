@@ -10,6 +10,7 @@ dependencies:
 - gsd=2.4.2
 - h5py=2.10
 - hdf5=1.10
+- libcint=4
 - matplotlib=3.4.2
 - numpy=1.21
 - openbabel=3.1.1
@@ -21,5 +22,3 @@ dependencies:
 - signac-flow=0.13.0
 - pytest
 - pytest-cov
-- pip:
-  - git+https://github.com/cmelab/morphct@v0.5.1
