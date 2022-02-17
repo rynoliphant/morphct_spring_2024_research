@@ -1,4 +1,3 @@
-import multiprocessing as mp
 from multiprocessing import get_context
 
 import ele
@@ -56,7 +55,7 @@ def singles_homolumo(chromo_list, filename=None, nprocs=None):
         will not be saved.
     nprocs : int, default None
         Number of processes passed to multiprocessing.Pool. If None,
-        multiprocessing.cpu_count will used to determine optimal number.
+        multiprocessing will not be used.
 
     Returns
     -------
@@ -64,12 +63,18 @@ def singles_homolumo(chromo_list, filename=None, nprocs=None):
         Array of energies where each row corresponds to the MO energies of each
         chromophore in the list.
     """
+    # no multiprocessing
     if nprocs is None:
-        nprocs = mp.cpu_count()
-    with get_context("spawn").Pool(processes=nprocs) as p:
-        data = p.map(
-            _worker_wrapper, [(i.qcc_input, i.charge) for i in chromo_list]
-        )
+        data = []
+        for i in chromo_list:
+            data.append(get_homolumo(i.qcc_input, i.charge))
+
+    # multiprocessing
+    else:
+        with get_context("spawn").Pool(processes=nprocs) as p:
+            data = p.map(
+                _worker_wrapper, [(i.qcc_input, i.charge) for i in chromo_list]
+            )
 
     data = np.stack(data)
     if filename is not None:
@@ -93,7 +98,7 @@ def dimer_homolumo(qcc_pairs, chromo_list, filename=None, nprocs=None):
         will not be saved.
     nprocs : int, default None
         Number of processes passed to multiprocessing.Pool. If None,
-        multiprocessing.cpu_count will used to determine optimal number.
+        multiprocessing will not be used.
 
     Returns
     -------
@@ -101,15 +106,24 @@ def dimer_homolumo(qcc_pairs, chromo_list, filename=None, nprocs=None):
         Each list item contains the indices of the pair and an array of its MO
         energies.
     """
+    # no multiprocessing
     if nprocs is None:
-        nprocs = mp.cpu_count()
+        data = []
+        for (i,j), qcc_input in qcc_pairs:
+            data.append(
+                get_homolumo(
+                    qcc_input, chromo_list[i].charge + chromo_list[j].charge
+                )
+            )
 
-    with get_context("spawn").Pool(processes=nprocs) as p:
-        args = [
-            (qcc_input, chromo_list[i].charge + chromo_list[j].charge)
-            for (i,j), qcc_input in qcc_pairs
-        ]
-        data = p.map(_worker_wrapper, args)
+    # multiprocessing
+    else:
+        with get_context("spawn").Pool(processes=nprocs) as p:
+            args = [
+                (qcc_input, chromo_list[i].charge + chromo_list[j].charge)
+                for (i,j), qcc_input in qcc_pairs
+            ]
+            data = p.map(_worker_wrapper, args)
 
     dimer_data = [i for i in zip([pair for pair, qcc_input in qcc_pairs], data)]
     if filename is not None:
