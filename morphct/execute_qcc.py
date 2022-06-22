@@ -1,3 +1,4 @@
+import multiprocessing as np
 from multiprocessing import get_context
 
 import ele
