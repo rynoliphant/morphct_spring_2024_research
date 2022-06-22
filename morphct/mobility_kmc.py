@@ -365,7 +365,7 @@ def run_single_kmc(
     cpu_rank=None,
     seed=None,
     send_end=None,
-    verbose=0,
+    verbose=1,
 ):
     """Run a single KMC simulation process.
 
@@ -564,6 +564,8 @@ def get_jobslist(sim_times, n_holes=0, n_elec=0, nprocs=None, seed=None):
     # Get the random seed now for all the child processes
     if seed is not None:
         np.random.seed(seed)
+    if nprocs is None:
+        nprocs = mp.cpu_count()
     # Determine the maximum simulation times based on the parameter dictionary
     carriers = []
     # Modification: Rather than being clever here with the carriers, I'm just
@@ -577,12 +579,9 @@ def get_jobslist(sim_times, n_holes=0, n_elec=0, nprocs=None, seed=None):
         for carrier_no in range(n_elec):
             carriers.append((carrier_no, lifetime, "electron"))
     np.random.shuffle(carriers)
-    if nprocs is None:
-        return carriers
     step = math.ceil(len(carriers) / nprocs)
     jobs_list = [carriers[i : i + step] for i in range(0, len(carriers), step)]
     return jobs_list
-
 
 def run_kmc(
     lifetimes,
@@ -596,7 +595,7 @@ def run_kmc(
     nprocs=None,
     combine=True,
     carrier_kwargs={},
-    verbose=0,
+    verbose=1,
     ): # pragma: no cover
     """Run KMC simulation using multiprocessing.
 
@@ -642,47 +641,33 @@ def run_kmc(
         'use_koopmans', 'boltz', 'use_vrh', 'hopping_prefactor'
     """
     jobs_list = get_jobslist(
-        lifetimes, n_holes=n_holes, n_elec=n_elec, seed=seed, nprocs=nprocs
+        lifetimes, n_holes=n_holes, n_elec=n_elec, seed=seed
     )
+    running_jobs = []
+    pipes = []
 
-    if nprocs is None:
-        carriers_lists = run_single_kmc(
-            jobs_list,
-            kmc_directory,
-            chromo_list,
-            snap,
-            temp,
-            carrier_kwargs=carrier_kwargs,
-            verbose=verbose,
+    for cpu_rank, jobs in enumerate(jobs_list):
+        child_seed = np.random.randint(0, 2 ** 32)
+
+        recv_end, send_end = mp.Pipe(False)
+        p = mp.Process(
+            target=run_single_kmc,
+            args=(jobs, kmc_directory, chromo_list, snap, temp),
+            kwargs={
+                "carrier_kwargs": carrier_kwargs,
+                "seed": child_seed,
+                "send_end": send_end,
+                "verbose": verbose,
+                "cpu_rank": cpu_rank,
+            },
         )
+        running_jobs.append(p)
+        pipes.append(recv_end)
 
-    else:
-        pipes = []
+    for p in running_jobs:
+        p.start()
 
-        for cpu_rank, jobs in enumerate(jobs_list):
-            child_seed = np.random.randint(0, 2 ** 32)
-
-            recv_end, send_end = mp.Pipe(False)
-            p = mp.Process(
-                target=run_single_kmc,
-                args=(jobs, kmc_directory, chromo_list, snap, temp),
-                kwargs={
-                    "carrier_kwargs": carrier_kwargs,
-                    "seed": child_seed,
-                    "send_end": send_end,
-                    "verbose": verbose,
-                    "cpu_rank": cpu_rank,
-                },
-            )
-            running_jobs.append(p)
-            pipes.append(recv_end)
-            p.start()
-
-        # wait for all jobs to finish
-        for p in running_jobs:
-            p.join()
-
-        carriers_lists = [x.recv() for x in pipes]
+    carriers_lists = [x.recv() for x in pipes]
 
     carriers = [item for sublist in carriers_lists for item in sublist]
     # Now combine the carrier data
@@ -709,3 +694,4 @@ def run_kmc(
                         combined_data[key] = val
         return combined_data
     return carriers
+
