@@ -55,8 +55,8 @@ def singles_homolumo(chromo_list, filename=None, nprocs=None):
         Path to file where singles energies will be saved. If None, energies
         will not be saved.
     nprocs : int, default None
-        Number of processes passed to multiprocessing.Pool. If None,
-        multiprocessing.cpu_count will used to determine optimal number.
+        Number of processes passed to multiprocessing.Pool. 
+       
 
     Returns
     -------
@@ -76,7 +76,6 @@ def singles_homolumo(chromo_list, filename=None, nprocs=None):
         np.savetxt(filename, data)
     return data
 
-
 def dimer_homolumo(qcc_pairs, chromo_list, filename=None, nprocs=None):
     """Get the HOMO-1, HOMO, LUMO, LUMO+1 energies for all chromophore pairs.
 
@@ -92,8 +91,8 @@ def dimer_homolumo(qcc_pairs, chromo_list, filename=None, nprocs=None):
         Path to file where the pair energies will be saved. If None, energies
         will not be saved.
     nprocs : int, default None
-        Number of processes passed to multiprocessing.Pool. If None,
-        multiprocessing.cpu_count will used to determine optimal number.
+        Number of processes passed to multiprocessing.Pool.
+        
 
     Returns
     -------
@@ -119,6 +118,7 @@ def dimer_homolumo(qcc_pairs, chromo_list, filename=None, nprocs=None):
                 for pair, en in dimer_data
             )
     return dimer_data
+
 
 
 def get_dimerdata(filename):

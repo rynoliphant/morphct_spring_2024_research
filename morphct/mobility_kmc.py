@@ -365,7 +365,7 @@ def run_single_kmc(
     cpu_rank=None,
     seed=None,
     send_end=None,
-    verbose=0,
+    verbose=1,
 ):
     """Run a single KMC simulation process.
 
@@ -400,7 +400,7 @@ def run_single_kmc(
     list of Carrier
         if send_end is None (this function is being run on its own), the
         carrier_list is returned. Otherwise it is assumed this function is being
-        as part of amultiprocessing run and nothing is returned.
+        as part of a multiprocessing run and nothing is returned.
     """
     if seed is not None:
         np.random.seed(seed)
@@ -500,7 +500,7 @@ def snap_molecule_indices(snap):
     """
     system = freud.AABBQuery.from_system(snap)
     n_query_pts = n_pts = snap.bonds.N
-    query_pt_inds = snap.bonds.group[:, 0]
+    query_pt_inds = np.sort(snap.bonds.group[:, 0])
     pt_inds = snap.bonds.group[:, 1]
     distances = system.box.compute_distances(
         system.points[query_pt_inds], system.points[pt_inds]
@@ -550,8 +550,8 @@ def get_jobslist(sim_times, n_holes=0, n_elec=0, nprocs=None, seed=None):
     n_elec : int, default 0
         The number of electrons to simulate.
     nprocs : int, default None
-        The number of processes in a multiprocessing run. If None is given, the
-        `multiprocessing.cpu_count` will be used.
+        The number of processes in a multiprocessing run. If None is given,
+        multiprocessing will not be used.
     seed : int, default None
         A seed for the random processes.
 
@@ -583,7 +583,6 @@ def get_jobslist(sim_times, n_holes=0, n_elec=0, nprocs=None, seed=None):
     jobs_list = [carriers[i : i + step] for i in range(0, len(carriers), step)]
     return jobs_list
 
-
 def run_kmc(
     lifetimes,
     kmc_directory,
@@ -593,9 +592,10 @@ def run_kmc(
     n_holes=0,
     n_elec=0,
     seed=42,
+    nprocs=None,
     combine=True,
     carrier_kwargs={},
-    verbose=0,
+    verbose=1,
     ): # pragma: no cover
     """Run KMC simulation using multiprocessing.
 
@@ -618,6 +618,9 @@ def run_kmc(
         The number of electrons to simulate.
     seed : int, default 42
         A seed for the random processes.
+    nprocs : int, default None
+        The number of processes in a multiprocessing run. If None is given,
+        multiprocessing will not be used.
     combine : bool, default True
         Whether to combine the results into a dictionary or return a list of
         Carriers.
@@ -660,11 +663,9 @@ def run_kmc(
         )
         running_jobs.append(p)
         pipes.append(recv_end)
-        p.start()
 
-    # wait for all jobs to finish
     for p in running_jobs:
-        p.join()
+        p.start()
 
     carriers_lists = [x.recv() for x in pipes]
 
@@ -693,3 +694,4 @@ def run_kmc(
                         combined_data[key] = val
         return combined_data
     return carriers
+
