@@ -27,6 +27,20 @@ MorphCT accomplishes this by:
 
 ## Installation ##
 
+To create a local environment with [conda](https://docs.conda.io/en/latest/miniconda.html), run:
+
+```bash
+git clone git@github.com:cmelab/morphct.git
+conda env create -f environment.yml
+conda activate morphct
+```
+
+And to test your installation, run:
+
+```
+pytest
+```
+
 ### Using a container
 To use MorphCT in a prebuilt container (using [Singularity](https://singularity.lbl.gov/)), run:
 ```bash
@@ -38,18 +52,6 @@ singularity exec morphct_latest.sif bash
 ```bash
 docker pull cmelab/morphct:latest
 docker run -it cmelab/morphct:latest
-```
-
-### Custom install
-
-To create a local environment with [conda](https://docs.conda.io/en/latest/miniconda.html), run:
-```bash
-conda env create -f environment.yml
-conda activate morphct
-```
-And to test your installation, run:
-```
-pytest
 ```
 
 ---
