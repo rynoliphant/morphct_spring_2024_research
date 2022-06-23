@@ -21,3 +21,10 @@ jupyter lab
 3. **new-acceptor-molecule-workflow.ipynb** : This workflow seeks to outline the path of least resistance for investigation of a new acceptor molecule with morphCT. To predict the mobililty of in a morphology, we need 2 things: (1) a gsd of your morphology and (2) and list of atom indeces that belong to each chromophore. This workflow automates the creation of (2). I WOULD START BY RUNNING THIS TO SEE IF MORPHCT IS WORKING. 
 4. **workflow-itic.ipynb** : A notebook for breaking ITIC into multiple chromophores. 
 5. **workflow-p3ht.ipynb** : How to use smarts matching to delineate chromophores. 
+
+# You can find some further (uncurated) workflows that use the morphct api here:
+https://github.com/JimmyRushing/thesis/tree/main/notebooks
+
+(1) **fused-experiment.ipynb** : I used smiles strings to check out the homo-lumo gap of fused thiophens. 
+(2) **voronoi_figures.ipynb** : I created a plot that visualized the voronoi analysis that takes place in the creation of neighbor lists in morphCT
+(3) other scratch workbooks for generating figures from morphCT data
