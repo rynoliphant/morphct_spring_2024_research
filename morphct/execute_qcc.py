@@ -34,7 +34,7 @@ def get_homolumo(molstr, charge=0, verbose=0, tol=1e-6):
     numpy.ndarray
         Array containing HOMO-1, HOMO, LUMO, LUMO+1 energies in eV
     """
-    mol = pyscf.M(atom=molstr, charge=charge)
+    mol = pyscf.M(atom=molstr) #, charge=charge)
     mf = MINDO3(mol).run(verbose=verbose, conv_tol=tol)
     occ = mf.get_occ()
     i_lumo = np.argmax(occ < 1)

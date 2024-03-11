@@ -115,6 +115,8 @@ class System():  # pragma: no cover
         chromophore_kwargs : dict, default {}
             Additional keywrod arguments to be passed to the Chromophore class.
         """
+        print('Can you read this?')
+
         start = len(self.chromophores)
         for i, ind in enumerate(indices):
             self._chromophores.append(
@@ -154,13 +156,13 @@ class System():  # pragma: no cover
 
         t0 = time.perf_counter()
         print("Starting singles energy calculation...")
-        data = singles_homolumo(self.chromophores, s_filename)
+        data = singles_homolumo(self.chromophores, s_filename, nprocs=1)
         t1 = time.perf_counter()
         print(f"Finished in {t1-t0:.2f} s. Output written to {s_filename}.")
 
         print("Starting dimer energy calculation...")
         dimer_data = dimer_homolumo(
-            self.qcc_pairs, self.chromophores, d_filename
+            self.qcc_pairs, self.chromophores, d_filename, nprocs=1
         )
         t2 = time.perf_counter()
         print(f"Finished in {t2-t1:.2f} s. Output written to {d_filename}.")
