@@ -56,6 +56,7 @@ def v_print(string, verbosity, v_level=0, filename=None):  # pragma: no cover
         else:
             with open(filename, "a") as f:
                 f.write(f"{string}\n")
+                f.close()
 
 
 def time_units(elapsed_time, precision=2):

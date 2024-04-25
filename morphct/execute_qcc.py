@@ -34,7 +34,7 @@ def get_homolumo(molstr, charge=0, verbose=0, tol=1e-6):
     numpy.ndarray
         Array containing HOMO-1, HOMO, LUMO, LUMO+1 energies in eV
     """
-    mol = pyscf.M(atom=molstr) #, charge=charge)
+    mol = pyscf.M(atom=molstr, charge=charge)
     mf = MINDO3(mol).run(verbose=verbose, conv_tol=tol)
     occ = mf.get_occ()
     i_lumo = np.argmax(occ < 1)
@@ -67,9 +67,9 @@ def singles_homolumo(chromo_list, filename=None, nprocs=None):
     if nprocs is None:
         nprocs = mp.cpu_count()
     with get_context("spawn").Pool(processes=nprocs) as p:
-        data = p.map(
-            _worker_wrapper, [(i.qcc_input, i.charge) for i in chromo_list]
-        )
+        args = [(i.qcc_input, i.charge) for i in chromo_list]
+        data = p.map(_worker_wrapper, args)
+        p.close()
 
     data = np.stack(data)
     if filename is not None:
@@ -109,6 +109,7 @@ def dimer_homolumo(qcc_pairs, chromo_list, filename=None, nprocs=None):
             for (i,j), qcc_input in qcc_pairs
         ]
         data = p.map(_worker_wrapper, args)
+        p.close()
 
     dimer_data = [i for i in zip([pair for pair, qcc_input in qcc_pairs], data)]
     if filename is not None:

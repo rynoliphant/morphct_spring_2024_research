@@ -115,7 +115,6 @@ class System():  # pragma: no cover
         chromophore_kwargs : dict, default {}
             Additional keywrod arguments to be passed to the Chromophore class.
         """
-        print('Can you read this?')
 
         start = len(self.chromophores)
         for i, ind in enumerate(indices):
@@ -134,7 +133,7 @@ class System():  # pragma: no cover
         else:
             self._dinds += indices
 
-    def compute_energies(self, dcut=None):
+    def compute_energies(self, dcut=None, nprocs=None):
         """Compute the energies of the chromophores in the system.
 
         Parameters
@@ -156,13 +155,13 @@ class System():  # pragma: no cover
 
         t0 = time.perf_counter()
         print("Starting singles energy calculation...")
-        data = singles_homolumo(self.chromophores, s_filename, nprocs=1)
+        data = singles_homolumo(self.chromophores, s_filename, nprocs)
         t1 = time.perf_counter()
         print(f"Finished in {t1-t0:.2f} s. Output written to {s_filename}.")
 
         print("Starting dimer energy calculation...")
         dimer_data = dimer_homolumo(
-            self.qcc_pairs, self.chromophores, d_filename, nprocs=1
+            self.qcc_pairs, self.chromophores, d_filename, nprocs
         )
         t2 = time.perf_counter()
         print(f"Finished in {t2-t1:.2f} s. Output written to {d_filename}.")
@@ -225,6 +224,18 @@ class System():  # pragma: no cover
         verbose : int, default 0
             The verbosity level of output.
         """
+
+        n_acceptor = len(self._ainds)
+        n_donor = len(self._dinds)
+        if n_holes > n_donor and n_donor==0:
+                print('ERROR: The number of holes is greater than zero and there are no donor chromophores for the holes to go to!')
+                print('Number of Holes:',n_holes,' | Number of Donor Chromophores:',n_donor)
+                return
+        if n_holes > n_donor and n_acceptor==0:
+                print('ERROR: The number of electrons is greater than zero and there are no acceptor chromophores for the electrons to go to!')
+                print('Number of Electrons:',n_elec,' | Number of Acceptor Chromophores:',n_acceptor)
+                return
+
         kmc_dir = os.path.join(self.outpath, "kmc")
         if not os.path.exists(kmc_dir):
             os.makedirs(kmc_dir)
