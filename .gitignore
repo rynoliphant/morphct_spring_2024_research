@@ -1,9 +1,3 @@
-examples/chromophores.txt
-examples/singles.txt
-examples/two-molecule-test.txt
-examples/itic
-examples/data/fillbox-gsds
-examples/TI-05-2022-2
 examples/output*
 scratch
 record.txt
