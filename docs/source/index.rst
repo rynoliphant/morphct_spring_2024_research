@@ -20,7 +20,7 @@ Contents
 .. toctree::
 	
 	usage
-	morphct
+	system
 
 
 Indices and tables
