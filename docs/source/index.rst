@@ -20,7 +20,8 @@ Contents
 .. toctree::
 	
 	usage
-	api
+	morphct
+
 
 Indices and tables
 ==================
