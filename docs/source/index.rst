@@ -8,23 +8,32 @@ Welcome to MorphCT's documentation!
 
 The intention of this code is to form a modular, computational pipeline that can powerfully and coherently relate organic molecular morphology on the Angstrom lengthscale to electronic device performance over hundreds of nanometers.
 
-Check out the :doc:`usage` section for further information, including how to :ref:`install <installation>` the project.
+MorphCT accomplishes this by:
+	* Splitting a morphology into electronically-active chromophores that charge carriers (holes in the case of donor materials, electrons for acceptors) are likely to be delocalized along, and can perform quantized charge hops between.
+	* Performing high-throughput, fast quantum chemical calculations (QCCs) to obtain the energetic landscape caused by conformational disorder, as well as electronic transfer integrals between chromophore pairs.
+	* Using these calculated electronic properties as inputs into a kinetic Monte Carlo (KMC) algorithm to simulate the motion of charge carriers throughout the device allowing carrier mobilities to be obtained (a good proxy for device performance).
 
 .. note::
 
 	This project is under active development.
 
-Contents
---------
+Getting Started
+----------------
+
+.. toctree::
+	installation
+
+Python API
+-----------
 
 .. toctree::
 	
-	usage
+	chromophores
 	system
 
 
-Indices and tables
-==================
+Indices and Tables
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`

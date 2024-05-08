@@ -10,7 +10,7 @@ import freud
 from openbabel import openbabel
 from openbabel import pybel
 import numpy as np
-from scipy.spatial import Delaunay
+#from scipy.spatial import Delaunay
 
 from morphct import execute_qcc as eqcc
 from morphct import helper_functions as hf
@@ -170,7 +170,8 @@ class Chromophore:
 
 
     def get_MO_energy(self):
-        """Get the frontier molecular orbital energy for this chromophore.
+        """
+        Get the frontier molecular orbital energy for this chromophore.
 
         If the chromphore is an acceptor, the LUMO energy is returned. If the
         chromphore is a donor, the HOMO energy is returned.
@@ -179,6 +180,7 @@ class Chromophore:
         -------
         float
             MO energy in eV
+        :noindex:
         """
         if self.species == "acceptor":
             return self.lumo

@@ -6,8 +6,6 @@ from morphct import (chromophores, execute_qcc, helper_functions, kmc_analyze,
 
 __all__ = [
         "__version__",
-        "Chromophore",
-        "Carrier",
         "chromophores",
         "execute_qcc",
         "helper_functions",

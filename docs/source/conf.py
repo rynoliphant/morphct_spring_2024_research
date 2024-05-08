@@ -1,7 +1,7 @@
 import pathlib
 import sys
 import os
-sys.path.append('/../../morphct')
+sys.path.append('/../..')
 sys.path.insert(0, os.path.abspath("../.."))
 
 # Configuration file for the Sphinx documentation builder.
@@ -23,23 +23,20 @@ release = '0.1'
 
 extensions = ["sphinx.ext.autodoc","sphinx.ext.autosummary", "sphinx.ext.napoleon", "sphinx.ext.mathjax"]
 autodoc_mock_imports = [
-    "cmeutils",
-    "forcefield_utilities",
-    "foyer",
+    "blas"
+    "ele",
     "freud",
-    "gmso",
     "grits",
     "gsd",
-    "hoomd",
+    "h5py"
     "mbuild",
+    "matplotlib"
     "numpy",
     "openbabel",
     "py3Dmol",
-    "pydantic",
-    "symengine",
-    "sympy",
-    "unyt",
-    "jupyter",
+    "scipy",
+    "signac",
+    "jupyterlab",
 ]
 
 templates_path = ["_templates"]

@@ -311,6 +311,7 @@ def calc_mobility(fit_time, fit_msd, time_err, msd_err, temp):
     -------
     mobility, mob_error : float, float
         The mobility and its standard error in centimeters^2/(Volt second).
+    
     """
     # YVals have a std error avmsdError associated with them
     # XVals have a std error avTimeError assosciated with them
@@ -641,10 +642,10 @@ def get_lambda_ij(chromo_length):
 
     The equation for the internal reorganisation energy was obtained from
     the data given in
-        Johansson, E.; Larsson, S.; 2004, Synthetic Metals 144: 183-191.
+    Johansson, E.; Larsson, S.; 2004, Synthetic Metals 144: 183-191.
     And the external reorganisation energy was obtained from
-        Liu, T.; Cheung, D. L.; Troisi, A.; 2011, Phys. Chem. Chem. Phys. 13:
-        21461-21470
+    Liu, T.; Cheung, D. L.; Troisi, A.; 2011, Phys. Chem. Chem. Phys. 13:
+    21461-21470
 
     Parameters
     ----------

@@ -168,7 +168,7 @@ def set_energyvalues(chromo_list, s_filename, d_filename):
 
     Run singles_homolumo and dimer_homolumo first to get the energy files.
     Energy values set by this function:
-        homo_1, homo, lumo, lumo_1, neighbors_delta_e, neighbors_ti
+    homo_1, homo, lumo, lumo_1, neighbors_delta_e, neighbors_ti
 
     Parameters
     ----------

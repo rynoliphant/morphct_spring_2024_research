@@ -1,5 +1,5 @@
 System
-------
+======
 
 .. py:currentmodule:morphct.system
 
@@ -9,6 +9,5 @@ System
 	:show-inheritance:
 	
 	.. autoclass:: System
-		:inherited-members:
 		:members: chromophores, carrier_data
-		:no-index:
+		:noindex: 
