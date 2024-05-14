@@ -180,7 +180,7 @@ class Chromophore:
         -------
         float
             MO energy in eV
-        :noindex:
+        
         """
         if self.species == "acceptor":
             return self.lumo

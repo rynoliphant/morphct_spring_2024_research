@@ -27,9 +27,15 @@ Python API
 -----------
 
 .. toctree::
+	:maxdepth: 2
 	
 	chromophores
+	execute_qcc
+	helper_functions
+	kmc_analyze
+	mobility_kmc
 	system
+	transfer_integrals
 
 
 Indices and Tables

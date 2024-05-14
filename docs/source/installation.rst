@@ -7,6 +7,10 @@ To create a local environment with conda, run::
 	conda env create -f environment.yml
 	conda activate morphct
 
+To install the MorphCT module, run this command within the cloned directory and with the environment, morphct, activated::
+
+	pip install -e .
+
 And to test your installation, run::
 
 	pytest
