@@ -3,7 +3,6 @@ ele==0.2.0
 freud
 gsd==2.4.2
 h5py==2.10
-libcint==4
 matplotlib==3.4.2
 numpy==1.21
 openbabel==3.1.1
