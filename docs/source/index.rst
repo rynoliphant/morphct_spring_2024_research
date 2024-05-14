@@ -23,11 +23,23 @@ Getting Started
 .. toctree::
 	installation
 
+Classes
+--------
+
+.. toctree::
+	:maxdepth: 2
+	
+	chromo_class
+	carrier
+	System <system_class>
+
+
 Python API
 -----------
 
 .. toctree::
-	:maxdepth: 2
+	:maxdepth: 1
+	:titlesonly:
 	
 	chromophores
 	execute_qcc
