@@ -30,3 +30,5 @@ Or using Docker, run::
 
 Examples
 --------
+
+Jupyter notebook examples as well as example data are provided for the user in ``morphct/examples``.
